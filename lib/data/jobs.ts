@@ -1,0 +1,42 @@
+export const WORK_EXPERIENCE: WorkExperience[] = [
+	{
+		company: "Memorang",
+		title: "AI Engineer",
+		start: "2024-09",
+		end: "Present",
+		link: "https://memorang.com/",
+		id: "memorang",
+	},
+	{
+		company: "McGill University",
+		title: "Research Assistant",
+		start: "2023-09",
+		end: "2024-07",
+		link: "https://www.mcgill.ca/desautels/",
+		id: "mcgill",
+	},
+	{
+		company: "Bain & Company",
+		title: "Associate, Private Equity",
+		start: "2020-09",
+		end: "2023-05",
+		link: "https://www.bain.com/offices/bcn/",
+		id: "bain",
+	},
+	{
+		company: "NITI Aayog",
+		title: "Summer Intern, Infrastructure Connectivity",
+		start: "2019-06",
+		end: "2019-08",
+		link: "https://www.niti.gov.in/verticals/infrastructure",
+		id: "niti",
+	},
+	{
+		company: "Testbook.com",
+		title: "Content Developer Internship",
+		start: "2018-03",
+		end: "2018-07",
+		link: "https://testbook.com/",
+		id: "testbook",
+	},
+];
