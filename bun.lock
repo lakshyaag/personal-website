@@ -9,6 +9,7 @@
         "@next/mdx": "^14.2.13",
         "@tailwindcss/typography": "^0.5.15",
         "@types/mdx": "^2.0.13",
+        "@vercel/speed-insights": "^1.1.0",
         "clsx": "^2.1.1",
         "lucide-react": "^0.468.0",
         "motion": "^11.15.0",
@@ -236,6 +237,8 @@
     "@typescript-eslint/visitor-keys": ["@typescript-eslint/visitor-keys@8.18.1", "", { "dependencies": { "@typescript-eslint/types": "8.18.1", "eslint-visitor-keys": "^4.2.0" } }, "sha512-Vj0WLm5/ZsD013YeUKn+K0y8p1M0jPpxOkKdbD1wB0ns53a5piVY02zjf072TblEweAbcYiFiPoSMF3kp+VhhQ=="],
 
     "@ungap/structured-clone": ["@ungap/structured-clone@1.2.1", "", {}, "sha512-fEzPV3hSkSMltkw152tJKNARhOupqbH96MZWyRjNaYZOMIzbrTeQDG+MTc6Mr2pgzFQzFxAfmhGDNP5QK++2ZA=="],
+
+    "@vercel/speed-insights": ["@vercel/speed-insights@1.1.0", "", { "peerDependencies": { "@sveltejs/kit": "^1 || ^2", "next": ">= 13", "react": "^18 || ^19 || ^19.0.0-rc", "svelte": ">= 4", "vue": "^3", "vue-router": "^4" }, "optionalPeers": ["@sveltejs/kit", "next", "react", "svelte", "vue", "vue-router"] }, "sha512-rAXxuhhO4mlRGC9noa5F7HLMtGg8YF1zAN6Pjd1Ny4pII4cerhtwSG4vympbCl+pWkH7nBS9kVXRD4FAn54dlg=="],
 
     "acorn": ["acorn@8.14.0", "", { "bin": "bin/acorn" }, "sha512-cl669nCJTZBsL97OF4kUQm5g5hC2uihk0NxY3WENAC0TYdILVkAyHymAntgxGkl7K+t0cXIrH5siy5S4XkFycA=="],
 
