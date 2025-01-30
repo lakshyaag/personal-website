@@ -1,0 +1,95 @@
+---
+title: 'ESL Pro League Season 14 - Group D'
+date: '2021-08-30'
+description: 'I analyze the performance of teams and players in Group D of the ESL Pro League Season 14, highlighting key metrics, map distribution, and standout players from the group stage'
+tags:
+  - 'CS:GO'
+  - 'Data Visualization'
+coverImage: './cover.png'
+slug: 'esl-pro-league-season-14-group-d'
+---
+
+## Introduction
+
+The round-robin group stage for 5 teams in the [ESL Pro League Season 14](https://www.hltv.org/events/5554/esl-pro-league-season-14) concluded recently. Here, I take a look at how the **players** in Group D performed.
+
+## Maps played and team performance
+
+Before diving into the players' performance, let's quickly take a look at the map distribution for this group.
+
+![Distribution of maps](output/maps_played.png 'Maps played')
+
+**Mirage** and **Inferno** take the top place, played 7 times each, leading to a total of 14 out of a potential 45. Surprised to see **Ancient** in the mix
+
+![Maps by team](output/maps_by_team.png 'Maps by team')
+
+Strong map picks as we see **Liquid** dominating _Inferno_ and **Gambit** dominating _Vertigo_
+
+---
+
+## Player performance
+
+### **Impact** vs **Rating 2.0**
+
+![Impact vs Rating](output/impact_rating.png 'Impact vs Rating 2.0')
+
+Some **key takeaways** from this graphic:
+
+- _KSCERATO_ ahead of his peers with a Rating 2.0 of 1.30. To put this figure into context, note that **FURIA** did not qualify for the playoffs
+- 4 players from **Gambit** and **Liquid** ended the group stage with a Rating 2.0 greater than 1
+
+### Top players by **ADR**
+
+![ADR](output/adr.png 'ADR')
+
+_KSCERATO_ leading the group with an ADR of 89 across 341 rounds, followed by _hampus_ at 85 and _EliGE_ with an ADR of 81.
+
+### Top players by **grenade damage per round**
+
+![Grenade damage per round](output/grenade_dmg_round.png 'Grenade damange per round')
+
+_NAF_ shaping up to be the grenade player for **Liquid**, with the highest grenade damage per round among all players in the group.
+
+Super interesting to see all _5 players_ from **Gambit** show up in the top 10 list. It's not very often you see all players of a team having relatively high grenade damage per round.
+
+### Top players by **headshot %**
+
+![Headshot %](output/headshot_percent.png 'Headshot %')
+
+**TeamOne** players have a relatively higher HS%, but just tapping heads did not prove to be enough for a victory.
+
+_EliGE_ comes third with a 57% HS%, which is pretty remarkable considering the high impact _EliGE_ had in these matches
+
+### Top players by **K/D Ratio**
+
+![K/D Ratio](output/k_d_ratio.png 'K/D Ratio')
+
+_KSCERATO_ leads this metric with a K/D ratio of **1.41**, followed by _sh1ro_ at **1.39**.
+
+4 players from **Liquid** make the top 10 list, indicating a high degree of teamwork and a mentality of playing for each other
+
+### Team ADR
+
+It shows the **spread of ADR** of each player in every team. To be sure, a _longer violin_ indicates a _larger ADR spread_ in a team, i.e., **_a greater difference between the player with the highest ADR and that with the lowest ADR, indicative of under-performance._**
+
+![Team ADR](output/team_adr.png 'Team ADR')
+
+Some **key takeways** from this graphic:
+
+- **Gambit** has a couple of players that can add even more firepower to an already impactful team
+- **FURIA** need to finalize their fifth player - _guerri_ stepped up incredibly as he transitioned from a coach to a player, but it wasn't enough to push them over the line
+- Both **Liquid** and **NIP** have a similar ADR spread
+
+---
+
+## Summary
+
+**Gambit** had an amazing performance so far in the group, orchestrating impossible comebacks and losing only to **NIP** in their last game (which, in their defense, they had no incentive to win) . **Liquid** and **NIP** are through to the playoffs.
+
+_Hobbit_ and _EliGE_ will be the key players to watch from this group. _KSCERATO_ would've been amazing to watch if only **FURIA** had got through to the playoffs
+
+---
+
+That's it for now! Hope this analysis was a little insightful. I'll come back with an overall preview soon.
+
+I would love to hear feedback and comments on how I can improve, so please feel free to contact me on **[Twitter](https://twitter.com/lakshyaag)** or shoot me an **[e-mail](mailto:lakshyagrwal12@gmail.com)**.

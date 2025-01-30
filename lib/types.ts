@@ -5,6 +5,12 @@ type Project = {
 	image?: string;
 	id: string;
 	date: string;
+	tech: string[];
+	external: {
+		label: string;
+		link: string;
+	}[];
+	content: string;
 };
 
 type WorkExperience = {

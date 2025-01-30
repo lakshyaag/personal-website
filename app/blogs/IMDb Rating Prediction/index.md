@@ -1,0 +1,126 @@
+---
+title: 'Predicting IMDb Ratings of New Movies'
+date: '2023-11-01'
+description: 'I build a model using regression techniques to predict IMDb ratings of new movies based on their features, and analyze the importance of each feature in determining the rating'
+tags:
+  - 'R'
+  - 'Machine Learning'
+  - 'Predictive Modeling'
+coverImage: './cover.png'
+slug: 'predicting-imdb-ratings-of-new-movies'
+---
+
+## Introduction
+
+As part of the MGSC 661: Multivariate Statistics course in my Fall term, I worked on a project to predict [IMDb](https://www.imdb.com/) ratings of new movies based on their features.
+
+It was a fun project to work on and it gave me a chance to apply the concepts I learned in the course around linear regression to a real-world dataset.
+
+## Data
+
+The dataset used for this project was provided by the Professor and contained ~2000 movies with 5 types of features:
+
+1. Identifiers
+2. Rating
+3. Movie characteristics
+4. Cast characteristics
+5. Production characteristics
+
+### Exploratory Data Analysis
+
+I started off by exploring the dataset and looking at the distribution of the features.
+
+The distribution of the target variable, `imdb_score`, is shown below:
+
+![Distribution of IMDb ratings](plots/imdb_score.png 'Distribution of IMDb ratings')
+
+From the above, we can see that most of the movies in the dataset have a rating between 5 and 8 on IMDb.
+
+I looked at the distribution of some other features as well, in addition to looking at the bivariate relationship between the target variable and the features.
+
+I will show the plots first to let you go through them and then discuss the insights I found.
+
+![Movie budget vs. IMDb rating](plots/movie_budget_imdb_score.png 'Movie budget vs. IMDb rating')
+
+- There does not appear to a significant relationship between the movie budget and IMDb rating. However, movies with a higher budget tend to not have lower ratings, except for a few outliers.
+
+![Movie duration vs. IMDb rating](plots/duration_imdb_score.png 'Movie duration vs. IMDb rating')
+
+- Most movies have a duration between 90 and 150 minutes. Longer running movies tend to have higher ratings, but only up to a certain point, indicating the presence of a hypothetical 'sweet spot'.
+
+![Distribution of rating by genre](plots/genre_imdb_score.png 'Distribution of rating by genre')
+
+- The distribution of ratings by genre is similar for most genres, except for the "Drama" genre, which has a higher median rating.
+
+![Number of movies by release month](plots/release_month.png 'Distribution of rating by release month')
+
+- The number of movies released is highest in the months of January and October, coinciding with the holiday season.
+
+![Distribution of rating for Top 10 distributors](plots/distributor_imdb_score.png 'Distribution of rating for Top 10 distributors')
+
+- Among the top 10 distributors, the distribution of ratings seems fairly consistent, except for "Miramax", which has a higher median rating.
+
+### Feature Engineering
+
+I created some new features based on the existing features in the dataset:
+
+1. `plot_keywords`: Created dummy variables for the top 10 keywords in the dataset
+2. `distributors`: Created dummy variables for the top 5 distributors in the dataset
+
+## Modeling
+
+For the modeling part, the first step was to run indvidual linear regression models for each feature and correct the model errors such as heteroscedasticity, non-linearity, multicollinearity, and removing outliers.
+
+With that done, I ran three different models:
+
+1. **Model 1:** Multiple linear regression with all relevant features
+2. **Model 2:** Polynomial regression with all relevant features and non-linear predictors
+3. **Model 3:** Spline regression with all relevant features and non-linear predictors
+
+The performance of the three models is shown below:
+
+|                      |            |                |            |
+| -------------------- | ---------- | -------------- | ---------- |
+| **Metric**           | **Linear** | **Polynomial** | **Spline** |
+| MSE                  | 0.76       | 0.68           | 0.67       |
+| RMSE                 | 0.87       | 0.83           | 0.82       |
+| R2                   | 0.38       | 0.45           | 0.46       |
+| Number of predictors | 52         | 60             | 61         |
+
+The spline regression model performed the best, with a lower MSE and RMSE and a higher R2 value than the other two models. However, when looking at the interpretability of the model, the polynomial regression model was the best, as it had the lowest number of predictors. Hence, I chose the polynomial regression model as the final model.
+
+## Predictions
+
+The predicted ratings for the test set are shown below:
+
+|     |                                                      |                  |            |                |            |
+| --- | ---------------------------------------------------- | ---------------- | ---------- | -------------- | ---------- |
+|     | **Movie Title**                                      | **Release Date** | **Linear** | **Polynomial** | **Spline** |
+| 1   | Pencils vs Pixels                                    | 2023-11-07       | 6.19       | 5.87           | 3.44       |
+| 2   | The Dirty South                                      | 2023-11-10       | 6.45       | 5.41           | 3.40       |
+| 3   | The Marvels                                          | 2023-11-10       | 6.82       | 7.08           | 9.41       |
+| 4   | The Holdovers                                        | 2023-11-10       | 7.22       | 7.66           | 8.70       |
+| 5   | Next Goal Wins                                       | 2023-11-17       | 6.78       | 7.43           | 8.59       |
+| 6   | Thanksgiving                                         | 2023-11-17       | 6.31       | 7.13           | 9.66       |
+| 7   | The Hunger Games: The Ballad of Songbirds and Snakes | 2023-11-17       | 7.02       | 7.90           | 10.38      |
+| 8   | Trolls Band Together                                 | 2023-11-17       | 7.01       | 7.71           | 8.88       |
+| 9   | Leo                                                  | 2023-11-21       | 6.92       | 6.41           | 5.08       |
+| 10  | Dream Scenario                                       | 2023-11-22       | 6.43       | 7.10           | 8.28       |
+| 11  | Wish                                                 | 2023-11-22       | 6.86       | 7.83           | 10.40      |
+| 12  | Napoleon                                             | 2023-11-22       | 7.57       | 8.32           | 10.52      |
+
+## Conclusion
+
+In this project, I built a model using regression techniques to predict IMDb ratings of new movies based on their features, and analyzed the importance of each feature in determining the rating. I also used the model to predict the ratings of 12 new movies to be released in November 2023.
+
+Based on the model, the top 3 features that determine the IMDb rating of a movie are:
+
+1. **Duration**: Audiences appreciate a well-paced, substantial movie, but there is a point of diminishing returns. Longer movies initially receive higher IMDb scores, but this advantage tapers off for exceedingly long durations. Aim for a ’Goldilocks’ duration that’s just right.
+2. **Movie budget**: Contrary to popular belief, throwing money at a project doesn’t necessarily make it better. Our model indicates that higher budgets are actually associated with slightly lower IMDb scores. This suggests a focus on resourceful filmmaking could be more beneficial.
+3. **Number of news articles**: The number of news articles about a movie shows a quadratic relationship with IMDb scores. Initial media coverage boosts ratings, but the effect plateaus. A well-planned PR strategy that avoids overexposure could be the key.
+
+## Code
+
+The code for this project can be found on [GitHub](https://github.com/lakshyaag/MGSC-661-Midterm-Project/).
+
+Thanks for reading! If you have any questions or feedback, please feel free to reach out to me on [Twitter](https://twitter.com/lakshyaag). 👋

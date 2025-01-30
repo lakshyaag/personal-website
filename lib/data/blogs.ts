@@ -10,7 +10,7 @@ export const BLOG_POSTS: BlogPost[] = [
 		title: "Understanding the diffusion process",
 		description:
 			"A deep dive into the mathematics and implementation of diffusion models",
-		link: "/blogs/understanding-the-diffusion-process",
+		link: "/blogs/understanding-diffusion",
 		uid: "understanding-diffusion",
 	},
 	{
