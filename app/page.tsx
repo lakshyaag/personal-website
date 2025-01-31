@@ -20,6 +20,7 @@ import {
 	VARIANTS_SECTION,
 	TRANSITION_SECTION,
 } from "@/lib/utils";
+import { SvgArrowRight } from "@/components/ui/svg-arrow-right";
 
 export default function Personal() {
 	return (
@@ -62,7 +63,20 @@ export default function Personal() {
 				variants={VARIANTS_SECTION}
 				transition={TRANSITION_SECTION}
 			>
-				<h3 className="mb-5 text-lg font-medium">Selected Projects</h3>
+				<div className="flex justify-between items-center mb-5">
+					<h3 className="text-lg font-medium">Selected Projects</h3>
+					<Link
+						href="/projects"
+						className="font-base group relative inline-flex items-center gap-[1px] font-[450] text-zinc-900 dark:text-zinc-50"
+					>
+						View all projects
+						<SvgArrowRight
+							link="/projects"
+							className="opacity-0 transition-opacity duration-200 group-hover:opacity-100"
+						/>
+						<span className="absolute bottom-0.5 left-0 block h-[1px] w-full max-w-0 bg-zinc-900 transition-all duration-200 group-hover:max-w-full" />
+					</Link>
+				</div>
 				<div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
 					{PROJECTS.sort(
 						(a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
