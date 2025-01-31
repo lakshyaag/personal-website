@@ -26,7 +26,7 @@ export function Header() {
 				</p>
 			</div>
 
-			<div className="flex flex-col items-end space-y-0.5">
+			<div className="hidden sm:flex flex-col items-end space-y-0.5">
 				{SOCIAL_LINKS.filter((link) => link.showHeader).map((link) => (
 					<Link
 						key={link.label}

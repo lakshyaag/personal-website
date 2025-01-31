@@ -2,34 +2,38 @@ export const WORK_EXPERIENCE: WorkExperience[] = [
 	{
 		company: "Memorang",
 		title: "AI Engineer",
-		start: "2024-09",
+		start: "Sep 2024",
 		end: "Present",
 		link: "https://memorang.com/",
 		id: "memorang",
+		isVisible: true
 	},
 	{
 		company: "McGill University",
 		title: "Research Assistant",
-		start: "2023-09",
-		end: "2024-07",
+		start: "Sep 2023",
+		end: "Aug 2024",
 		link: "https://www.mcgill.ca/desautels/",
 		id: "mcgill",
+		isVisible: true
 	},
 	{
 		company: "Bain & Company",
 		title: "Associate, Private Equity",
-		start: "2020-09",
-		end: "2023-05",
+		start: "Sep 2020",
+		end: "May 2023",
 		link: "https://www.bain.com/offices/bcn/",
 		id: "bain",
+		isVisible: true,
 	},
 	{
 		company: "NITI Aayog",
-		title: "Summer Intern, Infrastructure Connectivity",
-		start: "2019-06",
-		end: "2019-08",
+		title: "Intern, Public Transit Infrastructure",
+		start: "Jun 2019",
+		end: "Aug 2019",
 		link: "https://www.niti.gov.in/verticals/infrastructure",
 		id: "niti",
+		isVisible: true,
 	},
 	{
 		company: "Testbook.com",
@@ -38,5 +42,6 @@ export const WORK_EXPERIENCE: WorkExperience[] = [
 		end: "2018-07",
 		link: "https://testbook.com/",
 		id: "testbook",
+		isVisible: false,
 	},
 ];

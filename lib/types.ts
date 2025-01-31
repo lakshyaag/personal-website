@@ -20,6 +20,7 @@ type WorkExperience = {
 	end: string;
 	link: string;
 	id: string;
+	isVisible?: boolean;
 };
 
 type BlogPost = {

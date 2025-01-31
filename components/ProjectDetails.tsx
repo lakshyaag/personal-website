@@ -46,12 +46,12 @@ export function ProjectImage({ src, project }: ProjectImageProps) {
 						</div>
 
 						<div className="space-y-4">
-							<div className="flex items-center justify-between">
+							<div className="flex items-center justify-between gap-4">
 								<h3 className="text-xl font-medium text-zinc-900 dark:text-zinc-50">
 									{project.name}
 								</h3>
 								{project.external && (
-									<div className="flex flex-col gap-2">
+									<div className="flex flex-row gap-2">
 										{project.external.map(({ label, link }) => (
 											<MagneticSocialLink key={link} link={link}>
 												{label}
@@ -62,11 +62,11 @@ export function ProjectImage({ src, project }: ProjectImageProps) {
 							</div>
 
 							{project.tech && (
-								<div className="flex flex-wrap gap-2">
+								<div className="flex flex-wrap gap-2 pr-4">
 									{project.tech.sort().map((tech) => (
 										<span
 											key={tech}
-											className="rounded-full bg-zinc-100 px-3 py-1 text-sm text-zinc-800 dark:bg-zinc-800 dark:text-zinc-200"
+											className="rounded-full bg-zinc-100 px-3 py-1 text-xs text-zinc-800 dark:bg-zinc-800 dark:text-zinc-200"
 										>
 											{tech}
 										</span>

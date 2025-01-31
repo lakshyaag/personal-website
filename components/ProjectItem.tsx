@@ -1,4 +1,5 @@
 import { ProjectImage } from "./ProjectDetails";
+import { Spotlight } from "./ui/spotlight";
 
 type ProjectProps = {
 	project: Project;
@@ -8,6 +9,10 @@ const ProjectItem = ({ project }: ProjectProps) => {
 	return (
 		<div key={project.name} className="space-y-2">
 			<div className="relative rounded-2xl bg-zinc-50/40 p-1 ring-1 ring-zinc-200/50 ring-inset dark:bg-zinc-950/40 dark:ring-zinc-800/50">
+				<Spotlight
+					className="from-zinc-900 via-zinc-800 to-zinc-700 blur-2xl dark:from-zinc-100 dark:via-zinc-200 dark:to-zinc-50"
+					size={64}
+				/>
 				<ProjectImage src={project.image} project={project} />
 			</div>
 			<div className="px-1">

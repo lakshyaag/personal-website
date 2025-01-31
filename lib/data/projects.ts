@@ -15,6 +15,10 @@ export const PROJECTS: Project[] = [
 				label: "GitHub",
 				link: "https://github.com/lakshyaag/job-description-parser",
 			},
+			{
+				label: "Demo",
+				link: "https://job-description-parser.vercel.app/",
+			},
 		],
 	},
 	{
@@ -30,6 +34,10 @@ export const PROJECTS: Project[] = [
 			{
 				label: "GitHub",
 				link: "https://github.com/lakshyaag/",
+			},
+			{
+				label: "Demo",
+				link: "https://launchlens-ecorizz.vercel.app/startup-idea-evaluator/",
 			},
 		],
 		content:
@@ -48,6 +56,10 @@ export const PROJECTS: Project[] = [
 			{
 				label: "GitHub",
 				link: "https://github.com/lakshyaag/image-to-ad-copy",
+			},
+			{
+				label: "Demo",
+				link: "https://promo-pix.vercel.app/",
 			},
 		],
 		content:
@@ -100,6 +112,10 @@ export const PROJECTS: Project[] = [
 			{
 				label: "GitHub",
 				link: "https://github.com/lakshyaag/yt-lesson-planner",
+			},
+			{
+				label: "Demo",
+				link: "https://yt-lesson-planner.vercel.app/",
 			},
 		],
 	},
