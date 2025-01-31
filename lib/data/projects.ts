@@ -1,5 +1,63 @@
 export const PROJECTS: Project[] = [
 	{
+		isFeatured: true,
+		name: "Sparse Autoencoder Explorer",
+		description:
+			"A visual exploration of LLM feature activations by generating images on feature-adjusted outputs.",
+		link: "https://github.com/lakshyaag/sae-explore",
+		id: "sae-explorer",
+		date: "2024-12-25",
+		image: "/projects/sae-explorer.png",
+		tech: [
+			"Mechanistic Interpretability",
+			"Sparse Autoencoders",
+			"LLMs",
+			"Meta-prompting",
+			"Llama3.3",
+			"PostgreSQL",
+		],
+		external: [
+			{
+				label: "GitHub",
+				link: "https://github.com/lakshyaag/sae-explore",
+			},
+		],
+		content:
+			"This is a CLI project to attempt visualizing the impact on feature activations in [Goodfire's Llama-3.3-70B SAE](https://www.goodfire.ai/papers/understanding-and-steering-llama-3/) by taking a topic and a feature, generating multiple prompts by varying the feature strength on the topic, and then using those generated prompts as inputs to a diffusion model ([Flux/Schnell](https://fal.ai/models/fal-ai/flux/schnell)). The repository contains the CLI application to perform the above steps and a Streamlit application to easily navigate the tool.",
+	},
+	{
+		isFeatured: true,
+		name: "The Heist of Drake: Chapter 1",
+		description:
+			"A choose-your-own-adventure game built using LangGraph, Flux, and Next.js in 24 hours",
+		link: "https://new-builds-2024-six.vercel.app/",
+		id: "new-builds-2024",
+		date: "2024-09-30",
+		image: "/projects/new-builds-2024.png",
+		tech: [
+			"LangGraph",
+			"Cloudflare",
+			"Flux",
+			"Next.js",
+			"Python",
+			"PostgreSQL",
+		],
+		external: [
+			{
+				label: "GitHub",
+				link: "https://github.com/lakshyaag",
+			},
+			{
+				label: "Demo",
+				link: "https://new-builds-2024-six.vercel.app/",
+			},
+		],
+		content:
+			"At New Builds' hackathon, my team built TDot Goons – a choose your own adventure game using generative AI. The twist? The livestream chat creates the options. We use AI to parse chats and dynamically create the options. Once an option is picked, we use AI to write and draw the next chapter, all on the fly. Check out the demo [here](https://x.com/melkuo/status/1841521131439731038), and my blog post [here](https://lakshyaag.com/blogs/new-builds-2024). The password for the demo is `420blazeit`.",
+	},
+
+	{
+		isFeatured: true,
 		name: "JD Interpreter",
 		description:
 			"AI-powered job description analysis and resume optimization tool",
@@ -9,7 +67,7 @@ export const PROJECTS: Project[] = [
 		image: "/projects/jd-interpreter.png",
 		content:
 			"JD Interpreter is a job search optimization tool that simplifies the process in three easy steps: paste any job description, get a detailed breakdown and personalized recommendations, and optimize your resume. I use the [`instructor`](https://python.useinstructor.com/) library to extract structured entities from the job description and other forms of validation.",
-		tech: ["GPT-4o", "Python", "Pydantic", "Next.js", "Vercel"],
+		tech: ["GPT-4o", "Python", "Pydantic", "Next.js", "Vercel", "PostgreSQL"],
 		external: [
 			{
 				label: "GitHub",
@@ -22,6 +80,7 @@ export const PROJECTS: Project[] = [
 		],
 	},
 	{
+		isFeatured: true,
 		name: "LaunchLens",
 		description:
 			"RAG-powered idea evaluation tool for Venture Capitalists (VCs)",
@@ -44,6 +103,7 @@ export const PROJECTS: Project[] = [
 			"LaunchLens is an idea evaluation tool that uses GPT-4o to evaluate the feasibility of a given input set of ideas against a specified thesis, then analyze and rank them based on tunable parameters. One such application of this tool was demonstrated in the [Microsoft x Harvard AI EarthHack](https://www.genaicompetition.com/) competition, where it was used to mass evaluate the feasibility of startup ideas against circular economy principles.",
 	},
 	{
+		isFeatured: false,
 		name: "PromoPix",
 		description:
 			"A tool that helps you create ad copies directly from product images using GPT-4 Vision and `instructor`",
@@ -66,6 +126,7 @@ export const PROJECTS: Project[] = [
 			"PromoPix is a tool that helps you create ad copies direcly from product images, eliminating the need to write ad copies manually. It uses the multi-modal capabilities of the GPT-4 family of models to look at provided image(s) and extract key features from them, which are then used to generate ad copies.",
 	},
 	{
+		isFeatured: true,
 		name: "WhatsApp Accident Bot",
 		description:
 			"Automated WhatsApp bot for accident reporting and emergency response for endangered animals in Costa Rica",
@@ -80,6 +141,7 @@ export const PROJECTS: Project[] = [
 			"GPT-4o",
 			"LangChain / LangGraph",
 			"WhatsApp API",
+			"PostgreSQL",
 			"Firebase",
 			"Google Cloud Run",
 			"Docker",
@@ -92,6 +154,7 @@ export const PROJECTS: Project[] = [
 		],
 	},
 	{
+		isFeatured: true,
 		name: "Video YouNiversity",
 		description: "AI-powered YouTube-based learning platform",
 		link: "https://yt-lesson-planner.vercel.app/",
@@ -120,6 +183,7 @@ export const PROJECTS: Project[] = [
 		],
 	},
 	{
+		isFeatured: false,
 		name: "NBA Analytics",
 		description:
 			"Score margin prediction for the 2022-2023 NBA season on Databricks",

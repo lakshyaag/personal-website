@@ -77,12 +77,14 @@ export default function Personal() {
 						<span className="absolute bottom-0.5 left-0 block h-[1px] w-full max-w-0 bg-zinc-900 transition-all duration-200 group-hover:max-w-full" />
 					</Link>
 				</div>
-				<div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-					{PROJECTS.sort(
-						(a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
-					).map((project) => (
-						<ProjectItem key={project.name} project={project} />
-					))}
+				<div className="grid grid-cols-1 gap-12 my-4 sm:gap-8 sm:grid-cols-2">
+					{PROJECTS.filter((project) => project.isFeatured)
+						.sort(
+							(a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
+						)
+						.map((project) => (
+							<ProjectItem key={project.name} project={project} />
+						))}
 				</div>
 			</motion.section>
 

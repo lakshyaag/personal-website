@@ -1,5 +1,6 @@
 import { ProjectImage } from "./ProjectDetails";
 import { Spotlight } from "./ui/spotlight";
+import { SvgArrowRight } from "./ui/svg-arrow-right";
 
 type ProjectProps = {
 	project: Project;
@@ -17,14 +18,19 @@ const ProjectItem = ({ project }: ProjectProps) => {
 			</div>
 			<div className="px-1">
 				<a
-					className="font-base group relative inline-block font-[450] text-zinc-900 dark:text-zinc-50"
+					className="font-base group relative inline-flex items-center gap-[1px] font-[450] text-zinc-900 dark:text-zinc-50"
 					href={project.link}
 					target="_blank"
 					rel="noopener noreferrer"
 				>
 					{project.name}
+					<SvgArrowRight
+						link={project.link}
+						className="opacity-0 transition-opacity duration-200 group-hover:opacity-100"
+					/>
 					<span className="absolute bottom-0.5 left-0 block h-[1px] w-full max-w-0 bg-zinc-900 transition-all duration-200 group-hover:max-w-full" />
 				</a>
+
 				<p className="text-base text-zinc-600 dark:text-zinc-400">
 					{project.description}
 				</p>

@@ -11,6 +11,7 @@ type Project = {
 		link: string;
 	}[];
 	content: string;
+	isFeatured?: boolean;
 };
 
 type WorkExperience = {
