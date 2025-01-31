@@ -10,8 +10,8 @@ export const SOCIAL_LINKS: SocialLink[] = [
 		showHeader: true,
 	},
 	{
-		label: "Twitter",
-		link: "https://twitter.com/lakshyaag",
+		label: "X",
+		link: "https://x.com/lakshyaag",
 		showHeader: true,
 	},
 	{
