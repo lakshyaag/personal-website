@@ -34,4 +34,5 @@ type BlogPost = {
 type SocialLink = {
 	label: string;
 	link: string;
+	showHeader?: boolean;
 };

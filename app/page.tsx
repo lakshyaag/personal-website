@@ -1,9 +1,10 @@
 "use client";
+
 import Link from "next/link";
 import { motion } from "motion/react";
 
+import ReactMarkdown from "react-markdown";
 import { Spotlight } from "@/components/ui/spotlight";
-import { Magnetic } from "@/components/ui/magnetic";
 import { AnimatedBackground } from "@/components/ui/animated-background";
 import { SOCIAL_LINKS } from "@/lib/data/social";
 import { PROJECTS } from "@/lib/data/projects";
@@ -12,26 +13,13 @@ import { EMAIL } from "@/lib/data/email";
 import { BLOG_POSTS } from "@/lib/data/blogs";
 import ProjectItem from "@/components/ProjectItem";
 import MagneticSocialLink from "@/components/MagneticSocialLink";
-import BlogItem from "@/components/BlogItem";
-
-const VARIANTS_CONTAINER = {
-	hidden: { opacity: 0 },
-	visible: {
-		opacity: 1,
-		transition: {
-			staggerChildren: 0.15,
-		},
-	},
-};
-
-const VARIANTS_SECTION = {
-	hidden: { opacity: 0, y: 20, filter: "blur(8px)" },
-	visible: { opacity: 1, y: 0, filter: "blur(0px)" },
-};
-
-const TRANSITION_SECTION = {
-	duration: 0.3,
-};
+import { LANDING_INTRO } from "@/lib/constants";
+import remarkGfm from "remark-gfm";
+import {
+	VARIANTS_CONTAINER,
+	VARIANTS_SECTION,
+	TRANSITION_SECTION,
+} from "@/lib/utils";
 
 export default function Personal() {
 	return (
@@ -45,13 +33,28 @@ export default function Personal() {
 				variants={VARIANTS_SECTION}
 				transition={TRANSITION_SECTION}
 			>
-				<div className="flex-1">
-					<p className="text-zinc-600 dark:text-zinc-400">
-						I'm an AI engineer who loves working at the intersection of business
-						and technology. From machine learning to product strategy, I bring a
-						unique blend of technical and strategic thinking to solve complex
-						problems.
-					</p>
+				<div className="flex-1 prose prose-zinc dark:prose-invert">
+					<ReactMarkdown
+						remarkPlugins={[remarkGfm]}
+						components={{
+							a: ({ node, ...props }) => (
+								<a
+									{...props}
+									className="font-base group relative inline-block font-[450] text-zinc-900 dark:text-zinc-50 underline"
+									target="_blank"
+									rel="noopener noreferrer"
+								/>
+							),
+							p: ({ node, ...props }) => (
+								<p
+									{...props}
+									className="text-base text-zinc-600 dark:text-zinc-400"
+								/>
+							),
+						}}
+					>
+						{LANDING_INTRO}
+					</ReactMarkdown>
 				</div>
 			</motion.section>
 
@@ -97,7 +100,7 @@ export default function Personal() {
 											{job.company}
 										</p>
 									</div>
-									<p className="text-zinc-600 dark:text-zinc-400">
+									<p className="text-zinc-600 dark:text-zinc-400 text-sm whitespace-nowrap">
 										{job.start} - {job.end}
 									</p>
 								</div>

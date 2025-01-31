@@ -2,7 +2,7 @@ export const BLOG_POSTS: BlogPost[] = [
 	{
 		title: "New Builds 2024",
 		description:
-			"I recap my experience at New Builds 2024 in Toronto, Canada, and share how my team built a generative choose-your-own-adventure game in 24 hours.",
+			"A recap of building a generative choose-your-own-adventure game in 24 hours at New Builds 2024 hackathon",
 		link: "/blogs/new-builds-2024",
 		uid: "new-builds-2024",
 		date: "2024-09-30",
@@ -11,7 +11,7 @@ export const BLOG_POSTS: BlogPost[] = [
 	{
 		title: "Understanding the diffusion process",
 		description:
-			'I explain the key ideas of the paper "Denoising Diffusion Probabilistic Models" by Ho et al., which introduced the concept of diffusion models for image generation.',
+			"An exploration of the DDPM paper by Ho et al., covering core concepts of diffusion models for image generation.",
 		link: "/blogs/understanding-diffusion",
 		uid: "understanding-diffusion",
 		date: "2024-08-18",
@@ -26,7 +26,7 @@ export const BLOG_POSTS: BlogPost[] = [
 	{
 		title: "LangChain Primer",
 		description:
-			"I provide a brief overview of LangChain, an all-in-one LLM development stack, from prototyping to monitoring. A gentle introduction to RAG is also included.",
+			"An introduction to LangChain framework for AI applications, including RAG implementation and monitoring.",
 		link: "/blogs/langchain-primer",
 		uid: "langchain-primer",
 		date: "2024-06-18",
@@ -35,7 +35,7 @@ export const BLOG_POSTS: BlogPost[] = [
 	{
 		title: "LLM Evals",
 		description:
-			"I provide a small example on how to ingest, chunk, and embed 10-K filings into a Supabase database, and then use LangSmith to evaluate two models for a retrieval task.",
+			"A tutorial on evaluating LLM performance using LangSmith for 10-K filing retrieval tasks.",
 		link: "/blogs/llm-evals",
 		uid: "llm-evals",
 		date: "2024-06-25",
@@ -44,7 +44,7 @@ export const BLOG_POSTS: BlogPost[] = [
 	{
 		title: "IMDb Rating Prediction",
 		description:
-			"I build a model using regression techniques to predict IMDb ratings of new movies based on their features, and analyze the importance of each feature in determining the rating",
+			"A regression analysis project predicting IMDb movie ratings and identifying key influential features.",
 		link: "/blogs/imdb-rating-prediction",
 		uid: "imdb-rating-prediction",
 		date: "2023-11-01",
@@ -53,7 +53,7 @@ export const BLOG_POSTS: BlogPost[] = [
 	{
 		title: "GPT-4 Vision Example",
 		description:
-			"This post demonstrates how to use GPT-4 Vision API automatically generate advertising copy from just product images using the OpenAI API.",
+			"A guide to using GPT-4 Vision API for generating advertising copy from product images.",
 		link: "/blogs/gpt-4-vision-example",
 		uid: "gpt4-vision-example",
 		date: "2023-12-20",
@@ -62,7 +62,7 @@ export const BLOG_POSTS: BlogPost[] = [
 	{
 		title: "Fine-tune GPT-2 for Classification",
 		description:
-			"I show how to fine-tune GPT-2 for a classification task using Hugging Face Transformers.",
+			"A tutorial on fine-tuning GPT-2 for classification tasks using the Hugging Face Transformers library.",
 		link: "/blogs/fine-tune-gpt2-classification",
 		uid: "gpt2-classification",
 		date: "2024-06-04",
@@ -78,7 +78,7 @@ export const BLOG_POSTS: BlogPost[] = [
 	{
 		title: "EPL Season 14 Group D",
 		description:
-			"I analyze the performance of teams and players in Group D of the ESL Pro League Season 14, highlighting key metrics, map distribution, and standout players from the group stage",
+			"An analysis of ESL Pro League Season 14 Group D performance metrics and player statistics.",
 		link: "/blogs/epl-season-14",
 		uid: "epl-season-14",
 		date: "2021-08-30",
@@ -87,7 +87,7 @@ export const BLOG_POSTS: BlogPost[] = [
 	{
 		title: "Building a Transformer",
 		description:
-			"I explain the architecture of the Transformer model in detail, including the encoder and decoder blocks, and the self-attention mechanism",
+			"A detailed breakdown of the Transformer architecture, focusing on encoder-decoder blocks and self-attention.",
 		link: "/blogs/building-a-transformer",
 		uid: "building-a-transformer",
 		date: "2023-12-08",
@@ -96,7 +96,7 @@ export const BLOG_POSTS: BlogPost[] = [
 	{
 		title: "Building LSTMs from Scratch",
 		description:
-			"I provide a detailed guide on how to build a multi-layer LSTM from scratch in Python.",
+			"A step-by-step implementation guide for building multi-layer LSTMs from scratch in Python.",
 		link: "/blogs/building-lstms-from-scratch",
 		uid: "building-lstms-from-scratch",
 		date: "2024-05-24",
