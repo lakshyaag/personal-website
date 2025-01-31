@@ -1,18 +1,9 @@
----
-title: 'Fine-tuning GPT-2 for Classification'
-date: '2024-06-04'
-description: 'I show how to fine-tune GPT-2 for a classification task using Hugging Face Transformers.'
-tags:
-  - 'GPT-2'
-  - 'Hugging Face'
-  - 'Transformers'
-  - 'NLP'
-  - 'Deep Learning'
-  - 'Fine-tuning'
-coverImage: './cover.png'
-objectFit: 'contain'
-slug: 'fine-tune-gpt-2-for-classification'
----
+<Cover
+  src="/blogs/fine-tune-gpt2-classification/cover.png"
+  alt="Fine-tuning GPT-2 for Classification"
+  caption="Fine-tuning GPT-2 for Classification"
+/>
+
 
 It's no surprise to anyone that transformer-based models have bought a seismic shift in the way text data is handled. These models, such as GPT-2 for instance, are models with a general understanding of the data they were trained on (which is most of the Internet). This property allows us to further improve the model by taking the pre-trained knowledge and adding a specific task to boost performance there.
 
@@ -24,11 +15,11 @@ Before looking at the architecture, let's quickly go through the dataset.
 
 I use the famous [20 newsgroups dataset](http://qwone.com/~jason/20Newsgroups/), which comprises around 18000 newsgroups posts on 20 topics split into the training and testing sets. A sample is shown below:
 
-![Sample from 20 newsgroups dataset](./output/20_newsgroups_sample.png)
+![Sample from 20 newsgroups dataset](/blogs/fine-tune-gpt2-classification/20_newsgroups_sample.png)
 
 The objective is to fine-tune GPT-2 such that it takes in an article (as above) as input and predicts the news group category (out of 20). The categories in the training set are evenly distributed:
 
-![Target distribution](./output/target_distribution.png)
+![Target distribution](/blogs/fine-tune-gpt2-classification/target_distribution.png)
 
 ## Tokenization
 
@@ -46,7 +37,7 @@ As an analogy, think of attention like a spotlight on a stage with a play where 
 
 ### How attention works
 
-![Attention head visualized](./output/how_attention_works.png)
+![Attention head visualized](/blogs/fine-tune-gpt2-classification/how_attention_works.png)
 
 Each attention head in the model computes three vectors known as query, key, and value, calculates an attention score, and finally provides an output vector. Breaking it down in simpler terms, each attention head is made up of two key circuits (this is heavily inspired by [Anthropic's paper](https://transformer-circuits.pub/2021/framework/index.html)):
 
@@ -59,7 +50,7 @@ For more technical details, I invite the reader to go through Jay Alammar's exce
 
 The above explanation was for a single head of attention. In practice, we usually add multiple such heads to allow tokens to look at more than one token in parallel, each with its own independent set of Q/K/V parameters.
 
-![Multi-head attention (Jay Alammar)](./output/multi_head_attention.png)
+![Multi-head attention (Jay Alammar)](/blogs/fine-tune-gpt2-classification/multi_head_attention.png)
 
 ### Projection layer
 
@@ -69,13 +60,13 @@ Once the attention layer computes how much and where to take information from, i
 
 Combining the multi-headed attention with the projection layer creates a single transformer block, which takes in a sequence of tokens and outputs a representation. This is aided by layer normalization and residual connections to make the training process stable, but I will not go too deep into the technical specifications here.
 
-![Transformer block](./output/transformer_block.png)
+![Transformer block](/blogs/fine-tune-gpt2-classification/transformer_block.png)
 
 ## Classification head
 
 With the transformer blocks in place, we add a final linear layer that takes in the hidden state and outputs a vector of size equal to the number of classes. The final model architecture looks like below:
 
-![Classification model](./output/model.png)
+![Classification model](/blogs/fine-tune-gpt2-classification/model.png)
 
 ## Training process
 

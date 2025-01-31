@@ -24,7 +24,9 @@ type WorkExperience = {
 
 type BlogPost = {
 	title: string;
+	date: string;
 	description: string;
+	tags: string[];
 	link: string;
 	uid: string;
 };

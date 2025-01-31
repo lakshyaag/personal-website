@@ -12,6 +12,7 @@ import { EMAIL } from "@/lib/data/email";
 import { BLOG_POSTS } from "@/lib/data/blogs";
 import ProjectItem from "@/components/ProjectItem";
 import MagneticSocialLink from "@/components/MagneticSocialLink";
+import BlogItem from "@/components/BlogItem";
 
 const VARIANTS_CONTAINER = {
 	hidden: { opacity: 0 },
@@ -121,7 +122,9 @@ export default function Personal() {
 							duration: 0.2,
 						}}
 					>
-						{BLOG_POSTS.map((post) => (
+						{BLOG_POSTS.sort(
+							(a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
+						).map((post) => (
 							<Link
 								key={post.uid}
 								className="-mx-3 rounded-xl px-3 py-3"
@@ -132,7 +135,7 @@ export default function Personal() {
 									<h4 className="font-normal dark:text-zinc-100">
 										{post.title}
 									</h4>
-									<p className="text-zinc-500 dark:text-zinc-400">
+									<p className="text-zinc-500 dark:text-zinc-400 text-sm">
 										{post.description}
 									</p>
 								</div>

@@ -1,14 +1,9 @@
----
-title: 'Predicting IMDb Ratings of New Movies'
-date: '2023-11-01'
-description: 'I build a model using regression techniques to predict IMDb ratings of new movies based on their features, and analyze the importance of each feature in determining the rating'
-tags:
-  - 'R'
-  - 'Machine Learning'
-  - 'Predictive Modeling'
-coverImage: './cover.png'
-slug: 'predicting-imdb-ratings-of-new-movies'
----
+<Cover
+  src="/blogs/imdb-rating-prediction/cover.png"
+  alt="IMDb Rating Prediction"
+  caption="IMDb Rating Prediction"
+/>
+
 
 ## Introduction
 
@@ -32,7 +27,7 @@ I started off by exploring the dataset and looking at the distribution of the fe
 
 The distribution of the target variable, `imdb_score`, is shown below:
 
-![Distribution of IMDb ratings](plots/imdb_score.png 'Distribution of IMDb ratings')
+![Distribution of IMDb ratings](/blogs/imdb-rating-prediction/plots/imdb_score.png 'Distribution of IMDb ratings')
 
 From the above, we can see that most of the movies in the dataset have a rating between 5 and 8 on IMDb.
 
@@ -40,23 +35,23 @@ I looked at the distribution of some other features as well, in addition to look
 
 I will show the plots first to let you go through them and then discuss the insights I found.
 
-![Movie budget vs. IMDb rating](plots/movie_budget_imdb_score.png 'Movie budget vs. IMDb rating')
+![Movie budget vs. IMDb rating](/blogs/imdb-rating-prediction/plots/movie_budget_imdb_score.png 'Movie budget vs. IMDb rating')
 
 - There does not appear to a significant relationship between the movie budget and IMDb rating. However, movies with a higher budget tend to not have lower ratings, except for a few outliers.
 
-![Movie duration vs. IMDb rating](plots/duration_imdb_score.png 'Movie duration vs. IMDb rating')
+![Movie duration vs. IMDb rating](/blogs/imdb-rating-prediction/plots/duration_imdb_score.png 'Movie duration vs. IMDb rating')
 
 - Most movies have a duration between 90 and 150 minutes. Longer running movies tend to have higher ratings, but only up to a certain point, indicating the presence of a hypothetical 'sweet spot'.
 
-![Distribution of rating by genre](plots/genre_imdb_score.png 'Distribution of rating by genre')
+![Distribution of rating by genre](/blogs/imdb-rating-prediction/plots/genre_imdb_score.png 'Distribution of rating by genre')
 
 - The distribution of ratings by genre is similar for most genres, except for the "Drama" genre, which has a higher median rating.
 
-![Number of movies by release month](plots/release_month.png 'Distribution of rating by release month')
+![Number of movies by release month](/blogs/imdb-rating-prediction/plots/release_month.png 'Distribution of rating by release month')
 
 - The number of movies released is highest in the months of January and October, coinciding with the holiday season.
 
-![Distribution of rating for Top 10 distributors](plots/distributor_imdb_score.png 'Distribution of rating for Top 10 distributors')
+![Distribution of rating for Top 10 distributors](/blogs/imdb-rating-prediction/plots/distributor_imdb_score.png 'Distribution of rating for Top 10 distributors')
 
 - Among the top 10 distributors, the distribution of ratings seems fairly consistent, except for "Miramax", which has a higher median rating.
 

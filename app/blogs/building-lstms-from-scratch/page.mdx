@@ -1,17 +1,9 @@
----
-title: 'Building LSTMs from scratch'
-date: '2024-05-24'
-description: 'I provide a detailed guide on how to build a multi-layer LSTM from scratch in Python.'
-tags:
-  - 'LSTM'
-  - 'Python'
-  - 'Deep Learning'
-  - 'NLP'
-  - 'RNN'
-coverImage: './cover.png'
-objectFit: 'contain'
-slug: 'lstm-from-scratch'
----
+<Cover
+  src="/blogs/building-lstms-from-scratch/cover.png"
+  alt="Building LSTMs from Scratch"
+  caption="Building LSTMs from Scratch"
+/>
+
 
 Ever wondered how ChatGPT was made? I did too, and this led me to a rabbit-hole of learning. In order to understand how we get to transformers, we first need to understand what came before it.
 
@@ -57,13 +49,13 @@ Before we train the model, we first need to create embeddings for the characters
 
 The math behind embeddings is simple: For each token in the batch, we use an embedding layer to map the token index to a dense vector of the size of the embedding dimension.
 
-![Word2Vec](./output/word2vec.png)
+![Word2Vec](/blogs/building-lstms-from-scratch/word2vec.png)
 
 ## The LSTM Cell
 
 The LSTM architecture is designed to learn long-term dependencies in sequences. It has a memory cells that can store information over varying time periods.
 
-![LSTM Cell](./output/lstm_cell.png)
+![LSTM Cell](/blogs/building-lstms-from-scratch/lstm_cell.png)
 
 What makes LSTMs so performant is that it implements two versions of the memory, namely the short-term memory (what the model is currently looking at, $h$) and the long-term memory ($c$).
 
@@ -99,7 +91,7 @@ The W and b tensors represent the weights and biases for each gate respectively,
 
 The above equations describe a single-layer LSTM cell. In practice, you stack multiple LSTM cells on top of each other to create a multi-layer LSTM. The output of the LSTM cell at each layer is passed as input to the LSTM cell at the next layer. This allows the model to learn more complex relationships in the data.
 
-![Multi-layer LSTM](./output/multi_layer_lstm.png)
+![Multi-layer LSTM](/blogs/building-lstms-from-scratch/multi_layer_lstm.png)
 
 As you can see, the hidden state output at each time step for a layer becomes the input at the same time step to the next layer.
 

@@ -1,16 +1,9 @@
----
-title: 'LangChain: A Primer'
-date: '2024-06-18'
-description: 'I provide a brief overview of LangChain, an all-in-one LLM development stack, from prototyping to monitoring. A gentle introduction to RAG is also included.'
-tags:
-  - 'LLMs'
-  - 'LangChain'
-  - 'LLMOps'
-  - 'RAG'
-coverImage: './cover.png'
-objectFit: 'contain'
-slug: 'langchain-primer'
----
+<Cover
+  src="/blogs/langchain-primer/cover.png"
+  alt="LangChain Primer"
+  caption="LangChain Primer"
+/>
+
 
 > TL;DR: LLM orchestration is challenging, as with any new technology. LangChain is a powerful framework that provides a way to manage the different components of an LLM application. It consists of a core protocol (LCEL, `langchain_core`), multiple integrations (`langchain_community`), and a set of architectures (RAGs, LangGraph, LangSmith, LangServe).
 
@@ -22,7 +15,7 @@ I expect the reader to have some understanding of how LLM applications work. I w
 
 That's the ground-level idea. Every word in the idea above can be tweaked and made more complex, but the core idea remains the same. I really like this tweet from [Hamel Husain](https://x.com/HamelHusain/status/1798757828100047063) that cuts through the overly technical jargon.
 
-![Hamel Husain tweet](/output/tweet.png)
+![Hamel Husain tweet](/blogs/langchain-primer/tweet.png)
 
 ## What is [LLM] orchestration?
 
@@ -36,7 +29,7 @@ In simpler terms, an orchestration is like a conductor in an orchestra, with the
 - Connecting to enterprise systems and databases in a secure and scalable manner is challenging with the non-deterministic nature of LLMs
 - Validating and evaluating the output of LLMs is not straightforward.
 
-For a better understanding, look at this image from [a16z](https://a16z.com/emerging-architectures-for-llm-applications/): ![a16z Emerging LLM Stack](/output/a16z_stack.png)
+For a better understanding, look at this image from [a16z](https://a16z.com/emerging-architectures-for-llm-applications/): ![a16z Emerging LLM Stack](/blogs/langchain-primer/a16z_stack.png)
 
 I do not expect you to understand everything in the image (it's a lot). **The key takeaway is that there are multiple components with an orchestration block in the middle that connects everything.**
 
@@ -53,7 +46,7 @@ Here, I'm going to give an overview of LangChain, primarily for 2 reasons:
 1. The industry is gradually converging on it as the standard for LLM orchestration. It averages 1M+ installs per month, while similar tools barely reach 100k+.
 2. I've been using it since 2023 and have seen it evolve from a simple wrapper to a full-fledged toolkit - seriously, massive props to [Harrison Chase](https://x.com/hwchase17) and the entire LangChain team.
 
-As I explained above, LangChain is a framework to manage the different components of an LLM application. The entire stack, as shown on their website is: ![LangChain stack](/output/langchain_stack.png)
+As I explained above, LangChain is a framework to manage the different components of an LLM application. The entire stack, as shown on their website is: ![LangChain stack](/blogs/langchain-primer/langchain_stack.png)
 
 Again, it's a lot, but the key takeaway is that the stack comprises interoperable and interconnected components:
 
@@ -90,7 +83,7 @@ Now, how does the model know which document to look at, and specifically which p
 
 Let me explain it with a diagram:
 
-![RAG](/output/rag_1.png)
+![RAG](/blogs/langchain-primer/rag_1.png)
 
 The process is broken down into 4 steps:
 
@@ -105,7 +98,7 @@ That's all there is to RAG. As before, all the 4 steps above can be tweaked and 
 
 LangChain offers an extensive library of tools and an intuitive framework to compose the components of a RAG system, mostly contributed by the community. Let's look at the same example from before, but using the stack:
 
-![LangChain RAG](/output/langchain_retrieval_stack.png)
+![LangChain RAG](/blogs/langchain-primer/langchain_retrieval_stack.png)
 
 Notice how the core idea is the same: I'm still ingesting and retrieving documents, augmenting the prompt, and generating a response. The difference is that now I'm using:
 
@@ -125,7 +118,7 @@ From the LangChain docs:
 
 Essentially, agents are chains wrapped with conditional statements and `for`/`while` loops:
 
-![Agentic meme](/output/agent_meme.png)
+![Agentic meme](/blogs/langchain-primer/agent_meme.png)
 
 While the above isn't exactly true, it does have a grain of truth in it. The good news is that we already have an understanding of how we can create the "THEN" blocks. What's left is to understand how we can create the "IF" and "END" blocks.
 
@@ -137,7 +130,7 @@ A key point of difference is that LangGraph is not a [Directed Acyclic Graph (DA
 
 Let's look at an example application made with LangGraph:
 
-![LangGraph](/output/langgraph.png)
+![LangGraph](/blogs/langchain-primer/langgraph.png)
 
 I'll spare the technical details, which you can understand from this tutorial [here](https://langchain-ai.github.io/langgraph/tutorials/introduction/). Here are the key takeaways:
 
