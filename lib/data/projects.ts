@@ -1,6 +1,25 @@
 export const PROJECTS: Project[] = [
 	{
 		isFeatured: true,
+		name: "Pokemon Battling",
+		description:
+			"A Pokemon battling game, implemented fully in TypeScript with an in-browser game engine and websocket support for real-time multiplayer",
+		link: "https://github.com/lakshyaag/pokemon-battling",
+		id: "pokemon-battling",
+		date: "2025-03-29",
+		image: "/projects/pokemon-battling.png",
+		tech: ["Pokemon", "Game Engine", "Websockets"],
+		external: [
+			{
+				label: "GitHub",
+				link: "https://github.com/lakshyaag/pokemon-battling",
+			},
+		],
+		content:
+			"This is my attempt at building a Pokemon battle game with multiplayer supoprt. The objective was to learn more about how websockets work and how they can be used for realtime communication. I utilized the [@pkmn/ps](https://github.com/pkmn/ps) libraries to implement the battle logic and Next.js/TypeScript for a custom frontend.",
+	},
+	{
+		isFeatured: true,
 		name: "Sparse Autoencoder Explorer",
 		description:
 			"A visual exploration of LLM feature activations by generating images on feature-adjusted outputs.",
@@ -26,7 +45,7 @@ export const PROJECTS: Project[] = [
 			"This is a CLI project to attempt visualizing the impact on feature activations in [Goodfire's Llama-3.3-70B SAE](https://www.goodfire.ai/papers/understanding-and-steering-llama-3/) by taking a topic and a feature, generating multiple prompts by varying the feature strength on the topic, and then using those generated prompts as inputs to a diffusion model ([Flux/Schnell](https://fal.ai/models/fal-ai/flux/schnell)). The repository contains the CLI application to perform the above steps and a Streamlit application to easily navigate the tool.",
 	},
 	{
-		isFeatured: true,
+		isFeatured: false,
 		name: "The Heist of Drake: Chapter 1",
 		description:
 			"A choose-your-own-adventure game built using LangGraph, Flux, and Next.js in 24 hours",

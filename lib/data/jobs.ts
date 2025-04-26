@@ -3,10 +3,10 @@ export const WORK_EXPERIENCE: WorkExperience[] = [
 		company: "Memorang",
 		title: "AI Engineer",
 		start: "Sep 2024",
-		end: "Present",
+		end: "Apr 2025",
 		link: "https://memorang.com/",
 		id: "memorang",
-		isVisible: true
+		isVisible: true,
 	},
 	{
 		company: "McGill University",
@@ -15,7 +15,7 @@ export const WORK_EXPERIENCE: WorkExperience[] = [
 		end: "Aug 2024",
 		link: "https://www.mcgill.ca/desautels/",
 		id: "mcgill",
-		isVisible: true
+		isVisible: true,
 	},
 	{
 		company: "Bain & Company",
