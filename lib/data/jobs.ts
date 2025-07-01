@@ -1,5 +1,14 @@
 export const WORK_EXPERIENCE: WorkExperience[] = [
 	{
+		company: "Bain & Company",
+		title: "Software Engineer, Private Equity Innovation",
+		start: "May 2025",
+		end: "Present",
+		link: "https://www.bain.com/industry-expertise/private-equity/",
+		id: "bain-2",
+		isVisible: true,
+	},
+	{
 		company: "Memorang",
 		title: "AI Engineer",
 		start: "Sep 2024",
