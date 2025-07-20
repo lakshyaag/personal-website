@@ -1,0 +1,71 @@
+# Vibe-coding a digital wardrobe
+
+_This project was done in late April - early May 2025. I started writing this blog post after I was done, but never got around to finishing it. I'm posting it in late July 2025 to clear my backlog._
+
+I recently had some time free up after quitting my job and taking a small break. Over this period, I planned to organize my wardrobe because it was a complete mess. It looked really bad, and I had no idea what clothes I owned or what sizes still fit me. So, I decided I would take out all my garments, fold them up again, and rearrange everything into some kind of logical grouping.
+
+For some reason, my brain naturally said, "Hey, this looks like an indexing operation... sure would be nice to digitize it!" At first, I thought, "I'm sure apps like this exist" (and yes, they do: [Indyx](https://www.myindyx.com/), [Whering](https://whering.co.uk/)). But then I figured I could try to "vibe-code" this app myself and build some personal software. Since I had access to GitHub Copilot, I opted to use VS Code instead of Cursor to try out the new agent modes.
+
+Here's a small demo of the application in action:
+
+<video controls width="100%">
+  <source src="/blogs/vibe-coding-a-digtal-wardrobe/digital-wardrobe-demo.mp4" type="video/mp4"  />
+  Your browser does not support the video tag.
+</video>
+
+## Initial scoping
+
+To start, I basically dumped my initial ideas and thoughts into Gemini 2.5 Pro. After a bit of back and forth, I decided that the only features I would support for the first version were:
+
+- Clicking images of an item
+- Adding details and creating a new item
+- Viewing all created items
+
+The idea was extremely basic. I took it to both v0 and Lovable for a first pass to get a sense of how I wanted the UI to look. Lovable seemed like a great option since it promised a native connection to Supabase, which would serve as the backend for the database and storage. However, it crashed before it finished the first request, and that was the end of that. v0 was decent, so I took screenshots for reference. I decided I wanted to iterate on the app locally instead of through a service.
+
+## Choosing the tech stack
+
+I also decided that I would make this a monorepo. I opted to write the backend in Python with FastAPI and the frontend in Vite with React.
+
+The reason to choose Python for the backend instead of keeping everything in TypeScript was driven primarily by the fact that while waiting for v0 to complete a few edits, I decided to increase my scope and add "background removal" as a future feature. While `transformers.js` would have worked, I wanted to explore the stack of a Python backend with a React frontend.
+
+One issue I encountered early on was ensuring type safety. Claude 3.5 Sonnet suggested auto-generating TypeScript types from Pydantic, but the script it wrote was garbage. I decided to define the types in both places, which is probably not good from a scalability perspective. I considered Supabase Edge Functions as well but decided against it, as it would mean maintaining a separate backend in Deno and lead to vendor lock-in.
+## The actual "vibe-coding"
+
+Back to the coding, I set up both the backend and frontend with the recommended defaults manually, ran them both, and confirmed that the respective ports were working. Then, with the plan provided by Gemini Pro, I switched on Agent mode with Claude 3.7 Sonnet. I told it to build the frontend, use `shadcn/ui`, and provided the `v0` screenshots. It did an okay job initially, and after a few more prompts, I was sort of satisfied.
+
+Next, I wanted to tackle the backend and actually make the upload process work. I went to Supabase and created a new project manually. Then, I added the Supabase MCP to the agent mode, gave it the same prompt as the frontend, attached the frontend form logic, and told Claude to first create the necessary tables and then the API endpoint. 
+
+This was the first time in this project that I was actually impressed by the tool calling. As somebody who's been developing for and with AI since early 2023, I usually do not get impressed easily. Claude found the appropriate project and created a couple of tables with proper relationships. I simply clicked "approve" three or four times, and it was all set up without me writing a single line of SQL. Then, because it already had context about the tables it had made, it wrote the API endpoint. Overall, in about 30 minutes, I had a prototype that I could run on my phone's browser.
+
+As much as I tried to prompt it well, I found that Claude 3.7 Sonnet can be just a bit too extra, in my opinion. I had much better results with Claude 3.5 Sonnet for more direct tasks.
+
+After getting the basics down, I chose to tackle deployment. The frontend was pretty direct, thanks to Vercel. For the backend, I wrapped the API in a Docker container and deployed that to Railway. With the basic application done, adding new features was much simpler, as I now had a base to work on.
+
+## Adding AI features
+
+The next steps were largely upgrades to the frontend, adding VLM-based information detection, and creating an outfit generation feature.
+
+**1. VLM-based Information Detection**: This is used to auto-detect certain fields in the item input based on the images uploaded
+The flow for this was:
+1. The actual API call is made in the Python backend with a basic prompt and structured outputs, which returns a Pydantic object.
+2. This is wrapped in a FastAPI `POST` request.
+3. The `POST` request is wrapped in a client-side fetch wrapper to handle errors.
+4. This API wrapper is made into a React hook.
+5. The React hook is then called in the frontend as a blocking operation when a user uploads an image.
+
+**2. Outfit Generation**: Given a set of images, create an image showing it in an outfit
+Here, the structure remains the same as above. The only changes are:
+1. The API is swapped from Gemini to a GPT model with vision capabilities.
+2. The FastAPI `POST` request additionally handles the conversion from a list of item IDs to a list of images for the model.
+3. The React hook is called with a persistent toast notification, since the actual execution time can take close to two minutes.
+
+Obviously, both of the above features worked with below-expected accuracy. This is based on observation, not statistical evidence. I didn't do any deep prompt engineering or other fancy tricks to test the performance of the model provider APIs, since the underlying technology will only get faster and better.
+
+## Closing thoughts
+
+While writing all of this, my Railway deployment actually ran out of its monthly free credits, so the backend had to be taken offline. I didn't get around to implementing auth and all that other stuff - which is probably for the best.
+
+You can check out the code for the project on my GitHub: [https://github.com/lakshyaag/wardrobe-app](https://github.com/lakshyaag/wardrobe-app)
+
+Thanks for reading! 

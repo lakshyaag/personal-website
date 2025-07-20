@@ -1,5 +1,14 @@
 export const BLOG_POSTS: BlogPost[] = [
 	{
+		title: "Vibe-coding a digital wardrobe",
+		description: "My thoughts on vibe-coding as of May 2025.",
+		link: "/blogs/vibe-coding-a-digtal-wardrobe",
+		uid: "vibe-coding-a-digtal-wardrobe",
+		date: "2025-05-01",
+		tags: ["Vibe-coding", "Personal software", "Agents", "Python", "React"],
+	},
+
+	{
 		title: "New Builds 2024",
 		description:
 			"A recap of building a generative choose-your-own-adventure game in 24 hours at New Builds 2024 hackathon",
