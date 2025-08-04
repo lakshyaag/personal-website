@@ -111,4 +111,13 @@ export const BLOG_POSTS: BlogPost[] = [
 		date: "2024-05-24",
 		tags: ["LSTM", "Python", "Deep Learning", "NLP", "RNN"],
 	},
+	{
+		title: "Building a CLI Agent",
+		description:
+			"My experience building a terminal-based AI agent and demystifying the hype around agents.",
+		link: "/blogs/building-a-cli-agent",
+		uid: "building-a-cli-agent",
+		date: "2025-08-03",
+		tags: ["Go", "AI Agents", "CLI Tools", "LLMs", "Development"],
+	},
 ];

@@ -1,0 +1,127 @@
+_TL;DR: I built a CLI agent in Go (never touched Go before) using `claude-4-sonnet` and `gemini-2.5-pro` in Cursor. Having messed around with agents since the ReAct papers dropped in early 2024, the core loop is simple - it's just an LLM with tools in a loop. The hype makes it sound way more complex than it actually is._
+
+Here's a quick demo of my CLI agent in action:
+<video controls width="100%">
+  <source src="/blogs/building-a-cli-agent/cli-agent-demo.mp4" type="video/mp4"  />
+  Your browser does not support the video tag.
+</video>
+
+
+Recently, I decided to build my own terminal-based AI agent as a weekend project, inspired by tools like [Claude Code](https://www.anthropic.com/claude-code) or [Gemini CLI](https://github.com/google-gemini/gemini-cli). I wanted to see how far I could get in building the main pieces, augmented with [Background Agents](https://docs.cursor.com/en/background-agent) in Cursor
+
+I've been playing around with agents since early 2024, back when the ReAct paper was just gaining popularity, and everyone was getting excited about LLMs that could "think and act." The ["ReAct: Synergizing Reasoning and Acting in Language Models"](https://arxiv.org/abs/2210.03629) paper felt like a big deal at the time - this idea of combining reasoning and action in a loop was genuinely novel. Fast-forward to today, and it's wild how that same core concept is still exactly what we're doing, just with better models and fancier tooling around it.
+
+This post draws heavy inspiration from Thorsten Ball's excellent article, [How to Build an Agent](https://ampcode.com/how-to-build-an-agent), which shows you can build a code-editing agent in under 400 lines of code. I remember while reading that, I was like "Yes, exactly, that's all agents are basically. LLMs with tools in a loop.". I wanted to create something similar, but using Gemini instead of Claude.
+
+## So, what actually is an Agent?
+
+There is no agreed upon definition of what an "agent" is. [OpenAI](https://platform.openai.com/docs/guides/agents) defines an agent as something that "represent systems that intelligently accomplish tasks, ranging from executing simple workflows to pursuing complex, open-ended objectives." [Anthropic](https://www.anthropic.com/engineering/building-effective-agents), on the other hand, go a step further and actually distinguish between an agent and a workflow, with the latter is defined as "systems where LLMs and tools are orchestrated through predefined code paths."
+
+![Agent definition](/blogs/building-a-cli-agent/wrecking-its-environment.jpeg)
+
+
+I like this tweet from [@simonw](https://x.com/simonw/status/1843290729260703801) where he attempts to crowdsource the definition of an agent. One of the [replies](https://simonwillison.net/2025/Jun/5/wrecking-its-environment-in-a-loop/) to it was: "An agent is an LLM wrecking its environment in a loop".
+
+At its heart, an AI agent is just an LLM that can use tools and keep a conversation going. You tell the model "hey, when you want to read a file, say `read_file(path)`", then you parse that output, run the actual file read, and shove the result back into the conversation. That's literally it.
+
+The impressive stuff comes from good engineering, and good "context engineering" for that matter. This involves things that range from writing decent prompts, building useful tools, all the way to handling what is added to the conversation and when. But, somehow the marketing and hype has turned this into "AGI-incarnate".
+
+From building agents over the past year for work and for fun, the pattern has stayed more or less the same:
+
+1. **Input**: User types something
+2. **Reasoning**: LLM figures out what to do (if it was trained to do so)
+3. **Action**: Maybe run a tool if needed
+4. **Observation**: Shove the results back into context
+5. **Repeat**: Keep going until done (or it breaks)
+
+## What I built
+
+I made an extremely low-budget version of Gemini CLI that can:
+
+- Read files
+- List directory contents  
+- Create and edit files
+- Search files and patterns
+- Execute shell commands
+
+The app can be configured to use any of the Gemini models, and toggle thinking modes as well as tool confirmations.
+
+Here's the kicker - I built it in Go, and I'd literally never written a line of Go before this project. I'm more of a Python kinda guy, but I've had my fair share of experience with other languages, including a small stint where I tried to learn Rust back in 2022. 
+
+For this one, I watched a 5-minute video explaining the basics of Go, and then jumped straight into Cursor. I knew roughly what I wanted to create, and armed with Bell's post, I was able to jump between `gemini-2.5-pro` and `claude-4-sonnet` to get a working version running. 
+
+_Agents creating an agent - pretty meta, right?_
+
+In code, the simplified core loop looks something like this:
+
+```go
+func (a *Agent) ProcessMessage(userInput string) string {
+    // Add user message to conversation
+    a.Conversation = append(a.Conversation, userInput)
+
+    for {
+        // Send request to LLM
+        response := a.getModelResponse(a.Conversation)
+        
+        // Check for tool calls in response
+        if tool := response.GetToolCall(); tool != nil {
+            // If tool call is found, run the tool and get the result
+            result := a.executeTool(tool.Name, tool.Args)
+            
+            // Add result back to conversation
+            a.Conversation = append(a.Conversation, result)
+            continue
+        }
+        
+        // No tools to run, return the response
+        a.Conversation = append(a.Conversation, response.Text)
+        return response.Text
+    }
+}
+```
+
+With that set, I then turned my attention to learning about "terminal UI" (or TUI for short), and came across [bubbletea](https://github.com/charmbracelet/bubbletea). Now, I'm a sucker for a good terminal experience - the many hours I've spent customizing `oh-my-zsh` and `neovim` are a testament to that. `bubbletea` looked great in their demos and the docs as well, so I piped it straight into Cursor and let it rip.
+
+It's definitely not as polished as the actual thing, which I'm sure is a product of hard work and dedication from the teams at the big labs. But, it can handle basic stuff like editing files, running commands, or poking around directories just by talking to it. The full code is up on [GitHub](https://github.com/lakshyaag/code-editing-agent) if you want to see how hacky it really is. I'm not sure if I'll continue working on it, but it was a fun weekend project.
+
+## What I Actually Learned
+
+Building this thing really hammered home how simple the core concept is. Following Ball's guide, I had something working in a few hours - in a language I'd never used, no less. So, the agent loop itself is trivial. The hard part is the "**context engineering**" - figuring out how to give the agent the right info at the right time without making it confused or chatty.
+
+The LangChain team recently wrote about ["the rise of context engineering"](https://blog.langchain.com/the-rise-of-context-engineering/) and it's spot on - they define it as 
+
+> building dynamic systems to provide the right information and tools in the right format such that the LLM can plausibly accomplish the task.
+
+That's exactly what I found. Building the basic agent harness is straightforward, but the real business value comes from nailing the context engineering part.
+
+### The Actually Hard Parts (AKA Context Engineering)
+
+The loop is easy, but everything else is where you spend your time:
+
+- **System Prompts**: Writing prompts that are clear without being too verbose (models get confused with too much text, but break with too little)
+- **State Tracking**: Keeping track of what directory you're in, what files exist, etc.
+- **Context Management**: Keeping enough conversation history to be useful without hitting token limits (amazing research from Chroma on [context rot](https://research.trychroma.com/context-rot))
+- **Tool Design**: Building tools that are helpful and [MECE](https://en.wikipedia.org/wiki/MECE_principle) - give the model too many options and it gets decision paralysis
+- **Dynamic Context Building**: As the LangChain team points out, this isn't just static prompting - you need systems that can dynamically pull together the right information from multiple sources
+
+Context engineering is on track to become the most important skill for AI engineers (atleast in my opinion). The agent framework is commoditized at this point - the value is in getting the context engineering right. 
+
+I highly recommend checking out this [video from the LangChain team](https://www.youtube.com/watch?v=nyKvyRrpbyY) for a great overview of how to put context engineering into practice.
+
+<iframe width="100%" height="315" src="https://www.youtube.com/embed/nyKvyRrpbyY?si=iAdQH840qG-PlRE9" title="How to apply context engineering" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+
+### How Things Have Shifted Since Early 2024
+
+The ReAct pattern has remained remarkably consistent—the core "think then act" loop is still at the heart of things. What’s really changed is how much simpler everything else has become.
+
+In early 2024, I had to build custom parsers to pull out tool calls from model outputs because the responses were so unpredictable. Sometimes the output matched the expected format, but just as often it didn’t. Since then, the ecosystem has grown rapidly, and there’s a clear trend toward terminal-based workflows. It’ll be interesting to watch how this shapes the AI-powered IDE landscape, especially as tools like Cursor, Windsurf, and others compete for dominance, and now have to fight with likes of Claude Code and Gemini CLI directly.
+
+## What's Next?
+
+I think the core agent pattern is going to stay pretty much the same. Model providers may end up offering a set of tools linked to a model directly, taking away additional complexity from the developer's perspective of having to implement the tool itself for things such as searching the web, or having a sandboxed environment for running code. [The Responses API](https://platform.openai.com/docs/api-reference/responses) from OpenAI is a step in this direction as they offer tools such as `code_interpreter`, `web_search`, and `computer_use` directly in the API with no extra configuration. Further, models are only going to get better (and faster).
+
+In all of this, the real differentiator will be context engineering. This is what will separate something like Claude Code from my hacky TUI. As the basic agent harness becomes commoditized, the value will shift to who can build the best systems for dynamic context management.
+
+If you're curious about this stuff, just build something. Start with Ball's article, throw together a few tools, and see what happens. Use AI to help you write the code if you need to - honestly, it's a perfect use case for it. If you want to peek at my repo, it's [here](https://github.com/lakshyaag/code-editing-agent), but beware - it's a mess since mostly all of it is vibe-coded.
+
+Thanks for reading! I'm currently down a rabbit hole exploring more complex agent architectures and would love to chat about implementations or just the general weirdness of where this is all heading. Hit me up on [X/Twitter](https://x.com/lakshyaag) or [LinkedIn](https://linkedin.com/in/lakshyaag).
