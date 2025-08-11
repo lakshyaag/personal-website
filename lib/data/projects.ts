@@ -220,4 +220,37 @@ export const PROJECTS: Project[] = [
 		content:
 			"An end-to-end data science project that won the hackathon organized by [Compass Analytics](https://www.compassdata.ca/) and [Databricks](https://databricks.com/) for the [NBA](https://en.wikipedia.org/wiki/National_Basketball_Association) utilizing play-by-play data from 1996 to predict score margins for the 2022-2023 season.",
 	},
+	{
+		isFeatured: true,
+		name: "Micrograd",
+		description:
+			"Tiny autograd engine with an interactive Streamlit demo to visualize backpropagation and a 3-class 2D classifier.",
+		link: "https://micrograd-eureka.streamlit.app/",
+		id: "micrograd",
+		date: "2024-07-26",
+		image: "/og.png",
+		tech: [
+			"Autograd",
+			"Backpropagation",
+			"Neural Networks",
+			"Streamlit",
+			"Python",
+		],
+		external: [
+			{
+				label: "GitHub",
+				link: "https://github.com/lakshyaag/micrograd/tree/feat/streamlit-app",
+			},
+			{
+				label: "Streamlit",
+				link: "https://micrograd-eureka.streamlit.app/",
+			},
+			{
+				label: "Tweet",
+				link: "https://x.com/lakshyaag/status/1816540257342628179",
+			},
+		],
+		content:
+			"A minimal automatic differentiation engine inspired by karpathy/micrograd, extended with a 1-hidden-layer MLP and an interactive Streamlit app for 2D, 3-way classification. The app lets you add/modify points, step or play optimization, and inspect the computational graph with values/grads.\n\n- Demo: [Streamlit app](https://micrograd-eureka.streamlit.app/)\n- Code: [GitHub branch](https://github.com/lakshyaag/micrograd/tree/feat/streamlit-app)\n- Context: [Tweet](https://x.com/lakshyaag/status/1816540257342628179)",
+	},
 ];
