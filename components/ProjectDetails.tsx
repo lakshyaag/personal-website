@@ -27,22 +27,43 @@ export function ProjectImage({ src, project }: ProjectImageProps) {
 		>
 			<MorphingDialogTrigger>
 				<div className="aspect-[16/9] w-full overflow-hidden rounded-xl">
-					<img
-						src={src}
-						alt={project.name}
-						className="h-full w-full object-cover"
-					/>
+					{project.video ? (
+						<video
+							src={src}
+							autoPlay
+							muted
+							loop
+							className="h-full w-full object-cover"
+						/>
+					) : (
+						<img
+							src={src}
+							alt={project.name}
+							className="h-full w-full object-cover"
+						/>
+					)}
 				</div>
 			</MorphingDialogTrigger>
 			<MorphingDialogContainer>
 				<MorphingDialogContent className="relative max-h-[80vh] w-[90vw] max-w-3xl overflow-y-auto rounded-2xl bg-zinc-50 p-6 ring-1 ring-zinc-200/50 ring-inset dark:bg-zinc-950 dark:ring-zinc-800/50">
 					<div className="space-y-6">
 						<div className="aspect-[16/9] w-full overflow-hidden rounded-xl bg-zinc-100 dark:bg-zinc-900">
-							<img
-								src={src}
-								alt={project.name}
-								className="h-full w-full object-contain"
-							/>
+							{project.video ? (
+								<video
+									src={src}
+									autoPlay
+									muted
+									loop
+									controls
+									className="h-full w-full object-cover"
+								/>
+							) : (
+								<img
+									src={src}
+									alt={project.name}
+									className="h-full w-full object-cover"
+								/>
+							)}
 						</div>
 
 						<div className="space-y-4">

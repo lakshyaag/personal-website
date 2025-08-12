@@ -14,7 +14,11 @@ const ProjectItem = ({ project }: ProjectProps) => {
 					className="from-zinc-900 via-zinc-800 to-zinc-700 blur-2xl dark:from-zinc-100 dark:via-zinc-200 dark:to-zinc-50"
 					size={64}
 				/>
-				<ProjectImage src={project.image} project={project} />
+				{project.video ? (
+					<ProjectImage src={project.video} project={project} />
+				) : (
+					<ProjectImage src={project.image} project={project} />
+				)}
 			</div>
 			<div className="px-1">
 				<a
