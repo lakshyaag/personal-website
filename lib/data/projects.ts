@@ -45,7 +45,7 @@ export const PROJECTS: Project[] = [
 			"This is a CLI project to attempt visualizing the impact on feature activations in [Goodfire's Llama-3.3-70B SAE](https://www.goodfire.ai/papers/understanding-and-steering-llama-3/) by taking a topic and a feature, generating multiple prompts by varying the feature strength on the topic, and then using those generated prompts as inputs to a diffusion model ([Flux/Schnell](https://fal.ai/models/fal-ai/flux/schnell)). The repository contains the CLI application to perform the above steps and a Streamlit application to easily navigate the tool.",
 	},
 	{
-		isFeatured: false,
+		isFeatured: true,
 		name: "The Heist of Drake: Chapter 1",
 		description:
 			"A choose-your-own-adventure game built using LangGraph, Flux, and Next.js in 24 hours",
@@ -72,7 +72,7 @@ export const PROJECTS: Project[] = [
 			},
 		],
 		content:
-			"At New Builds' hackathon, my team built TDot Goons – a choose your own adventure game using generative AI. The twist? The livestream chat creates the options. We use AI to parse chats and dynamically create the options. Once an option is picked, we use AI to write and draw the next chapter, all on the fly. Check out the demo [here](https://x.com/melkuo/status/1841521131439731038), and my blog post [here](https://lakshyaag.com/blogs/new-builds-2024). The password for the demo is `420blazeit`.",
+			"At New Builds' hackathon, my team built TDot Goons – a choose your own adventure game using generative AI. The twist? The livestream chat creates the options. We use AI to parse chats and dynamically create the options. Once an option is picked, we use AI to write and draw the next chapter, all on the fly, powered by LangGraph. Check out the demo [here](https://x.com/melkuo/status/1841521131439731038), and my blog post [here](https://lakshyaag.com/blogs/new-builds-2024). The password for the demo is `420blazeit`.",
 	},
 
 	{
@@ -227,8 +227,8 @@ export const PROJECTS: Project[] = [
 			"Tiny autograd engine with an interactive Streamlit demo to visualize backpropagation and a 3-class 2D classifier.",
 		link: "https://micrograd-eureka.streamlit.app/",
 		id: "micrograd",
-		date: "2024-07-26",
-		image: "/og.png",
+		date: "2024-07-25",
+		video: "/projects/micrograd-visualizer.mp4",
 		tech: [
 			"Autograd",
 			"Backpropagation",
@@ -251,6 +251,6 @@ export const PROJECTS: Project[] = [
 			},
 		],
 		content:
-			"A minimal automatic differentiation engine inspired by karpathy/micrograd, extended with a 1-hidden-layer MLP and an interactive Streamlit app for 2D, 3-way classification. The app lets you add/modify points, step or play optimization, and inspect the computational graph with values/grads.\n\n- Demo: [Streamlit app](https://micrograd-eureka.streamlit.app/)\n- Code: [GitHub branch](https://github.com/lakshyaag/micrograd/tree/feat/streamlit-app)\n- Context: [Tweet](https://x.com/lakshyaag/status/1816540257342628179)",
+			"A minimal automatic differentiation engine inspired by [karpathy/micrograd](https://github.com/karpathy/micrograd), extended with a 1-hidden-layer MLP and an interactive Streamlit app for 2D, 3-way classification. The app lets you add/modify points, step or play optimization, and inspect the computational graph with values and gradients.",
 	},
 ];
