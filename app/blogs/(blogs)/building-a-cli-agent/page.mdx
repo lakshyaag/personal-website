@@ -1,3 +1,32 @@
+export const metadata = {
+  title: "Building a CLI Agent",
+  description:
+    "My experience building a terminal-based AI agent and demystifying the hype around agents.",
+  openGraph: {
+    title: "Building a CLI Agent",
+    description:
+      "My experience building a terminal-based AI agent and demystifying the hype around agents.",
+    type: "article",
+    url: "https://lakshyaag.com/blogs/building-a-cli-agent",
+    images: [
+      "https://lakshyaag.com/blogs/building-a-cli-agent/wrecking-its-environment.jpeg",
+      "https://lakshyaag.com/og.png",
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Building a CLI Agent",
+    description:
+      "My experience building a terminal-based AI agent and demystifying the hype around agents.",
+    images: [
+      "https://lakshyaag.com/blogs/building-a-cli-agent/wrecking-its-environment.jpeg",
+      "https://lakshyaag.com/og.png",
+    ],
+    creator: "@lakshyaag",
+  },
+  alternates: { canonical: "/blogs/building-a-cli-agent" },
+};
+
 _TL;DR: I built a CLI agent in Go (never touched Go before) using `claude-4-sonnet` and `gemini-2.5-pro` in Cursor. Having messed around with agents since the ReAct papers dropped in early 2024, the core loop is simple - it's just an LLM with tools in a loop. The hype makes it sound way more complex than it actually is._
 
 Here's a quick demo of my CLI agent in action:
