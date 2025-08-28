@@ -1,0 +1,141 @@
+# Building RL environments for open-source AGI
+
+<div className="flex justify-center">
+<Tweet id="1960783427948699680" />
+</div>
+
+## Background and quick summary
+
+* Reinforcement learning (RL), if you zoom out far enough (or zoom in?), is a type of machine learning that involves an agent learning to interact (take **actions**) in an **environment** to maximize a **reward signal**. 
+* RL has existed far, far before the current hype, and is multi-disciplinary, involving ideas from control theory, optimization, statistics, and more.
+* Applied to the world of Language Models (LMs), both large and small, it offers a way to provide a LM with **actions** in that **environment**, and a way to evaluate it based on **reward signals**.
+* From [@karpathy](https://x.com/karpathy/status/1960803117689397543): 
+> Environments have the property that once the skeleton of the framework is in place, in principle the community / industry can parallelize across many different domains, which is exciting.
+
+In this post, I talk about:
+- What an environment is
+- My understanding of [`verifiers`](https://github.com/willccbb/verifiers)
+- How I helped port a couple of benchmarks to PrimeIntellect's Environment Hub
+- Running my own inference server with `Qwen/Qwen3-0.6B`
+
+## What is an environment?
+
+What you see around you is your environment. If you extend that analogy into the world of LMs, then anything that a LM is able to interact with becomes its environment. Put another way, the environment defines the loop of _"state -> action -> reward"_. These are three key components of an environment:
+1. **State**: The current observations about the world for the LM. (e.g., question, tools, etc.)
+2. **Action**: The action that the LM takes, either in the form of reasoning, direct response, or a tool call. (e.g., "Call `get_weather` to get the current weather")
+3. **Feedback**: The result of the action taken by the LM, sent as feedback to the LM. (e.g., "✔️ `get_weather()` tool called, reward = 1.0")
+
+<ImageWithCaption src="/blogs/rl-environments/AE_loop.png" alt="Environment loop" caption="Environment loop ([Credits](https://gymnasium.farama.org/introduction/basic_usage/))" />
+
+An extremely simple example of this is the [`math-python`](https://app.primeintellect.ai/dashboard/environments/will/math-python) environment, which defines:
+
+* A Python REPL as a tool
+* Reward functions that judge correctness using symbolic equivalence and number of errors as separate signals
+
+Another example of an environment is the [Wordle](https://www.nytimes.com/games/wordle/index.html) game, where the [LM is tasked](https://app.primeintellect.ai/dashboard/environments/will/wordle) with solving a puzzle, and getting feedback on things such as correctness, number of steps taken, etc. It's easy to see how this conceptual model can be applied to multiple domains when scaled up: 
+
+* `computer-use` becomes an environment where the LM has access to a browser and receives feedback on tasks such as navigating to a webpage
+* `coding` becomes an environment where the LM has access to a code editor, the terminal, and receives feedback on tasks such as solving issues, fixing bugs, etc.
+* `<something>` becomes an environment where the LM has access to `<thing 1>, <thing 2>, ...` and receives feedback on areas such as `<task 1>, <task 2>, ...`.
+
+
+## But how do we use these environments?
+
+Hopefully, you're now sold on the idea of environments, but that's just the first half of the puzzle. The other challenge comes from the fact that these environments are not defined in a uniform way, which makes it difficult to replicate results, and thus, trust benchmarks.
+
+A benchmark is created when a particular dataset (or a set of datasets) is used to evaluate the performance of a LM on a given environment. Even if the dataset doesn't change, the way it's processed, or the way the LM is invoked may not be the same.
+
+The [`verifiers`](https://github.com/willccbb/verifiers) project is a great attempt at solving this problem. It aims to provide a standardized way of defining environments with _LEGO_-esque blocks: datasets, parsers, rubrics, and rollout. You can read more about the technical implementation [here](https://github.com/willccbb/verifiers/blob/b0e2df3fbdc09333e967448ee7d8d1260dc59580/README.md), but I will talk about my experience when porting two benchmarks to PrimeIntellect's [Environment Hub](https://app.primeintellect.ai/dashboard/environments).
+
+## Porting environments to the Hub
+
+Late Friday night, I saw this tweet from [@willccbb](https://x.com/willccbb/status/1959084653131813134) crowdsourcing efforts for agent dev work. I was already looking into RL, so this was the perfect opportunity to learn by doing. I ended up porting two benchmarks using the `verifiers` library to create environments: [BrowseComp by OpenAI](https://openai.com/index/browsecomp/), and [LisanBench by @scaling01](https://x.com/scaling01/status/1928510435164037342)
+
+In both, the general design that I followed to work with the `verifiers` library was:
+
+1. Loading the dataset: Each environment defines its dataset differently, but the general idea is the same: 
+> Create a Hugging Face dataset with "question" and "answer" columns, where each row defines an example.
+
+2. Creating a parser: The parser is responsible for actually reading the LM response and extracting points of interest. This is extremely useful if your domain has a custom format that you would like to work on top of. The library also offers a few helpers such as `vf.ThinkParser` and `vf.XMLParser` for common use cases.
+
+3. Creating reward functions for defining rubrics: The rubric is a set of functions that take in the prompt, completion, state, and returns a number defining the value of a specific signal. This reward can either be deterministic (e.g., check `2 + 2 = 4`), or stochastic (e.g., using LLM-as-judge to measure reward). Each reward can be weighted and grouped to create different signals.
+
+For example, a simple reward function would be:
+```python
+def exact_match(prompt, completion, answer, state):
+    """Reward exact matches."""
+    response = parser.parse(completion)
+    return 1.0 if response.strip() == answer.strip() else 0.0
+```
+
+4. Creating a rollout strategy: The rollout strategy defines how the LM interacts with the environment. Broadly, this can be thought of as a _"single turn"_, where the LM is given a question and an answer is returned, or _"multi turn"_, where the LM is given a question and is allowed to interact with the environment multiple times until it decides to terminate (similar to [ReAct](https://lakshyaag.com/blogs/building-a-cli-agent)).
+
+
+The library is quite simple to understand and the [documentation](https://verifiers.readthedocs.io/en/latest/overview.html) is a great resource to get started.
+
+## Running an evaluation
+
+Something new that I tried out was actually running an open-source model on a GPU, and then running an evaluation using the Environment Hub. I've dabbled with running models directly before, but those were in the context of diffusion models (see [here](https://lakshyaag.com/blogs/understanding-diffusion)). 
+
+It was quite easy to get a hosted instance at [PrimeIntellect](https://app.primeintellect.ai/dashboard/create-cluster). I went with a single L40S to keep things simple, and then logged into the instance using the `ssh` command. Once in, the steps to set up an inference server were:
+
+1. Install `uv`: 
+```bash
+curl -LsSf https://astral.sh/uv/install.sh | sh
+```
+
+2. Clone the `prime-rl` repo:
+```bash
+git clone https://github.com/primeintellect/prime-rl.git
+```
+
+3. Install the dependencies:
+```bash
+cd prime-rl
+uv sync
+```
+
+To actually run the server, you will need to define a `infer.toml` (similar to the `configs/**/infer.toml` files in the repo) file somewhere with your configuration. To follow along, this is the one I used:
+
+```toml
+[model]
+model = "Qwen/Qwen3-0.6B"
+```
+
+With that defined, you can run:
+```bash
+uv run inference @ <path-to-your-infer.toml>
+```
+
+This will start the server through vLLM (takes a while to start up), and serve a FastAPI server at `http://localhost:8000/v1`. From here, you basically have your own OpenAI-compatible API server that you point your applications to.
+
+### Installing the environment
+
+Once you have the server running, you can install the [example environment](https://app.primeintellect.ai/dashboard/environments/adi-kmt/nyt-connections) by running:
+
+```bash
+cd /prime-rl/environments
+prime env pull adi-kmt/nyt-connections
+```
+
+To run the evaluation, you can use the `vf-eval` command:
+```bash
+cd adi-kmt-nyt-connections-latest
+uv run vf-eval nyt-connections  -m "Qwen/Qwen3-0.6B" -b "http://localhost:8000/v1" -k "_API_KEY" -n 10 -r 2 -c 4 -a '{"num_eval_samples": 10}' -s
+```
+
+With that, the library will run the evaluation with the defined settings, and you should see the results in the terminal. To view it in a more interactive way, you can use `uv run vf-tui` from the same directory to open a dashboard.
+
+<ImageWithCaption src="/blogs/rl-environments/vf-tui.png" alt="TUI" caption="Terminal UI showing the results of an evaluation" />
+
+As we can see above, the `Qwen/Qwen3-0.6B` model gets an average reward of `0.1` across the 10 examples, with each example running twice to account for variance.
+
+## Next steps
+
+It was a great learning experience, and I'm grateful to Will and the Prime Intellect team for the opportunity to work on this and learn from it. I ended up shipping a couple of contributions to the `verifiers` repository as well for some quality-of-life improvements.
+
+I'm going to continue exploring this space - my next objective is to actually train a small model on an environment and follow that process to learn more. 
+
+> This is not a sponsored post. I am genuinely impressed with the work that Prime Intellect is doing, and want to push the boundaries to help reach open-source AGI.
+
+Thanks for reading! If you would like to chat more custom RL environments, or just discuss generally about the whole space, hit me up on [X/Twitter](https://x.com/lakshyaag) or [LinkedIn](https://linkedin.com/in/lakshyaag).

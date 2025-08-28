@@ -1,5 +1,14 @@
 export const BLOG_POSTS: BlogPost[] = [
 	{
+		title: "Building RL environments for open-source AGI",
+		description:
+			"Weekend notes on porting environments, running evaluations, and serving LMs on a cloud-hosted GPU.",
+		link: "/blogs/rl-environments",
+		uid: "rl-environments",
+		date: "2025-08-23",
+		tags: ["RL", "Open-source AGI", "vLLM", "LLMs", "Evaluations"],
+	},
+	{
 		title: "Vibe-coding a digital wardrobe",
 		description: "My thoughts on vibe-coding as of May 2025.",
 		link: "/blogs/vibe-coding-a-digtal-wardrobe",
