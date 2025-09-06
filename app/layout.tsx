@@ -21,13 +21,6 @@ export const metadata: Metadata = {
 	openGraph: {
 		title: "Lakshya Agarwal",
 		description: "Lakshya Agarwal's personal corner on the Internet!",
-		images: [
-			{
-				url: "/og.png",
-				width: 800,
-				height: 400,
-			},
-		],
 		url: "https://lakshyaag.com",
 		locale: "en_US",
 		type: "website",
@@ -37,7 +30,6 @@ export const metadata: Metadata = {
 		card: "summary_large_image",
 		title: "Lakshya Agarwal",
 		description: "Lakshya Agarwal's personal corner on the Internet!",
-		images: ["/og.png"],
 		creator: "@lakshyaag",
 	},
 };
