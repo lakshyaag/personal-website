@@ -1,0 +1,250 @@
+export const metadata = {
+    title: "Exploring GEPA and DSPyfor AI system optimization",
+    description:
+        "An overview of DSPy and GEPA for AI system optimization.",
+    openGraph: {
+        title: "Exploring GEPA and DSPyfor AI system optimization",
+        description:
+            "An overview of DSPy and GEPA for AI system optimization.",
+        type: "article",
+        url: "https://lakshyaag.com/blogs/gepa",
+        images: [
+            {
+                url: "https://lakshyaag.com/api/og/blogs/gepa",
+                width: 1200,
+                height: 630,
+                alt: "GEPA Tutorial",
+            },
+        ],
+    },
+    twitter: {
+        card: "summary_large_image",
+        title: "Exploring GEPA and DSPyfor AI system optimization",
+        description:
+            "An overview of DSPy and GEPA for AI system optimization.",
+        images: [
+            {
+                url: "https://lakshyaag.com/api/og/blogs/gepa",
+                width: 1200,
+                height: 630,
+                alt: "GEPA Tutorial",
+            },
+        ],
+        creator: "@lakshyaag",
+    },
+    alternates: { canonical: "/blogs/gepa" },
+};
+
+# Exploring GEPA and DSPyfor AI system optimization
+
+## Background info about DSPy
+
+* [DSPy](https://dspy.ai/) is a declarative framework for building language model (LM) systems. At its core, it provides a set of well-designed abstractions to build AI programs in a more "PyTorch"-oriented approach.
+* It brings the idea of "prompt engineering" or "prompt optimization" to a much more manageable level of defining `signatures`, which are the inputs and outputs of the program, rather than dealing with each individual token in the prompt.
+* A `module` in DSPy defines the program itself, and can be composed of other modules (`ChainOfThought`, `ReAct`, etc.) to build more complex programs. Together, these abstractions allow you to build systems in a more realistic way, and enables faster experimentation.
+* An `optimizer` in DSPy allows you to _train_ your program on a particular trajectory to improve your modules (and prompts) to perform better on certain tasks. This will be the focus of this post.
+* A simple DSPy program can be defined as:
+```python
+import dspy
+
+math = dspy.Predict("question -> steps: List[str], answer: str")
+math(question="Two dice are tossed. What is the probability that the sum equals two?")
+
+>>> Prediction(
+    steps=[
+        'There are 6 faces on each die, so the total number of outcomes is 6 * 6 = 36.',
+        'The sum of the numbers on the two dice equals two only when both dice show a 1. This is just one specific outcome: (1, 1).',
+        'Therefore, there is only 1 favorable outcome.',
+        'The probability of the sum being two is the number of favorable outcomes divided by the total number of possible outcomes, which is 1/36.'
+    ],
+    answer=0.0277776
+)
+```
+
+* There is a lot more to understand about DSPy, but I want to keep this post focused on GEPA. To read more about DSPy, I recommend checking out [this blog post](https://thedataquarry.com/blog/learning-dspy-1-the-power-of-good-abstractions/) by [Prashanth Rao](https://x.com/tech_optimist).
+
+
+## What does `optimization` mean here?
+
+The fundamental model of the current wave of AI software looks a lot like this:
+<ImageWithCaption src="/blogs/gepa/ai_system_finetuning.png" alt="Simplified view of fine-tuning" caption="Simplified view of fine-tuning" />
+
+When you're building these systems, the work can broadly be split into:
+1. Thinking about the system architecture: 
+    * What are the inputs?
+    * What do I expect the output to be?
+    * What tools will I have to provide to the model?
+    * How do I measure success?
+
+2. Building the system:
+    * What prompts should I write?
+    * What framework should I commit to?
+    * What model should I use?
+    * How should I format my tool results?
+
+Most teams I observe spend a lot of their time on the second part, and not enough on the first part. In other words, a lot of time currently may be wasted on incremental improvements through manual prompt engineering, while the real work is in unraveling the complexity of the system architecture, which is only possible by starting simple and iteratively building up.
+
+To that end, an AI system can be thought of as a set of three components:
+- **Dataset**: A collection of examples that comprehensively represent the set of tasks for the system. It can be represented as dictionaries containing any information required by the task. For example, [HotpotQA](https://huggingface.co/datasets/hotpotqa/hotpot_qa), [RealworldQA](https://huggingface.co/datasets/xai-org/RealworldQA), etc.
+- **Task**: A program that maps input → output. This is where the optimization happens, either directly on the language model weights or in the prompts across the system.
+- **Scorer**: A function that provides a metric (and optionally feedback) for the task, based on an example and the corresponding output. A scorer can be simple, such as `exact_match(prediction, answer)`, or more complex, such as an LLM-as-judge rubric that asks another model to grade correctness. 
+
+    > A natural question that arises here: Wait, how do I ensure that the LLM-as-judge is grading correctly? For the interested, I invite you to read the [AlignEval article](https://eugeneyan.com/writing/aligneval/) by [Eugene Yan](https://x.com/eugeneyan) for an extremely comprehensive answer.
+
+To summarize, optimizing an AI system can be viewed as a search over the task space, with guidance from the scorer.
+
+## What is [GEPA](https://arxiv.org/pdf/2507.19457)?
+
+GEPA, or Genetic-Pareto, is a sample-efficient optimizer based on three principles: Genetic evolution, Pareto filtering, and Reflection using natural language feedback.
+
+From the paper:
+
+<ImageWithCaption src="/blogs/gepa/gepa_overview.png" alt="Source: [GEPA](https://arxiv.org/pdf/2507.19457) principles" caption="Source: [GEPA](https://arxiv.org/pdf/2507.19457)" />
+
+The goal of the optimization process is to identify a set of prompts in the program that maximize the score over the tasks, constrained by a budget. When GEPA starts, it initializes a candidate pool $P$. Each candidate is a set of prompts to be used in the program, which means initially there is only 1 candidate in the pool. Iteratively, GEPA will propose new candidates by modifying existing candidates based on their previous states to accumulate lessons as the genetic tree evolves. In each iteration, GEPA does the following:
+
+1. Selects the best candidate from the pool $P$ based on the score over the tasks (see [Pareto filtering](#pareto-frontier-and-pareto-filtering-with-an-analogy) below)
+2. Generates a new candidate by modifying the selected candidate through reflection (usually a strong LM, such as `gpt-5-high` or `gemini-2.5-pro`).
+3. Evaluates the new candidate on a minibatch of tasks
+4. If the new candidate performs better than the selected candidate, the new candidate is added to the pool $P$ and it is evaluated on the full validation set
+5. Else, the new candidate is discarded and the process repeats until the budget is exhausted.
+
+### Pareto filtering
+
+The sub-problem of selecting candidates in each iteration determines the "explore-exploit" tradeoff in the optimization process, which is an extremely crucial component of any decision making process. Strategies can range from purely exploitative (always selecting the best candidate) to purely exploratory (randomly selecting a candidate), with multiple intermediate strategies in between. Both extremes on this spectrum have significant drawbacks:
+    * A purely exploitative strategy may get stuck in a local optimum, as a dominant strategy will always be selected, giving no room for potentially better strategies.
+    * A purely exploratory strategy may not converge to a good solution, as it may spend too much time exploring inferior strategies.
+
+The authors of GEPA employ a strategy that keeps only the best performers. For every training example, GEPA tracks the highest score any candidate has achieved so far. creating a "Pareto frontier" of scores. Then, it keeps only those candidates that hit at least one of these best scores to "filter" the pool down to candidates that have demonstrated success in some form. Candidates in the pool are then pruned based on dominance to prevent the pool from growing too large. Finally, GEPA randomly picks a candidate from the pruned pool, giving higher chances to those that achieved the most best scores. 
+
+This strategy helps escaping a local optimum, but also prevents excessive exploration.
+
+To write:
+## Sample optimization run
+
+### Dataset, Task, Scorer
+### Inference provider
+### Results
+
+
+---
+
+Lock those in, and let an optimizer search the task space with guidance from the scorer.
+
+## The three concepts
+
+
+### 1) Dataset
+
+For this tutorial, I used a small public “browsing QA” dataset. Each row has a natural‑language question and a ground‑truth answer. In DSPy terms, we’ll convert rows into `dspy.Example(question=..., answer=...).with_inputs("question")`. You can replace this with anything — a synthetic set for prompt fiddling, a production trace, or unlabeled inputs if your scorer doesn’t need ground truth.
+
+```python
+# Each example has: question (input), answer (reference), and optional metadata
+examples = [
+    dspy.Example(question="Who wrote The Selfish Gene?", answer="Richard Dawkins").with_inputs("question"),
+    dspy.Example(question="Capital of France?", answer="Paris").with_inputs("question"),
+]
+```
+
+### 2) Task
+
+The task is “how do we produce an answer?” In my notebook, that’s a small ReAct‑style module that can:
+
+- call a web search tool (Exa),
+- fetch a page and convert it to markdown,
+- ask a model to answer from those contents.
+
+In DSPy, that’s a `dspy.Module` wrapping `dspy.ReAct` over two tools: `search_tool` and `ask_about_webpage_tool`.
+
+```python
+class BrowseCompModule(dspy.Module):
+  def __init__(self, tools: list[dspy.Tool], max_iters: int = 3):
+    super().__init__()
+    self.react = dspy.ReAct(AgentQA, tools=tools, max_iters=max_iters)
+
+  def forward(self, question: str):
+    result = self.react(question=question)
+    return dspy.Prediction(answer=result.answer)
+```
+
+You can swap anything inside the task: base model, temperatures, prompts, the tools themselves, or the controller (`ReAct` vs a static chain). That’s the search space GEPA explores.
+
+### 3) Scorer
+
+A scorer takes `(question, output, answer)` and returns a score plus optional feedback. The simplest version is a function like `int(output == answer)`. For open‑ended text, I used LLM‑as‑judge: a short rubric that asks a small eval model to grade correctness and provide a rationale. That gives GEPA dense feedback to improve the task.
+
+```python
+def metric_with_feedback(example: dspy.Example, pred: dspy.Prediction):
+  with dspy.context(lm=eval_lm):
+    r = judge(question=example.question, response=pred.answer, correct_answer=example.answer)
+  score = 1 if r.correct == "yes" else 0
+  feedback = f"Correct: {example.answer}\nYours: {pred.answer}\nWhy: {r.reasoning}"
+  return dspy.Prediction(score=score, feedback=feedback)
+```
+
+## Putting it together with GEPA
+
+GEPA in DSPy takes your `task`, `train/dev sets`, and `scorer`, and runs a guided search over task configs. It uses the feedback signal to reflect and propose changes (e.g., prompts, temperatures, few‑shots) that increase your metric.
+
+```python
+from dspy import GEPA
+
+optimizer = GEPA(
+  metric=metric_with_feedback,
+  max_metric_calls=60,
+  num_threads=8,
+  reflection_minibatch_size=2,
+  reflection_lm=reflection_lm,
+)
+
+optimized = optimizer.compile(
+  program=BrowseCompModule(tools=[search_tool, ask_about_webpage_tool], max_iters=3),
+  trainset=trainset[:10],
+  valset=devset[:10],
+)
+```
+
+After compilation, `optimized` is just another DSPy module — call it like the original task, but expect better behavior on average under your metric.
+
+## A minimal end‑to‑end run
+
+Here’s a compact example that mirrors the notebook setup (search + webpage QA + LLM‑as‑judge):
+
+1. Build dataset: decrypt rows → `(question, answer)` → `dspy.Example`
+2. Configure models: base/answer/eval/reflection LMs
+3. Define tools: `exa_search`, `ask_about_webpage`
+4. Wrap task: `BrowseCompModule`
+5. Define scorer: `judge` → `metric_with_feedback`
+6. Optimize with GEPA → get `optimized_program`
+
+Then evaluate on a small hold‑out with `dspy.evaluate.Evaluate(metric=metric, ...)`.
+
+## Tips from running this
+
+- **Keep the scorer sharp**: Your system will optimize whatever you measure. If the rubric is loose, you’ll overfit to style, not substance.
+- **Bound the search**: Start with a small space (few temperatures/prompts), short `max_iters`, tiny train/val slices. Scale when you see signal.
+- **Use lightweight eval LMs**: The judge doesn’t need to be huge; consistency matters more than raw capability.
+- **Make errors legible**: Have the scorer return feedback that points to fixable mistakes (missing citation, wrong entity, vague phrasing).
+
+## Where GEPA fits
+
+I think of GEPA as “prompt + policy search with feedback.” It’s not a silver bullet, but it’s a solid default for:
+
+- rapidly prototyping agents and chains,
+- upgrading prompts/configs without manual fiddling,
+- turning ad‑hoc evaluation into an optimization loop.
+
+If you’ve already got traces and metrics, you’re one `scorer` away from closing the loop.
+
+## Appendix: Swap any part
+
+- **Dataset**: move from synthetic QAs to real user questions; drop answers and switch to heuristic scorers
+- **Task**: replace ReAct with a simple chain; add a reranker; turn up/down temperature; try a different base model
+- **Scorer**: exact‑match, fuzzy string, regex checks, reference‑free style/content heuristics, or a compact LLM‑as‑judge
+
+If you try this with your own dataset or task, I’d love to hear how it goes. DM me on X or LinkedIn.
+
+## References
+
+- [DSPy tutorial: GEPA for AIME](https://dspy.ai/tutorials/gepa_aime/)
+- [Pareto improvements for language model programs (arXiv:2507.19457)](https://arxiv.org/abs/2507.19457)
