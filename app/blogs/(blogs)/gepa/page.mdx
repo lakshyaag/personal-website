@@ -104,7 +104,7 @@ From the paper:
 The goal of the optimization process is to identify a set of prompts in the program that maximize the score over the tasks, constrained by a budget. When GEPA starts, it initializes a candidate pool $P$. Each candidate is a set of prompts to be used in the program, which means initially there is only 1 candidate in the pool. Iteratively, GEPA will propose new candidates by modifying existing candidates based on their previous states to accumulate lessons as the genetic tree evolves. In each iteration, GEPA does the following:
 
 1. Selects the best candidate from the pool $P$ based on the score over the tasks (see [Pareto filtering](#pareto-frontier-and-pareto-filtering-with-an-analogy) below)
-2. Generates a new candidate by modifying the selected candidate through reflection (usually a strong LM, such as `gpt-5-high` or `gemini-2.5-pro`).
+2. Generates a new candidate by modifying the selected candidate through reflection (usually a strong LM, such as `gpt-5-high` or `gemini-2.5-pro`). In this step, feedback from previous generations is used to guide the reflection process, turning the evaluation trace into a diagnostic signal.
 3. Evaluates the new candidate on a minibatch of tasks
 4. If the new candidate performs better than the selected candidate, the new candidate is added to the pool $P$ and it is evaluated on the full validation set
 5. Else, the new candidate is discarded and the process repeats until the budget is exhausted.
@@ -119,132 +119,170 @@ The authors of GEPA employ a strategy that keeps only the best performers. For e
 
 This strategy helps escaping a local optimum, but also prevents excessive exploration.
 
-To write:
-## Sample optimization run
+## Running GEPA on the PIQA dataset
 
-### Dataset, Task, Scorer
-### Inference provider
-### Results
+To make things concrete, let's walk through a simple example of running GEPA on a toy dataset.
 
+### Dataset
 
----
+I'm using the [PIQA: Reasoning about Physical Commonsense in Natural Language](https://huggingface.co/datasets/lighteval/piqa) dataset, which contains a question with two options in a multiple choice format.
 
-Lock those in, and let an optimizer search the task space with guidance from the scorer.
+A sample of the dataset is shown below:
+```json
 
-## The three concepts
+{
+    "goal": "Secure a wire to a battery terminal.", 
+    "sol1": "Use a plastic chip clip to secure a wire to a battery terminal.", 
+    "sol2": "Use alligator clips to secure a wire to a battery terminal.", 
+    "label": 1
+}
+```
 
-
-### 1) Dataset
-
-For this tutorial, I used a small public “browsing QA” dataset. Each row has a natural‑language question and a ground‑truth answer. In DSPy terms, we’ll convert rows into `dspy.Example(question=..., answer=...).with_inputs("question")`. You can replace this with anything — a synthetic set for prompt fiddling, a production trace, or unlabeled inputs if your scorer doesn’t need ground truth.
+The dataset contains three splits: `train`, `validation`, and `test`. Since the `test` split does not contains the actual labels, I will not be using it for this post. Instead, the `validation` split will act as the test set, while the `train` split will be split into training and development sets.
 
 ```python
-# Each example has: question (input), answer (reference), and optional metadata
-examples = [
-    dspy.Example(question="Who wrote The Selfish Gene?", answer="Richard Dawkins").with_inputs("question"),
-    dspy.Example(question="Capital of France?", answer="Paris").with_inputs("question"),
+train_dataset = [
+    dspy.Example(**d).with_inputs("goal", "sol1", "sol2") for d in dataset["train"]
 ]
+
+test_dataset = [
+    dspy.Example(**d).with_inputs("goal", "sol1", "sol2") for d in dataset["validation"]
+]
+
+random.Random(1).shuffle(train_dataset)
+
+trainset = train_dataset[:300]
+devset = train_dataset[300:600]
+
+testset = test_dataset[:100]
 ```
 
-### 2) Task
+### Task
 
-The task is “how do we produce an answer?” In my notebook, that’s a small ReAct‑style module that can:
+The task here is direct: Given a question, select the correct answer from the two options. In DSPy, this program can be written as:
+```python
+class PIQA(dspy.Signature):
+    """Based on the question and the two options, select the correct answer."""
 
-- call a web search tool (Exa),
-- fetch a page and convert it to markdown,
-- ask a model to answer from those contents.
+    goal: str = dspy.InputField()
+    sol1: str = dspy.InputField()
+    sol2: str = dspy.InputField()
 
-In DSPy, that’s a `dspy.Module` wrapping `dspy.ReAct` over two tools: `search_tool` and `ask_about_webpage_tool`.
+    answer: str = dspy.OutputField(description="The correct option number (0 if sol1 is correct, 1 if sol2 is correct) corresponding to the answer.")
+
+program = dspy.ChainOfThought(PIQA)
+```
+
+### Scorer
+
+The scorer is also straightforward. We can compare the model's predicted answer with the `label` field in the dataset and assign a score of 1 if they match, otherwise 0. Since we will be using reflection to guide the prompt mutation, we can return natural language feedback depending on the score:
 
 ```python
-class BrowseCompModule(dspy.Module):
-  def __init__(self, tools: list[dspy.Tool], max_iters: int = 3):
-    super().__init__()
-    self.react = dspy.ReAct(AgentQA, tools=tools, max_iters=max_iters)
+def metric_with_feedback(
+    example: dspy.Example,
+    pred: dspy.Prediction,
+    trace=None,
+    pred_trace=None,
+    pred_name=None,
+):
+    try:
+        score = 1 if int(pred.answer) == example.label else 0
 
-  def forward(self, question: str):
-    result = self.react(question=question)
-    return dspy.Prediction(answer=result.answer)
+    except Exception:
+        feedback_text = dedent(
+            f"""
+        There was an error in processing the answer: {e}. Please ensure that you follow the instructions carefully.
+        """
+        ) 
+
+        return dspy.Prediction(
+            score=0,
+            feedback=feedback_text,
+        )
+    
+    correct_answer = example.get(f"sol{example.label + 1}")
+
+    feedback_text = dedent(
+        f"""
+    You chose the {"correct" if score == 1 else "incorrect"} answer!
+    Correct answer: {correct_answer}
+    """
+    )
+
+    return dspy.Prediction(
+        score=score,
+        # This feedback will be sent only to the reflection LM for mutation
+        feedback=feedback_text,
+    )
 ```
 
-You can swap anything inside the task: base model, temperatures, prompts, the tools themselves, or the controller (`ReAct` vs a static chain). That’s the search space GEPA explores.
+### Inference provider and models
 
-### 3) Scorer
+With the three components defined, we can now set up inference. DSPy integrates with [LiteLLM](https://docs.litellm.ai/docs/providers) to support a wide range of inference providers. For this example, I used a single A100 GPU instance on [PrimeIntellect](https://app.primeintellect.ai/dashboard/instances) as my provider. A brief set of instructions to set up the instance is provided in the [Appendix](#appendix).
 
-A scorer takes `(question, output, answer)` and returns a score plus optional feedback. The simplest version is a function like `int(output == answer)`. For open‑ended text, I used LLM‑as‑judge: a short rubric that asks a small eval model to grade correctness and provide a rationale. That gives GEPA dense feedback to improve the task.
+For both the base model and reflection model, I chose [`Qwen/Qwen3-8B`](https://huggingface.co/Qwen/Qwen3-8B). While using a more powerful model for reflection can potentially improve performance, the actual benefits depend heavily on the specific task. Here's how to configure the models in DSPy:
 
 ```python
-def metric_with_feedback(example: dspy.Example, pred: dspy.Prediction):
-  with dspy.context(lm=eval_lm):
-    r = judge(question=example.question, response=pred.answer, correct_answer=example.answer)
-  score = 1 if r.correct == "yes" else 0
-  feedback = f"Correct: {example.answer}\nYours: {pred.answer}\nWhy: {r.reasoning}"
-  return dspy.Prediction(score=score, feedback=feedback)
+lm = dspy.LM(
+    "openai/Qwen/Qwen3-8B",
+    api_base="http://localhost:8000/v1",
+    api_key="API_KEY",
+    temperature=None,
+    max_tokens=16384,
+)
+
+dspy.configure(lm=lm)
 ```
 
-## Putting it together with GEPA
+To ensure everything is working, we can run a simple query:
+```python
+response = program(goal="How do you wash pillows?", sol1="Warm water and gentle cycle", sol2="Warm water and normal cycle")
 
-GEPA in DSPy takes your `task`, `train/dev sets`, and `scorer`, and runs a guided search over task configs. It uses the feedback signal to reflect and propose changes (e.g., prompts, temperatures, few‑shots) that increase your metric.
+print(response)
+
+>>> Prediction(
+    reasoning="The correct approach involves using a gentle cycle for washing pillows to avoid damaging the fabric or filling. Solution 1 specifies the gentle cycle, which is more suitable for delicate pillow materials, while Solution 2 recommends the normal cycle, which could be too harsh.",
+    answer=0
+)
+```
+
+If you've made it this far, then congratulations! You've successfully made a simple AI system. Next, let's run the optimization process.
+
+### Running the optimization
+
+While GEPA offers a nice [adapter](https://github.com/gepa-ai/gepa/blob/main/src/gepa/core/adapter.py) to pair with any existing system, using it in DSPy is the easiest and recommended way to get started.
 
 ```python
 from dspy import GEPA
 
 optimizer = GEPA(
-  metric=metric_with_feedback,
-  max_metric_calls=60,
-  num_threads=8,
-  reflection_minibatch_size=2,
-  reflection_lm=reflection_lm,
+    metric=metric_with_feedback,
+    auto="light",
+    num_threads=64,
+    track_stats=True,
+    reflection_minibatch_size=16,
+    reflection_lm=lm,
 )
 
-optimized = optimizer.compile(
-  program=BrowseCompModule(tools=[search_tool, ask_about_webpage_tool], max_iters=3),
-  trainset=trainset[:10],
-  valset=devset[:10],
+optimized_program = optimizer.compile(
+    program=program,
+    trainset=trainset,
+    valset=devset,
 )
 ```
 
-After compilation, `optimized` is just another DSPy module — call it like the original task, but expect better behavior on average under your metric.
+With this, you should see the optimization process begin. After a few minutes (or hours), the `optimized_program` will contain an updated set of instructions that should hopefully perform better on the test set than the baseline program.
 
-## A minimal end‑to‑end run
+### Results
 
-Here’s a compact example that mirrors the notebook setup (search + webpage QA + LLM‑as‑judge):
+I have deliberately kept the dataset size small to finish the run quickly for this post. Therefore, the actual performance results are highly directional and not worth reporting. However, we can see the baseline and optimized prompt side by side:
 
-1. Build dataset: decrypt rows → `(question, answer)` → `dspy.Example`
-2. Configure models: base/answer/eval/reflection LMs
-3. Define tools: `exa_search`, `ask_about_webpage`
-4. Wrap task: `BrowseCompModule`
-5. Define scorer: `judge` → `metric_with_feedback`
-6. Optimize with GEPA → get `optimized_program`
+TODO: Add side-by-side string comparison widget
 
-Then evaluate on a small hold‑out with `dspy.evaluate.Evaluate(metric=metric, ...)`.
+## Conclusion
 
-## Tips from running this
-
-- **Keep the scorer sharp**: Your system will optimize whatever you measure. If the rubric is loose, you’ll overfit to style, not substance.
-- **Bound the search**: Start with a small space (few temperatures/prompts), short `max_iters`, tiny train/val slices. Scale when you see signal.
-- **Use lightweight eval LMs**: The judge doesn’t need to be huge; consistency matters more than raw capability.
-- **Make errors legible**: Have the scorer return feedback that points to fixable mistakes (missing citation, wrong entity, vague phrasing).
-
-## Where GEPA fits
-
-I think of GEPA as “prompt + policy search with feedback.” It’s not a silver bullet, but it’s a solid default for:
-
-- rapidly prototyping agents and chains,
-- upgrading prompts/configs without manual fiddling,
-- turning ad‑hoc evaluation into an optimization loop.
-
-If you’ve already got traces and metrics, you’re one `scorer` away from closing the loop.
-
-## Appendix: Swap any part
-
-- **Dataset**: move from synthetic QAs to real user questions; drop answers and switch to heuristic scorers
-- **Task**: replace ReAct with a simple chain; add a reranker; turn up/down temperature; try a different base model
-- **Scorer**: exact‑match, fuzzy string, regex checks, reference‑free style/content heuristics, or a compact LLM‑as‑judge
-
-If you try this with your own dataset or task, I’d love to hear how it goes. DM me on X or LinkedIn.
+TBD
 
 ## References
 
 - [DSPy tutorial: GEPA for AIME](https://dspy.ai/tutorials/gepa_aime/)
-- [Pareto improvements for language model programs (arXiv:2507.19457)](https://arxiv.org/abs/2507.19457)
