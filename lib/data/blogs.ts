@@ -1,6 +1,6 @@
 export const BLOG_POSTS: BlogPost[] = [
 	{
-		title: "Exploring GEPA and DSPyfor AI system optimization",
+		title: "Exploring GEPA and DSPy for AI system optimization",
 		description:
 			"An overview of DSPy and GEPA for AI system optimization.",
 		link: "/blogs/gepa",
