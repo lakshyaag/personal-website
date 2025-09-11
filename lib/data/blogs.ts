@@ -1,5 +1,14 @@
 export const BLOG_POSTS: BlogPost[] = [
 	{
+		title: "Exploring GEPA and DSPy for AI system optimization",
+		description:
+			"An overview of DSPy and GEPA for AI system optimization.",
+		link: "/blogs/gepa",
+		uid: "gepa",
+		date: "2025-09-07",
+		tags: ["DSPy", "GEPA", "LLMs", "Evaluation", "Agents", "Context Engineering"],
+	},
+	{
 		title: "Building RL environments for open-source AGI",
 		description:
 			"Weekend notes on porting environments, running evaluations, and serving LMs on a cloud-hosted GPU.",
