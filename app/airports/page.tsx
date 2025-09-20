@@ -19,8 +19,8 @@ type AirportRow = {
   gps_code: string | null;
   iata_code: string | null;
   local_code: string | null;
-  visited: number;
-  visited_at: string | null;
+  visited?: number;
+  visited_at?: string | null;
 };
 
 type PagedAirports = {
@@ -115,33 +115,31 @@ function useStats() {
 export default function AirportsPage() {
   const airports = useAirports();
   const stats = useStats();
-  const [importing, setImporting] = useState(false);
-
-  async function importData() {
-    setImporting(true);
+  const [visitedSet, setVisitedSet] = useState<Set<string>>(() => {
+    if (typeof window === "undefined") return new Set();
     try {
-      const res = await fetch("/api/airports/import", { method: "POST" });
-      if (!res.ok) throw new Error("Import failed");
-      // reload first page and stats
-      airports.setPage(0);
-    } catch (e) {
-      // ignore for now
-      console.error(e);
-    } finally {
-      setImporting(false);
+      const raw = localStorage.getItem("visited-airports");
+      if (!raw) return new Set();
+      return new Set<string>(JSON.parse(raw));
+    } catch {
+      return new Set();
     }
-  }
+  });
 
-  async function toggleVisit(ident: string, next: boolean) {
-    const res = await fetch(`/api/airports/${encodeURIComponent(ident)}/visit`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ visited: next }),
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      localStorage.setItem("visited-airports", JSON.stringify(Array.from(visitedSet)));
+    } catch {}
+  }, [visitedSet]);
+
+  function toggleVisit(ident: string, next: boolean) {
+    setVisitedSet((prev) => {
+      const copy = new Set(prev);
+      if (next) copy.add(ident);
+      else copy.delete(ident);
+      return copy;
     });
-    if (res.ok) {
-      // trigger reload
-      airports.setPage(airports.page);
-    }
   }
 
   const totalPages = Math.ceil((airports.data.total || 0) / airports.pageSize);
@@ -156,16 +154,9 @@ export default function AirportsPage() {
       <motion.section variants={VARIANTS_SECTION} transition={TRANSITION_SECTION}>
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-medium">Airport Visits</h1>
-          <button
-            className="text-sm underline text-zinc-700 dark:text-zinc-300 disabled:opacity-50"
-            onClick={importData}
-            disabled={importing}
-          >
-            {importing ? "Importing…" : "Import OurAirports CSV"}
-          </button>
         </div>
         <p className="text-zinc-600 dark:text-zinc-400 mt-2">
-          Free worldwide airport data from OurAirports. Track where you have flown.
+          Free worldwide airport data from OurAirports. The list loads live from their CSV.
         </p>
       </motion.section>
 
@@ -226,7 +217,7 @@ export default function AirportsPage() {
           </p>
           {stats && (
             <p className="text-sm text-zinc-600 dark:text-zinc-400">
-              Visited {stats.visited} of {stats.total}
+              Total airports {stats.total}
             </p>
           )}
         </div>
@@ -251,14 +242,14 @@ export default function AirportsPage() {
                 </p>
               </div>
               <button
-                onClick={() => toggleVisit(a.ident, a.visited ? false : true)}
+                onClick={() => toggleVisit(a.ident, !visitedSet.has(a.ident))}
                 className={`text-xs rounded-md px-2 py-1 border transition-colors ${
-                  a.visited
+                  visitedSet.has(a.ident)
                     ? "border-green-600 text-green-700 dark:text-green-400"
                     : "border-zinc-400 text-zinc-700 dark:text-zinc-300"
                 }`}
               >
-                {a.visited ? "Visited" : "Mark visited"}
+                {visitedSet.has(a.ident) ? "Visited" : "Mark visited"}
               </button>
             </div>
           ))}

@@ -1,4 +1,4 @@
-import { importOurAirportsCsv } from "@/lib/airports/importer";
+import { downloadAirportsCsvToTmp } from "@/lib/airports/csv";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -11,7 +11,7 @@ export async function POST(request: Request) {
 			const body = await request.json();
 			url = body?.url as string | undefined;
 		} catch {}
-		const result = await importOurAirportsCsv(url);
+		const result = await downloadAirportsCsvToTmp(url);
 		return Response.json({ ok: true, ...result });
 	} catch (err) {
 		return new Response(

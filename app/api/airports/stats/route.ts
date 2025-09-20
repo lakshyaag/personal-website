@@ -1,11 +1,12 @@
-import { getStats } from "@/lib/airports/db";
+import { fetchAirportsCsvText, parseAirportsCsv } from "@/lib/airports/csv";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 export async function GET() {
-	const stats = getStats();
-	return Response.json(stats);
+	const csvText = await fetchAirportsCsvText();
+	const rows = parseAirportsCsv(csvText);
+	return Response.json({ total: rows.length, visited: 0, topCountries: [] });
 }
 
