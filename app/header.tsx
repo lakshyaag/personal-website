@@ -27,6 +27,12 @@ export function Header() {
 			</div>
 
 			<div className="hidden sm:flex flex-col items-end space-y-0.5">
+				<Link
+					href="/airports"
+					className="underline underline-offset-1 text-zinc-800 hover:text-zinc-600 dark:text-zinc-200 dark:hover:text-zinc-400 transition-colors"
+				>
+					Airports
+				</Link>
 				{SOCIAL_LINKS.filter((link) => link.showHeader).map((link) => (
 					<Link
 						key={link.label}
