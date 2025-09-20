@@ -26,16 +26,36 @@ export type AirportRow = Airport & {
 
 let dbInstance: Database.Database | null = null;
 
-function getDatabaseFilePath(): string {
+function getPreferredDatabaseFilePath(): string {
 	const configured = process.env.AIRPORTS_DB_PATH;
 	if (configured && configured.trim().length > 0) return configured;
+	// Prefer persistent path in dev, fallback to /tmp in prod/serverless
+	const isServerless = process.env.VERCEL === "1" || process.env.NEXT_RUNTIME === "edge" || process.env.NODE_ENV === "production";
+	if (isServerless) {
+		return path.join("/tmp", "airports.sqlite");
+	}
 	return path.join(process.cwd(), ".data", "airports.sqlite");
 }
 
-function ensureDirectoryExists(filePath: string) {
-	const dir = path.dirname(filePath);
-	if (!fs.existsSync(dir)) {
-		fs.mkdirSync(dir, { recursive: true });
+function ensureDirectoryExistsOrFallback(preferredPath: string): string {
+	const preferredDir = path.dirname(preferredPath);
+	try {
+		if (!fs.existsSync(preferredDir)) {
+			fs.mkdirSync(preferredDir, { recursive: true });
+		}
+		return preferredPath;
+	} catch {
+		const fallbackPath = path.join("/tmp", path.basename(preferredPath));
+		try {
+			// /tmp should exist on most runtimes; ensure just in case
+			if (!fs.existsSync("/tmp")) {
+				fs.mkdirSync("/tmp", { recursive: true });
+			}
+			return fallbackPath;
+		} catch {
+			// Last resort: in-memory database; note: this won't persist across requests
+			return ":memory:";
+		}
 	}
 }
 
@@ -72,9 +92,14 @@ function migrate(database: Database.Database) {
 
 export function getDb(): Database.Database {
 	if (dbInstance) return dbInstance;
-	const filePath = getDatabaseFilePath();
-	ensureDirectoryExists(filePath);
-	dbInstance = new Database(filePath);
+	const preferred = getPreferredDatabaseFilePath();
+	const filePath = ensureDirectoryExistsOrFallback(preferred);
+	try {
+		dbInstance = new Database(filePath);
+	} catch {
+		// Fallback to in-memory if opening fails
+		dbInstance = new Database(":memory:");
+	}
 	migrate(dbInstance);
 	return dbInstance;
 }
