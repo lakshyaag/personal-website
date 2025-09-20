@@ -29,6 +29,8 @@ let dbInstance: Database.Database | null = null;
 function getPreferredDatabaseFilePath(): string {
 	const configured = process.env.AIRPORTS_DB_PATH;
 	if (configured && configured.trim().length > 0) return configured;
+	// Force in-memory if requested
+	if (process.env.AIRPORTS_DB_IN_MEMORY === "1") return ":memory:";
 	// Prefer persistent path in dev, fallback to /tmp in prod/serverless
 	const isServerless = process.env.VERCEL === "1" || process.env.NEXT_RUNTIME === "edge" || process.env.NODE_ENV === "production";
 	if (isServerless) {
