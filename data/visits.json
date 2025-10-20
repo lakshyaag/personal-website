@@ -1,0 +1,594 @@
+[
+  {
+    "id": "VEBD-2023-01-14-1760962313525",
+    "airportIdent": "VEBD",
+    "date": "2023-01-14",
+    "flightNumbers": [
+      "SEJ 904"
+    ]
+  },
+  {
+    "id": "VIDP-2023-01-14-1760962313526",
+    "airportIdent": "VIDP",
+    "date": "2023-01-14",
+    "flightNumbers": [
+      "SEJ 904"
+    ]
+  },
+  {
+    "id": "VIDP-2023-01-21-1760962313527",
+    "airportIdent": "VIDP",
+    "date": "2023-01-21",
+    "flightNumbers": [
+      "SEJ 187"
+    ]
+  },
+  {
+    "id": "VEBD-2023-01-21-1760962313528",
+    "airportIdent": "VEBD",
+    "date": "2023-01-21",
+    "flightNumbers": [
+      "SEJ 187"
+    ]
+  },
+  {
+    "id": "VEBD-2023-02-12-1760962313529",
+    "airportIdent": "VEBD",
+    "date": "2023-02-12",
+    "flightNumbers": [
+      "GOW 537"
+    ]
+  },
+  {
+    "id": "VECC-2023-02-12-1760962313530",
+    "airportIdent": "VECC",
+    "date": "2023-02-12",
+    "flightNumbers": [
+      "GOW 537"
+    ]
+  },
+  {
+    "id": "VECC-2023-02-13-1760962313531",
+    "airportIdent": "VECC",
+    "date": "2023-02-13",
+    "flightNumbers": [
+      "AXM 62"
+    ]
+  },
+  {
+    "id": "WMKK-2023-02-13-1760962313532",
+    "airportIdent": "WMKK",
+    "date": "2023-02-13",
+    "flightNumbers": [
+      "AXM 62",
+      "AXM 528"
+    ],
+    "isLayover": true
+  },
+  {
+    "id": "VVTS-2023-02-13-1760962313534",
+    "airportIdent": "VVTS",
+    "date": "2023-02-13",
+    "flightNumbers": [
+      "AXM 528"
+    ]
+  },
+  {
+    "id": "VVTS-2023-02-16-1760962313535",
+    "airportIdent": "VVTS",
+    "date": "2023-02-16",
+    "flightNumbers": [
+      "VJC 652"
+    ]
+  },
+  {
+    "id": "VVDN-2023-02-16-1760962313536",
+    "airportIdent": "VVDN",
+    "date": "2023-02-16",
+    "flightNumbers": [
+      "VJC 652"
+    ]
+  },
+  {
+    "id": "VVDN-2023-02-18-1760962313537",
+    "airportIdent": "VVDN",
+    "date": "2023-02-18",
+    "flightNumbers": [
+      "VJC 508"
+    ]
+  },
+  {
+    "id": "VVNB-2023-02-18-1760962313538",
+    "airportIdent": "VVNB",
+    "date": "2023-02-18",
+    "flightNumbers": [
+      "VJC 508"
+    ]
+  },
+  {
+    "id": "VVNB-2023-02-26-1760962313539",
+    "airportIdent": "VVNB",
+    "date": "2023-02-26",
+    "flightNumbers": [
+      "IGO 1379"
+    ]
+  },
+  {
+    "id": "VECC-2023-02-26-1760962313540",
+    "airportIdent": "VECC",
+    "date": "2023-02-26",
+    "flightNumbers": [
+      "IGO 1379"
+    ]
+  },
+  {
+    "id": "VEBD-2023-04-21-1760962313541",
+    "airportIdent": "VEBD",
+    "date": "2023-04-21",
+    "flightNumbers": [
+      "SEJ 328"
+    ]
+  },
+  {
+    "id": "VOBL-2023-04-21-1760962313542",
+    "airportIdent": "VOBL",
+    "date": "2023-04-21",
+    "flightNumbers": [
+      "SEJ 328"
+    ]
+  },
+  {
+    "id": "VOBL-2023-04-29-1760962313543",
+    "airportIdent": "VOBL",
+    "date": "2023-04-29",
+    "flightNumbers": [
+      "IGO 122"
+    ]
+  },
+  {
+    "id": "VIDP-2023-04-29-1760962313544",
+    "airportIdent": "VIDP",
+    "date": "2023-04-29",
+    "flightNumbers": [
+      "IGO 122"
+    ]
+  },
+  {
+    "id": "VIDP-2023-05-06-1760962313545",
+    "airportIdent": "VIDP",
+    "date": "2023-05-06",
+    "flightNumbers": [
+      "VTI 725"
+    ]
+  },
+  {
+    "id": "VEBD-2023-05-06-1760962313546",
+    "airportIdent": "VEBD",
+    "date": "2023-05-06",
+    "flightNumbers": [
+      "VTI 725"
+    ]
+  },
+  {
+    "id": "VEBD-2023-06-30-1760962313547",
+    "airportIdent": "VEBD",
+    "date": "2023-06-30",
+    "flightNumbers": [
+      "VTI 726"
+    ]
+  },
+  {
+    "id": "VIDP-2023-06-30-1760962313548",
+    "airportIdent": "VIDP",
+    "date": "2023-06-30",
+    "flightNumbers": [
+      "VTI 726"
+    ]
+  },
+  {
+    "id": "VIDP-2023-07-01-1760962313549",
+    "airportIdent": "VIDP",
+    "date": "2023-07-01",
+    "flightNumbers": [
+      "ACA 43"
+    ]
+  },
+  {
+    "id": "CYYZ-2023-07-01-1760962313550",
+    "airportIdent": "CYYZ",
+    "date": "2023-07-01",
+    "flightNumbers": [
+      "ACA 43"
+    ]
+  },
+  {
+    "id": "CYUL-2024-01-26-1760962313551",
+    "airportIdent": "CYUL",
+    "date": "2024-01-26",
+    "flightNumbers": [
+      "THY 36"
+    ]
+  },
+  {
+    "id": "LTFM-2024-01-27-1760962313552",
+    "airportIdent": "LTFM",
+    "date": "2024-01-27",
+    "flightNumbers": [
+      "THY 36",
+      "THY 716"
+    ],
+    "isLayover": true
+  },
+  {
+    "id": "VIDP-2024-01-28-1760962313554",
+    "airportIdent": "VIDP",
+    "date": "2024-01-28",
+    "flightNumbers": [
+      "THY 716",
+      "SEJ 8903"
+    ],
+    "isLayover": true
+  },
+  {
+    "id": "VEBD-2024-01-28-1760962313556",
+    "airportIdent": "VEBD",
+    "date": "2024-01-28",
+    "flightNumbers": [
+      "SEJ 8903"
+    ]
+  },
+  {
+    "id": "VEBD-2024-02-17-1760962313557",
+    "airportIdent": "VEBD",
+    "date": "2024-02-17",
+    "flightNumbers": [
+      "SEJ 8199"
+    ]
+  },
+  {
+    "id": "VIDP-2024-02-17-1760962313558",
+    "airportIdent": "VIDP",
+    "date": "2024-02-17",
+    "flightNumbers": [
+      "SEJ 8199"
+    ]
+  },
+  {
+    "id": "VIDP-2024-02-18-1760962313559",
+    "airportIdent": "VIDP",
+    "date": "2024-02-18",
+    "flightNumbers": [
+      "THY 717"
+    ]
+  },
+  {
+    "id": "LTFM-2024-02-18-1760962313560",
+    "airportIdent": "LTFM",
+    "date": "2024-02-18",
+    "flightNumbers": [
+      "THY 717",
+      "THY 35"
+    ],
+    "isLayover": true
+  },
+  {
+    "id": "CYUL-2024-02-18-1760962313562",
+    "airportIdent": "CYUL",
+    "date": "2024-02-18",
+    "flightNumbers": [
+      "THY 35"
+    ]
+  },
+  {
+    "id": "CYUL-2024-02-29-1760962313563",
+    "airportIdent": "CYUL",
+    "date": "2024-02-29",
+    "flightNumbers": [
+      "ACA 301"
+    ]
+  },
+  {
+    "id": "CYVR-2024-02-29-1760962313564",
+    "airportIdent": "CYVR",
+    "date": "2024-02-29",
+    "flightNumbers": [
+      "ACA 301"
+    ]
+  },
+  {
+    "id": "CYVR-2024-03-05-1760962313565",
+    "airportIdent": "CYVR",
+    "date": "2024-03-05",
+    "flightNumbers": [
+      "ACA 314"
+    ]
+  },
+  {
+    "id": "CYUL-2024-03-06-1760962313566",
+    "airportIdent": "CYUL",
+    "date": "2024-03-06",
+    "flightNumbers": [
+      "ACA 314"
+    ]
+  },
+  {
+    "id": "CYUL-2024-06-01-1760962313567",
+    "airportIdent": "CYUL",
+    "date": "2024-06-01",
+    "flightNumbers": [
+      "ACA 481"
+    ]
+  },
+  {
+    "id": "CYYZ-2024-06-01-1760962313568",
+    "airportIdent": "CYYZ",
+    "date": "2024-06-01",
+    "flightNumbers": [
+      "ACA 481",
+      "ACA 1873"
+    ],
+    "isLayover": true
+  },
+  {
+    "id": "MRLB-2024-06-01-1760962313570",
+    "airportIdent": "MRLB",
+    "date": "2024-06-01",
+    "flightNumbers": [
+      "ACA 1873"
+    ]
+  },
+  {
+    "id": "MRLB-2024-06-11-1760962313571",
+    "airportIdent": "MRLB",
+    "date": "2024-06-11",
+    "flightNumbers": [
+      "ACA 1872"
+    ]
+  },
+  {
+    "id": "CYYZ-2024-06-11-1760962313572",
+    "airportIdent": "CYYZ",
+    "date": "2024-06-11",
+    "flightNumbers": [
+      "ACA 1872",
+      "ACA 432"
+    ],
+    "isLayover": true
+  },
+  {
+    "id": "CYUL-2024-06-12-1760962313574",
+    "airportIdent": "CYUL",
+    "date": "2024-06-12",
+    "flightNumbers": [
+      "ACA 432"
+    ]
+  },
+  {
+    "id": "CYYZ-2024-09-10-1760962313575",
+    "airportIdent": "CYYZ",
+    "date": "2024-09-10",
+    "flightNumbers": [
+      "POE 7421"
+    ]
+  },
+  {
+    "id": "CYUL-2024-09-10-1760962313576",
+    "airportIdent": "CYUL",
+    "date": "2024-09-10",
+    "flightNumbers": [
+      "POE 7421"
+    ]
+  },
+  {
+    "id": "CYUL-2024-09-12-1760962313577",
+    "airportIdent": "CYUL",
+    "date": "2024-09-12",
+    "flightNumbers": [
+      "POE 132"
+    ]
+  },
+  {
+    "id": "CYYZ-2024-09-12-1760962313578",
+    "airportIdent": "CYYZ",
+    "date": "2024-09-12",
+    "flightNumbers": [
+      "POE 132"
+    ]
+  },
+  {
+    "id": "CYYZ-2025-01-09-1760962313579",
+    "airportIdent": "CYYZ",
+    "date": "2025-01-09",
+    "flightNumbers": [
+      "ACA 8872"
+    ]
+  },
+  {
+    "id": "KEWR-2025-01-09-1760962313580",
+    "airportIdent": "KEWR",
+    "date": "2025-01-09",
+    "flightNumbers": [
+      "ACA 8872"
+    ]
+  },
+  {
+    "id": "KJFK-2025-01-10-1760962313581",
+    "airportIdent": "KJFK",
+    "date": "2025-01-10",
+    "flightNumbers": [
+      "VIR 46"
+    ]
+  },
+  {
+    "id": "EGLL-2025-01-11-1760962313582",
+    "airportIdent": "EGLL",
+    "date": "2025-01-11",
+    "flightNumbers": [
+      "VIR 46",
+      "VIR 358"
+    ],
+    "isLayover": true
+  },
+  {
+    "id": "VABB-2025-01-12-1760962313584",
+    "airportIdent": "VABB",
+    "date": "2025-01-12",
+    "flightNumbers": [
+      "VIR 358"
+    ]
+  },
+  {
+    "id": "VABB-2025-01-13-1760962313585",
+    "airportIdent": "VABB",
+    "date": "2025-01-13",
+    "flightNumbers": [
+      "IGO 5388"
+    ]
+  },
+  {
+    "id": "VOBL-2025-01-13-1760962313586",
+    "airportIdent": "VOBL",
+    "date": "2025-01-13",
+    "flightNumbers": [
+      "IGO 5388"
+    ]
+  },
+  {
+    "id": "VOBL-2025-01-19-1760962313587",
+    "airportIdent": "VOBL",
+    "date": "2025-01-19",
+    "flightNumbers": [
+      "SLT 1850"
+    ]
+  },
+  {
+    "id": "VEBD-2025-01-19-1760962313588",
+    "airportIdent": "VEBD",
+    "date": "2025-01-19",
+    "flightNumbers": [
+      "SLT 1850"
+    ]
+  },
+  {
+    "id": "VEBD-2025-02-16-1760962313589",
+    "airportIdent": "VEBD",
+    "date": "2025-02-16",
+    "flightNumbers": [
+      "IGO 2147"
+    ]
+  },
+  {
+    "id": "VIDP-2025-02-16-1760962313590",
+    "airportIdent": "VIDP",
+    "date": "2025-02-16",
+    "flightNumbers": [
+      "IGO 2147"
+    ]
+  },
+  {
+    "id": "VIDP-2025-02-17-1760962313591",
+    "airportIdent": "VIDP",
+    "date": "2025-02-17",
+    "flightNumbers": [
+      "ACA 43"
+    ]
+  },
+  {
+    "id": "CYYZ-2025-02-17-1760962313592",
+    "airportIdent": "CYYZ",
+    "date": "2025-02-17",
+    "flightNumbers": [
+      "ACA 43"
+    ]
+  },
+  {
+    "id": "CYTZ-2025-04-30-1760962313593",
+    "airportIdent": "CYTZ",
+    "date": "2025-04-30",
+    "flightNumbers": [
+      "POE 2387"
+    ]
+  },
+  {
+    "id": "KMDW-2025-04-30-1760962313594",
+    "airportIdent": "KMDW",
+    "date": "2025-04-30",
+    "flightNumbers": [
+      "POE 2387"
+    ]
+  },
+  {
+    "id": "KMDW-2025-05-05-1760962313595",
+    "airportIdent": "KMDW",
+    "date": "2025-05-05",
+    "flightNumbers": [
+      "POE 2394"
+    ]
+  },
+  {
+    "id": "CYTZ-2025-05-05-1760962313596",
+    "airportIdent": "CYTZ",
+    "date": "2025-05-05",
+    "flightNumbers": [
+      "POE 2394"
+    ]
+  },
+  {
+    "id": "CYYZ-2025-10-11-1760962313597",
+    "airportIdent": "CYYZ",
+    "date": "2025-10-11",
+    "flightNumbers": [
+      "POE 603"
+    ]
+  },
+  {
+    "id": "KLGA-2025-10-11-1760962313598",
+    "airportIdent": "KLGA",
+    "date": "2025-10-11",
+    "flightNumbers": [
+      "POE 603"
+    ]
+  },
+  {
+    "id": "KJFK-2025-10-13-1760962313599",
+    "airportIdent": "KJFK",
+    "date": "2025-10-13",
+    "flightNumbers": [
+      "THY 12"
+    ]
+  },
+  {
+    "id": "LTFM-2025-10-13-1760962313600",
+    "airportIdent": "LTFM",
+    "date": "2025-10-13",
+    "flightNumbers": [
+      "THY 12",
+      "THY 720"
+    ],
+    "isLayover": true
+  },
+  {
+    "id": "VABB-2025-10-14-1760962313602",
+    "airportIdent": "VABB",
+    "date": "2025-10-14",
+    "flightNumbers": [
+      "THY 720"
+    ]
+  },
+  {
+    "id": "VABB-2025-10-15-1760962313603",
+    "airportIdent": "VABB",
+    "date": "2025-10-15",
+    "flightNumbers": [
+      "AKJ 1385"
+    ]
+  },
+  {
+    "id": "VEBD-2025-10-15-1760962313604",
+    "airportIdent": "VEBD",
+    "date": "2025-10-15",
+    "flightNumbers": [
+      "AKJ 1385"
+    ]
+  }
+]

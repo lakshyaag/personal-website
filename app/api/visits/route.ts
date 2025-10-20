@@ -26,7 +26,8 @@ export async function POST(req: Request) {
 			id,
 			airportIdent: body.airportIdent,
 			date: body.date,
-			flightNumber: body.flightNumber,
+			flightNumbers: body.flightNumbers,
+			isLayover: body.isLayover,
 			notes: body.notes,
 			photos: body.photos,
 		};

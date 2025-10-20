@@ -151,12 +151,19 @@ export default function AirportList({
 								</div>
 
 								{/* Flight info */}
-								{visit.flightNumber && (
+								{visit.flightNumbers && visit.flightNumbers.length > 0 && (
 									<div className="flex items-center gap-2 text-sm">
 										<Plane className="h-4 w-4 text-zinc-500" />
 										<span className="font-medium text-zinc-700 dark:text-zinc-300">
-											{visit.flightNumber}
+											{visit.isLayover && visit.flightNumbers.length > 1
+												? `${visit.flightNumbers[0]} → ${visit.flightNumbers[1]}`
+												: visit.flightNumbers.join(", ")}
 										</span>
+										{visit.isLayover && (
+											<span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">
+												Layover
+											</span>
+										)}
 									</div>
 								)}
 
@@ -272,12 +279,19 @@ export default function AirportList({
 									{/* Last visit info when not expanded */}
 									{!isExpanded && (
 										<>
-											{lastVisit.flightNumber && (
+											{lastVisit.flightNumbers && lastVisit.flightNumbers.length > 0 && (
 												<div className="flex items-center gap-2 text-sm">
 													<Plane className="h-4 w-4 text-zinc-500" />
 													<span className="font-medium text-zinc-700 dark:text-zinc-300">
-														{lastVisit.flightNumber}
+														{lastVisit.isLayover && lastVisit.flightNumbers.length > 1
+															? `${lastVisit.flightNumbers[0]} → ${lastVisit.flightNumbers[1]}`
+															: lastVisit.flightNumbers.join(", ")}
 													</span>
+													{lastVisit.isLayover && (
+														<span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">
+															Layover
+														</span>
+													)}
 												</div>
 											)}
 											{lastVisit.notes && (
@@ -349,10 +363,19 @@ export default function AirportList({
 														<span className="font-medium text-zinc-900 dark:text-zinc-100">
 															{formatDate(visit.date)}
 														</span>
-														{visit.flightNumber && (
+														{visit.flightNumbers && visit.flightNumbers.length > 0 && (
 															<div className="flex items-center gap-1.5 text-sm text-zinc-600 dark:text-zinc-400">
 																<Plane className="h-3.5 w-3.5" />
-																<span>{visit.flightNumber}</span>
+																<span>
+																	{visit.isLayover && visit.flightNumbers.length > 1
+																		? `${visit.flightNumbers[0]} → ${visit.flightNumbers[1]}`
+																		: visit.flightNumbers.join(", ")}
+																</span>
+																{visit.isLayover && (
+																	<span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">
+																		Layover
+																	</span>
+																)}
 															</div>
 														)}
 													</div>

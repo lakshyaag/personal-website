@@ -15,7 +15,8 @@ export interface Visit {
 	id: string;
 	airportIdent: string;
 	date: string; // YYYY-MM-DD
-	flightNumber?: string; // e.g., "THY 36", "SEJ 904"
+	flightNumbers?: string[]; // e.g., ["THY 36"] or ["THY 717", "THY 35"] for layovers
+	isLayover?: boolean;
 	notes?: string;
 	photos?: string[];
 }

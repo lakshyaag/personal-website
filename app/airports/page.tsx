@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { motion } from "motion/react";
 import dynamic from "next/dynamic";
 import airports from "@/data/airports.min.json";
@@ -32,13 +32,13 @@ export default function AirportsPage() {
 	const [filtersExpanded, setFiltersExpanded] = useState(false);
 	const [viewMode, setViewMode] = useState<"grouped" | "timeline">("grouped");
 
-	if (!mounted) {
+	useEffect(() => {
 		setMounted(true);
 		fetch("/api/visits")
 			.then((r) => r.json())
 			.then(setVisits)
 			.catch((err) => console.error("Failed to fetch visits:", err));
-	}
+	}, []);
 
 	const airportsByIdent = useMemo(
 		() =>
@@ -207,11 +207,10 @@ export default function AirportsPage() {
 													key={year}
 													type="button"
 													onClick={() => toggleYear(year)}
-													className={`rounded-lg px-3 py-1 text-sm transition-colors ${
-														selectedYears.has(year)
+													className={`rounded-lg px-3 py-1 text-sm transition-colors ${selectedYears.has(year)
 															? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900"
 															: "bg-zinc-200 text-zinc-700 hover:bg-zinc-300 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"
-													}`}
+														}`}
 												>
 													{year}
 												</button>
@@ -241,11 +240,10 @@ export default function AirportsPage() {
 													key={continent}
 													type="button"
 													onClick={() => toggleContinent(continent)}
-													className={`rounded-lg px-3 py-1 text-sm transition-colors ${
-														selectedContinents.has(continent)
+													className={`rounded-lg px-3 py-1 text-sm transition-colors ${selectedContinents.has(continent)
 															? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900"
 															: "bg-zinc-200 text-zinc-700 hover:bg-zinc-300 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"
-													}`}
+														}`}
 												>
 													{continentNames[continent] || continent}
 												</button>
@@ -281,22 +279,20 @@ export default function AirportsPage() {
 							<button
 								type="button"
 								onClick={() => setViewMode("grouped")}
-								className={`rounded px-3 py-1 text-sm transition-colors ${
-									viewMode === "grouped"
+								className={`rounded px-3 py-1 text-sm transition-colors ${viewMode === "grouped"
 										? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900"
 										: "text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
-								}`}
+									}`}
 							>
 								By Airport
 							</button>
 							<button
 								type="button"
 								onClick={() => setViewMode("timeline")}
-								className={`rounded px-3 py-1 text-sm transition-colors ${
-									viewMode === "timeline"
+								className={`rounded px-3 py-1 text-sm transition-colors ${viewMode === "timeline"
 										? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900"
 										: "text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
-								}`}
+									}`}
 							>
 								Timeline
 							</button>

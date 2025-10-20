@@ -13,7 +13,8 @@ import {
 export default function AdminAirportsPage() {
 	const [query, setQuery] = useState("");
 	const [date, setDate] = useState("");
-	const [flightNumber, setFlightNumber] = useState("");
+	const [flightNumbers, setFlightNumbers] = useState<string[]>([""]);
+	const [isLayover, setIsLayover] = useState(false);
 	const [notes, setNotes] = useState("");
 	const [selectedAirport, setSelectedAirport] = useState<Airport | null>(null);
 	const [uploadedPhotos, setUploadedPhotos] = useState<string[]>([]);
@@ -25,14 +26,14 @@ export default function AdminAirportsPage() {
 	const showDropdown = query && !selectedAirport;
 	const results: Airport[] = showDropdown
 		? (airports as Airport[])
-			.filter(
-				(a) =>
-					a.ident?.toLowerCase().includes(query.toLowerCase()) ||
-					a.iata_code?.toLowerCase().includes(query.toLowerCase()) ||
-					a.name?.toLowerCase().includes(query.toLowerCase()) ||
-					a.municipality?.toLowerCase().includes(query.toLowerCase()),
-			)
-			.slice(0, 20)
+				.filter(
+					(a) =>
+						a.ident?.toLowerCase().includes(query.toLowerCase()) ||
+						a.iata_code?.toLowerCase().includes(query.toLowerCase()) ||
+						a.name?.toLowerCase().includes(query.toLowerCase()) ||
+						a.municipality?.toLowerCase().includes(query.toLowerCase()),
+				)
+				.slice(0, 20)
 		: [];
 
 	useEffect(() => {
@@ -92,11 +93,13 @@ export default function AdminAirportsPage() {
 
 		setSaving(true);
 		try {
+			const filteredFlightNumbers = flightNumbers.filter(fn => fn.trim() !== "");
 			const visitData = {
 				id: editingVisit?.id,
 				airportIdent: selectedAirport.ident,
 				date,
-				flightNumber: flightNumber || undefined,
+				flightNumbers: filteredFlightNumbers.length > 0 ? filteredFlightNumbers : undefined,
+				isLayover: isLayover || undefined,
 				notes: notes || undefined,
 				photos: uploadedPhotos.length > 0 ? uploadedPhotos : undefined,
 			};
@@ -153,7 +156,8 @@ export default function AdminAirportsPage() {
 
 		setSelectedAirport(airport);
 		setDate(visit.date);
-		setFlightNumber(visit.flightNumber || "");
+		setFlightNumbers(visit.flightNumbers && visit.flightNumbers.length > 0 ? visit.flightNumbers : [""]);
+		setIsLayover(visit.isLayover || false);
 		setNotes(visit.notes || "");
 		setUploadedPhotos(visit.photos || []);
 		setEditingVisit(visit);
@@ -163,7 +167,8 @@ export default function AdminAirportsPage() {
 	function resetForm() {
 		setQuery("");
 		setDate("");
-		setFlightNumber("");
+		setFlightNumbers([""]);
+		setIsLayover(false);
 		setNotes("");
 		setSelectedAirport(null);
 		setUploadedPhotos([]);
@@ -188,12 +193,12 @@ export default function AdminAirportsPage() {
 			</motion.section>
 
 			<motion.section
-				className="space-y-8"
-				variants={VARIANTS_SECTION}
-				transition={TRANSITION_SECTION}
+			className="space-y-8"
+			variants={VARIANTS_SECTION}
+			transition={TRANSITION_SECTION}
 			>
-				{/* Form */}
-				<div className="space-y-4">
+			{/* Form */}
+			<div className="space-y-4">
 					<h2 className="text-xl font-medium">
 						{editingVisit ? "Edit Visit" : "Add New Visit"}
 					</h2>
@@ -214,8 +219,7 @@ export default function AdminAirportsPage() {
 
 						{showDropdown && results.length > 0 && (
 							<div className="mt-2 max-h-64 overflow-auto rounded-lg border border-zinc-300 dark:border-zinc-700">
-								{results.map((airport) => {
-									return (
+								{results.map((airport) => (
 									<button
 										type="button"
 										key={airport.ident}
@@ -234,10 +238,9 @@ export default function AdminAirportsPage() {
 											{airport.iso_country}
 										</div>
 									</button>
-								);
-							})}
-						</div>
-					)}
+								))}
+							</div>
+						)}
 
 						{selectedAirport && (
 							<div className="mt-2 rounded-lg bg-zinc-100 px-4 py-2 dark:bg-zinc-900/50">
@@ -266,16 +269,74 @@ export default function AdminAirportsPage() {
 					</div>
 
 					<div>
-						<label className="mb-2 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
-							Flight Number (optional)
-						</label>
-						<input
-							type="text"
-							value={flightNumber}
-							onChange={(e) => setFlightNumber(e.target.value)}
-							placeholder="e.g., THY 36"
-							className="w-full rounded-lg border border-zinc-300 bg-white px-4 py-2 text-zinc-900 focus:border-zinc-500 focus:outline-none focus:ring-2 focus:ring-zinc-500/20 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
-						/>
+						<div className="mb-3 flex items-center gap-3">
+							<label className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+								Flight Information (optional)
+							</label>
+							<label className="flex items-center gap-2">
+								<input
+									type="checkbox"
+									checked={isLayover}
+									onChange={(e) => {
+										setIsLayover(e.target.checked);
+										if (e.target.checked && flightNumbers.length === 1) {
+											setFlightNumbers(["", ""]);
+										} else if (!e.target.checked && flightNumbers.length > 1) {
+											setFlightNumbers([flightNumbers[0] || ""]);
+										}
+									}}
+									className="rounded border-zinc-300 text-zinc-900 focus:ring-2 focus:ring-zinc-500/20 dark:border-zinc-700"
+								/>
+								<span className="text-sm text-zinc-600 dark:text-zinc-400">
+									Layover
+								</span>
+							</label>
+						</div>
+
+						{isLayover ? (
+							<div className="space-y-2">
+								<div>
+									<label className="mb-1 block text-xs text-zinc-500 dark:text-zinc-400">
+										Arrival Flight
+									</label>
+									<input
+										type="text"
+										value={flightNumbers[0] || ""}
+										onChange={(e) => {
+											const newFlights = [...flightNumbers];
+											newFlights[0] = e.target.value;
+											setFlightNumbers(newFlights);
+										}}
+										placeholder="e.g., THY 717"
+										className="w-full rounded-lg border border-zinc-300 bg-white px-4 py-2 text-zinc-900 focus:border-zinc-500 focus:outline-none focus:ring-2 focus:ring-zinc-500/20 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
+									/>
+								</div>
+								<div>
+									<label className="mb-1 block text-xs text-zinc-500 dark:text-zinc-400">
+										Departure Flight
+									</label>
+									<input
+										type="text"
+										value={flightNumbers[1] || ""}
+										onChange={(e) => {
+											const newFlights = [...flightNumbers];
+											newFlights[1] = e.target.value;
+											setFlightNumbers(newFlights);
+										}}
+										placeholder="e.g., THY 35"
+										className="w-full rounded-lg border border-zinc-300 bg-white px-4 py-2 text-zinc-900 focus:border-zinc-500 focus:outline-none focus:ring-2 focus:ring-zinc-500/20 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
+									/>
+								</div>
+							</div>
+						) : (
+							<input
+								type="text"
+								value={flightNumbers[0] || ""}
+								onChange={(e) => setFlightNumbers([e.target.value])}
+								placeholder="e.g., THY 36"
+								className="w-full rounded-lg border border-zinc-300 bg-white px-4 py-2 text-zinc-900 focus:border-zinc-500 focus:outline-none focus:ring-2 focus:ring-zinc-500/20 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
+							/>
+						)}
 					</div>
 
 					<div>
@@ -382,15 +443,8 @@ export default function AdminAirportsPage() {
 												<div className="text-sm text-zinc-600 dark:text-zinc-400">
 													{visit.airportIdent} — {visit.date}
 												</div>
-												{visit.flightNumber && (
-													<div className="mt-1 flex items-center gap-2 text-sm text-zinc-600 dark:text-zinc-400">
-														<span className="inline-block bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-200 rounded px-2 py-0.5 font-mono">
-															✈️ {visit.flightNumber}
-														</span>
-													</div>
-												)}
 												{visit.notes && (
-													<div className="mt-1 text-sm italic text-zinc-600 dark:text-zinc-400">
+													<div className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
 														{visit.notes}
 													</div>
 												)}
