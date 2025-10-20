@@ -34,7 +34,7 @@ export default function Personal() {
 				variants={VARIANTS_SECTION}
 				transition={TRANSITION_SECTION}
 			>
-				<div className="flex-1 prose prose-zinc dark:prose-invert">
+				<div className="flex-1 prose prose-zinc dark:prose-invert max-w-fit">
 					<ReactMarkdown
 						remarkPlugins={[remarkGfm]}
 						components={{
