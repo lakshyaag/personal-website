@@ -13,6 +13,7 @@ import {
 export default function AdminAirportsPage() {
 	const [query, setQuery] = useState("");
 	const [date, setDate] = useState("");
+	const [flightNumber, setFlightNumber] = useState("");
 	const [notes, setNotes] = useState("");
 	const [selectedAirport, setSelectedAirport] = useState<Airport | null>(null);
 	const [uploadedPhotos, setUploadedPhotos] = useState<string[]>([]);
@@ -22,16 +23,16 @@ export default function AdminAirportsPage() {
 	const [editingVisit, setEditingVisit] = useState<Visit | null>(null);
 
 	const showDropdown = query && !selectedAirport;
-	const results = showDropdown
+	const results: Airport[] = showDropdown
 		? (airports as Airport[])
-				.filter(
-					(a) =>
-						a.ident?.toLowerCase().includes(query.toLowerCase()) ||
-						a.iata_code?.toLowerCase().includes(query.toLowerCase()) ||
-						a.name?.toLowerCase().includes(query.toLowerCase()) ||
-						a.municipality?.toLowerCase().includes(query.toLowerCase()),
-				)
-				.slice(0, 20)
+			.filter(
+				(a) =>
+					a.ident?.toLowerCase().includes(query.toLowerCase()) ||
+					a.iata_code?.toLowerCase().includes(query.toLowerCase()) ||
+					a.name?.toLowerCase().includes(query.toLowerCase()) ||
+					a.municipality?.toLowerCase().includes(query.toLowerCase()),
+			)
+			.slice(0, 20)
 		: [];
 
 	useEffect(() => {
@@ -95,6 +96,7 @@ export default function AdminAirportsPage() {
 				id: editingVisit?.id,
 				airportIdent: selectedAirport.ident,
 				date,
+				flightNumber: flightNumber || undefined,
 				notes: notes || undefined,
 				photos: uploadedPhotos.length > 0 ? uploadedPhotos : undefined,
 			};
@@ -151,6 +153,7 @@ export default function AdminAirportsPage() {
 
 		setSelectedAirport(airport);
 		setDate(visit.date);
+		setFlightNumber(visit.flightNumber || "");
 		setNotes(visit.notes || "");
 		setUploadedPhotos(visit.photos || []);
 		setEditingVisit(visit);
@@ -160,6 +163,7 @@ export default function AdminAirportsPage() {
 	function resetForm() {
 		setQuery("");
 		setDate("");
+		setFlightNumber("");
 		setNotes("");
 		setSelectedAirport(null);
 		setUploadedPhotos([]);
@@ -184,7 +188,7 @@ export default function AdminAirportsPage() {
 			</motion.section>
 
 			<motion.section
-				className="grid gap-8 lg:grid-cols-2"
+				className="space-y-8"
 				variants={VARIANTS_SECTION}
 				transition={TRANSITION_SECTION}
 			>
@@ -210,15 +214,12 @@ export default function AdminAirportsPage() {
 
 						{showDropdown && results.length > 0 && (
 							<div className="mt-2 max-h-64 overflow-auto rounded-lg border border-zinc-300 dark:border-zinc-700">
-								{results.map((airport) => (
+								{results.map((airport) => {
+									return (
 									<button
 										type="button"
 										key={airport.ident}
-										className={`w-full px-4 py-2 text-left text-sm transition-colors hover:bg-zinc-100 dark:hover:bg-zinc-800 ${
-											selectedAirport?.ident === airport.ident
-												? "bg-zinc-100 dark:bg-zinc-800"
-												: ""
-										}`}
+										className="w-full px-4 py-2 text-left text-sm transition-colors hover:bg-zinc-100 dark:hover:bg-zinc-800"
 										onClick={() => {
 											setSelectedAirport(airport);
 											setQuery(airport.name);
@@ -233,9 +234,10 @@ export default function AdminAirportsPage() {
 											{airport.iso_country}
 										</div>
 									</button>
-								))}
-							</div>
-						)}
+								);
+							})}
+						</div>
+					)}
 
 						{selectedAirport && (
 							<div className="mt-2 rounded-lg bg-zinc-100 px-4 py-2 dark:bg-zinc-900/50">
@@ -259,6 +261,19 @@ export default function AdminAirportsPage() {
 							type="date"
 							value={date}
 							onChange={(e) => setDate(e.target.value)}
+							className="w-full rounded-lg border border-zinc-300 bg-white px-4 py-2 text-zinc-900 focus:border-zinc-500 focus:outline-none focus:ring-2 focus:ring-zinc-500/20 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
+						/>
+					</div>
+
+					<div>
+						<label className="mb-2 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
+							Flight Number (optional)
+						</label>
+						<input
+							type="text"
+							value={flightNumber}
+							onChange={(e) => setFlightNumber(e.target.value)}
+							placeholder="e.g., THY 36"
 							className="w-full rounded-lg border border-zinc-300 bg-white px-4 py-2 text-zinc-900 focus:border-zinc-500 focus:outline-none focus:ring-2 focus:ring-zinc-500/20 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
 						/>
 					</div>
@@ -337,7 +352,12 @@ export default function AdminAirportsPage() {
 						)}
 					</div>
 				</div>
+			</motion.section>
 
+			<motion.section
+				variants={VARIANTS_SECTION}
+				transition={TRANSITION_SECTION}
+			>
 				{/* Visits List */}
 				<div className="space-y-4">
 					<h2 className="text-xl font-medium">Existing Visits ({visits.length})</h2>
@@ -362,8 +382,15 @@ export default function AdminAirportsPage() {
 												<div className="text-sm text-zinc-600 dark:text-zinc-400">
 													{visit.airportIdent} — {visit.date}
 												</div>
+												{visit.flightNumber && (
+													<div className="mt-1 flex items-center gap-2 text-sm text-zinc-600 dark:text-zinc-400">
+														<span className="inline-block bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-200 rounded px-2 py-0.5 font-mono">
+															✈️ {visit.flightNumber}
+														</span>
+													</div>
+												)}
 												{visit.notes && (
-													<div className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+													<div className="mt-1 text-sm italic text-zinc-600 dark:text-zinc-400">
 														{visit.notes}
 													</div>
 												)}

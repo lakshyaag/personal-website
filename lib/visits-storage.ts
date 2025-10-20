@@ -1,67 +1,46 @@
-import { list, put } from "@vercel/blob";
+import { put } from "@vercel/blob";
 import type { Visit } from "./airports";
-import { readFileSync, writeFileSync } from "fs";
-import { join } from "path";
 
 const VISITS_KEY = "airports/visits.json";
-const LOCAL_VISITS_PATH = join(process.cwd(), "data", "visits.json");
 
+// Construct the public blob URL directly to avoid list() operations
+function getVisitsUrl(): string {
+	const token = process.env.BLOB_READ_WRITE_TOKEN;
+	if (!token) throw new Error("BLOB_READ_WRITE_TOKEN not configured");
+
+	// Extract store ID from token format: vercel_blob_rw_<storeId>_<secret>
+	const parts = token.split("_");
+	const storeId = parts[3]; // Position of storeId in token
+
+	return `https://${storeId}.public.blob.vercel-storage.com/${VISITS_KEY}`;
+}
 
 export async function getVisits(): Promise<Visit[]> {
-    // Use local JSON file in development or when Vercel Blob is not available
-    if (process.env.NODE_ENV === "development") {
-        try {
-            const data = readFileSync(LOCAL_VISITS_PATH, "utf-8");
-            return JSON.parse(data);
-        } catch (localError) {
-            console.error("Error reading local visits file:", localError);
-            return [];
-        }
-    }
+	try {
+		const url = getVisitsUrl();
+		const res = await fetch(url, { cache: "no-store" });
 
-    // Try Vercel Blob first in production
-    try {
-        const items = await list({ prefix: "airports/" });
-        const file = items.blobs.find((b) => b.pathname === VISITS_KEY);
-        if (!file) throw new Error("No visits file found in blob storage");
+		// 404 means file doesn't exist yet - return empty array
+		if (res.status === 404) {
+			return [];
+		}
 
-        const res = await fetch(file.url, { cache: "no-store" });
-        if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+		if (!res.ok) {
+			throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+		}
 
-        return await res.json();
-    } catch (error) {
-        console.error("Error fetching visits from Vercel Blob, falling back to local file:", error);
-
-        // Fall back to local JSON file
-        try {
-            const data = readFileSync(LOCAL_VISITS_PATH, "utf-8");
-            return JSON.parse(data);
-        } catch (localError) {
-            console.error("Error reading local visits file:", localError);
-            return [];
-        }
-    }
+		return await res.json();
+	} catch (error) {
+		console.error("Error fetching visits:", error);
+		return [];
+	}
 }
 
 export async function saveVisits(visits: Visit[]): Promise<void> {
-    // Use local JSON file in development
-    if (process.env.NODE_ENV === "development") {
-        try {
-            writeFileSync(LOCAL_VISITS_PATH, JSON.stringify(visits, null, 2));
-            return;
-        } catch (localError) {
-            console.error("Error writing local visits file:", localError);
-            throw localError;
-        }
-    }
-
-    try {
-        await put(VISITS_KEY, JSON.stringify(visits), {
-            access: "public",
-            contentType: "application/json",
-        });
-    } catch (error) {
-        console.error("Error saving visits to Vercel Blob:", error);
-        throw error;
-    }
+	// put() is 1 operation - overwrites existing file
+	await put(VISITS_KEY, JSON.stringify(visits), {
+		access: "public",
+        allowOverwrite: true,
+		contentType: "application/json",
+	});
 }

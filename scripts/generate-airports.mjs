@@ -68,11 +68,11 @@ async function generateAirportsData() {
 			name: airport.name,
 			lat: Number.parseFloat(airport.latitude_deg),
 			lon: Number.parseFloat(airport.longitude_deg),
-			continent: airport.contient || "",
+			continent: airport.continent || "",
 			iso_country: airport.iso_country,
 			iso_region: airport.iso_region || "",
 			municipality: airport.municipality || "",
-			elevation_ft: airport.elevation_ft || -1,
+			elevation_ft: Number.parseInt(airport.elevation_ft) || 0,
 		}));
 
 	console.log(`✅ Filtered to ${filtered.length} scheduled passenger airports`);

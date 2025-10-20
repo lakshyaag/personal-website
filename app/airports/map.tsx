@@ -1,20 +1,11 @@
 "use client";
 
 import { useMemo } from "react";
-import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
+import { MapContainer, TileLayer, CircleMarker } from "react-leaflet";
 import { useTheme } from "next-themes";
 import airports from "@/data/airports.min.json";
 import type { Visit, Airport } from "@/lib/airports";
 import type { LatLngExpression } from "leaflet";
-import L from "leaflet";
-
-// Fix for default marker icons in react-leaflet
-delete (L.Icon.Default.prototype as any)._getIconUrl;
-L.Icon.Default.mergeOptions({
-	iconRetinaUrl: "leaflet-markers/marker-icon-2x.png",
-	iconUrl: "leaflet-markers/marker-icon.png",
-	shadowUrl: "leaflet-markers/marker-shadow.png",
-});
 
 interface MapProps {
 	visits: Visit[];
@@ -51,10 +42,12 @@ export default function Map({ visits }: MapProps) {
 			.filter((m) => m !== null);
 	}, [visits, airportsByIdent]);
 
+	const isDark = resolvedTheme === "dark";
+
 	return (
 		<MapContainer
 			center={[20, 0]}
-			zoom={1}
+			zoom={2}
 			scrollWheelZoom
 			className="h-[480px] w-full rounded-xl border border-zinc-200 dark:border-zinc-800"
 		>
@@ -63,58 +56,22 @@ export default function Map({ visits }: MapProps) {
 				url={tileUrl}
 				maxZoom={19}
 			/>
-			{markers.map((marker, idx) => marker && (
-				<Marker key={idx} position={marker.position}>
-					<Popup>
-						<div className="min-w-[200px]">
-							<strong>{marker.airport.name}</strong>
-							<br />
-							<span style={{ color: "#666" }}>
-								{marker.airport.ident}
-								{marker.airport.iata_code
-									? ` (${marker.airport.iata_code})`
-									: ""}
-							</span>
-							<br />
-							<span style={{ color: "#666" }}>
-								{marker.airport.municipality}, {marker.airport.iso_country}
-							</span>
-							<br />
-							<br />
-							<strong>Visited:</strong> {marker.visit.date}
-							<br />
-							{marker.visit.notes && (
-								<>
-									<br />
-									<em>{marker.visit.notes}</em>
-									<br />
-								</>
-							)}
-							{marker.visit.photos && marker.visit.photos.length > 0 && (
-								<>
-									<br />
-									📷 {marker.visit.photos.length} photo
-									{marker.visit.photos.length > 1 ? "s" : ""}
-									<br />
-									<br />
-									{marker.visit.photos.map((photo, photoIdx) => (
-										<img
-											key={photoIdx}
-											src={photo}
-											alt={`Visit ${photoIdx + 1}`}
-											style={{
-												width: "100%",
-												marginTop: "8px",
-												borderRadius: "4px",
-											}}
-										/>
-									))}
-								</>
-							)}
-						</div>
-					</Popup>
-				</Marker>
-			))}
+			{markers.map(
+				(marker, idx) =>
+					marker && (
+						<CircleMarker
+							key={idx}
+							center={marker.position}
+							radius={6}
+							pathOptions={{
+								fillColor: isDark ? "#fafafa" : "#18181b",
+								fillOpacity: 0.8,
+								color: isDark ? "#fafafa" : "#18181b",
+								weight: 2,
+							}}
+						/>
+					),
+			)}
 		</MapContainer>
 	);
 }
