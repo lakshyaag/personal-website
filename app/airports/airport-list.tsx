@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { motion } from "motion/react";
+import { motion, AnimatePresence } from "motion/react";
 import type { Visit, Airport } from "@/lib/airports";
 import { ChevronDown, Plane, Mountain, MapPin } from "lucide-react";
 
@@ -330,79 +330,84 @@ export default function AirportList({
 											{new Date(lastVisit.date).getFullYear()}
 										</div>
 									</div>
-									{hasMultipleVisits && (
-										<motion.div
-											animate={{ rotate: isExpanded ? 180 : 0 }}
-											transition={{ duration: 0.2 }}
-											className="mt-2"
-										>
-											<ChevronDown className="h-5 w-5 text-zinc-400" />
-										</motion.div>
-									)}
+									{/* Always reserve space for chevron for consistent alignment */}
+									<div className="mt-2 flex items-center justify-center" style={{ width: 20, height: 20 }}>
+										{hasMultipleVisits ? (
+											<motion.div
+												animate={{ rotate: isExpanded ? 180 : 0 }}
+												transition={{ duration: 0.2 }}
+												className="flex items-center justify-center"
+											>
+												<ChevronDown className="h-5 w-5 text-zinc-400" />
+											</motion.div>
+										) : null}
+									</div>
 								</div>
 							</div>
 						</button>
 
 						{/* Expanded visits */}
-						{isExpanded && hasMultipleVisits && (
-							<motion.div
-								initial={{ opacity: 0, height: 0 }}
-								animate={{ opacity: 1, height: "auto" }}
-								exit={{ opacity: 0, height: 0 }}
-								className="border-t border-zinc-200 dark:border-zinc-800"
-							>
-								<div className="space-y-px bg-zinc-50 p-4 dark:bg-zinc-900/30">
-									{airportVisits.map((visit, idx) => (
-										<div
-											key={visit.id}
-											className="rounded-lg border border-zinc-200 bg-white p-4 dark:border-zinc-700 dark:bg-zinc-900/50"
-										>
-											<div className="flex items-start justify-between gap-4">
-												<div className="flex-1 space-y-2">
-													<div className="flex items-center gap-3">
-														<span className="font-medium text-zinc-900 dark:text-zinc-100">
-															{formatDate(visit.date)}
-														</span>
-														{visit.flightNumbers && visit.flightNumbers.length > 0 && (
-															<div className="flex items-center gap-1.5 text-sm text-zinc-600 dark:text-zinc-400">
-																<Plane className="h-3.5 w-3.5" />
-																<span>
-																	{visit.isLayover && visit.flightNumbers.length > 1
-																		? `${visit.flightNumbers[0]} → ${visit.flightNumbers[1]}`
-																		: visit.flightNumbers.join(", ")}
-																</span>
-																{visit.isLayover && (
-																	<span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">
-																		Layover
+						<AnimatePresence>
+							{isExpanded && hasMultipleVisits && (
+								<motion.div
+									initial={{ opacity: 0, height: 0 }}
+									animate={{ opacity: 1, height: "auto" }}
+									exit={{ opacity: 0, height: 0 }}
+									className="border-t border-zinc-200 dark:border-zinc-800"
+								>
+									<div className="space-y-px bg-zinc-50 p-4 dark:bg-zinc-900/30">
+										{airportVisits.map((visit, idx) => (
+											<div
+												key={visit.id}
+												className="rounded-lg border border-zinc-200 bg-white p-4 dark:border-zinc-700 dark:bg-zinc-900/50"
+											>
+												<div className="flex items-start justify-between gap-4">
+													<div className="flex-1 space-y-2">
+														<div className="flex items-center gap-3">
+															<span className="font-medium text-zinc-900 dark:text-zinc-100">
+																{formatDate(visit.date)}
+															</span>
+															{visit.flightNumbers && visit.flightNumbers.length > 0 && (
+																<div className="flex items-center gap-1.5 text-sm text-zinc-600 dark:text-zinc-400">
+																	<Plane className="h-3.5 w-3.5" />
+																	<span>
+																		{visit.isLayover && visit.flightNumbers.length > 1
+																			? `${visit.flightNumbers[0]} → ${visit.flightNumbers[1]}`
+																			: visit.flightNumbers.join(", ")}
 																	</span>
-																)}
+																	{visit.isLayover && (
+																		<span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">
+																			Layover
+																		</span>
+																	)}
+																</div>
+															)}
+														</div>
+														{visit.notes && (
+															<p className="text-sm italic text-zinc-600 dark:text-zinc-400">
+																{visit.notes}
+															</p>
+														)}
+														{visit.photos && visit.photos.length > 0 && (
+															<div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+																{visit.photos.map((photo, photoIdx) => (
+																	<img
+																		key={photoIdx}
+																		src={photo}
+																		alt={`Visit photo ${photoIdx + 1}`}
+																		className="h-24 w-full rounded-lg object-cover"
+																	/>
+																))}
 															</div>
 														)}
 													</div>
-													{visit.notes && (
-														<p className="text-sm italic text-zinc-600 dark:text-zinc-400">
-															{visit.notes}
-														</p>
-													)}
-													{visit.photos && visit.photos.length > 0 && (
-														<div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-															{visit.photos.map((photo, photoIdx) => (
-																<img
-																	key={photoIdx}
-																	src={photo}
-																	alt={`Visit photo ${photoIdx + 1}`}
-																	className="h-24 w-full rounded-lg object-cover"
-																/>
-															))}
-														</div>
-													)}
 												</div>
 											</div>
-										</div>
-									))}
-								</div>
-							</motion.div>
-						)}
+										))}
+									</div>
+								</motion.div>
+							)}
+						</AnimatePresence>
 					</motion.div>
 				);
 			})}

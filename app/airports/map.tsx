@@ -49,6 +49,7 @@ export default function Map({ visits }: MapProps) {
 			center={[20, 0]}
 			zoom={2}
 			scrollWheelZoom
+			worldCopyJump
 			className="h-[480px] w-full rounded-xl border border-zinc-200 dark:border-zinc-800"
 		>
 			<TileLayer
