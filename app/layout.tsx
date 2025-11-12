@@ -7,6 +7,7 @@ import { ThemeProvider } from "next-themes";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { Analytics } from "@vercel/analytics/react";
 import Script from "next/script";
+import { Toaster } from "sonner";
 
 export const viewport: Viewport = {
 	width: "device-width",
@@ -77,6 +78,7 @@ export default function RootLayout({
 					</div>
 					<Analytics />
 					<SpeedInsights />
+					<Toaster />
 					<Script
 						data-goatcounter="https://lakshyaag.goatcounter.com/count"
 						src="https://gc.zgo.at/count.js"
