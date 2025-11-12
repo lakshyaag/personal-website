@@ -138,7 +138,20 @@ export default function Personal() {
 				variants={VARIANTS_SECTION}
 				transition={TRANSITION_SECTION}
 			>
-				<h3 className="mb-3 text-lg font-medium">Blog</h3>
+				<div className="flex justify-between items-center mb-3">
+					<h3 className="text-lg font-medium">Blog</h3>
+					<Link
+						href="/blogs"
+						className="font-base group relative inline-flex items-center gap-[1px] font-[450] text-zinc-900 dark:text-zinc-50"
+					>
+						View all posts
+						<SvgArrowRight
+							link="/blogs"
+							className="opacity-0 transition-opacity duration-200 group-hover:opacity-100"
+						/>
+						<span className="absolute bottom-0.5 left-0 block h-[1px] w-full max-w-0 bg-zinc-900 transition-all duration-200 group-hover:max-w-full" />
+					</Link>
+				</div>
 				<div className="flex flex-col space-y-0">
 					<AnimatedBackground
 						enableHover
@@ -152,7 +165,9 @@ export default function Personal() {
 					>
 						{BLOG_POSTS.sort(
 							(a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
-						).map((post) => (
+						)
+							.slice(0, 5)
+							.map((post) => (
 							<Link
 								key={post.uid}
 								className="-mx-3 rounded-xl px-3 py-3"
