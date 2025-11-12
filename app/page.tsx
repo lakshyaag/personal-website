@@ -13,6 +13,7 @@ import { EMAIL } from "@/lib/data/email";
 import { BLOG_POSTS } from "@/lib/data/blogs";
 import ProjectItem from "@/components/ProjectItem";
 import MagneticSocialLink from "@/components/MagneticSocialLink";
+import CollapsibleCurrentlyReading from "@/components/CollapsibleCurrentlyReading";
 import { LANDING_INTRO } from "@/lib/constants";
 import remarkGfm from "remark-gfm";
 import {
@@ -33,6 +34,7 @@ export default function Personal() {
 			<motion.section
 				variants={VARIANTS_SECTION}
 				transition={TRANSITION_SECTION}
+				className="space-y-4"
 			>
 				<div className="flex-1 prose prose-zinc dark:prose-invert max-w-fit">
 					<ReactMarkdown
@@ -57,6 +59,7 @@ export default function Personal() {
 						{LANDING_INTRO}
 					</ReactMarkdown>
 				</div>
+				<CollapsibleCurrentlyReading />
 			</motion.section>
 
 			<motion.section
@@ -139,6 +142,7 @@ export default function Personal() {
 				<div className="flex flex-col space-y-0">
 					<AnimatedBackground
 						enableHover
+						fullWidth
 						className="h-full w-full rounded-lg bg-zinc-100 dark:bg-zinc-900/80"
 						transition={{
 							type: "spring",
@@ -155,10 +159,18 @@ export default function Personal() {
 								href={post.link}
 								data-id={post.uid}
 							>
-								<div className="flex flex-col space-y-1">
-									<h4 className="font-normal dark:text-zinc-100">
-										{post.title}
-									</h4>
+								<div className="flex flex-col space-y-1 w-full">
+									<div className="flex justify-between items-start gap-4 w-full">
+										<h4 className="font-normal dark:text-zinc-100 flex-1">
+											{post.title}
+										</h4>
+										<p className="text-zinc-500 dark:text-zinc-400 text-sm whitespace-nowrap flex-shrink-0">
+											{new Date(post.date).toLocaleDateString("en-US", {
+												year: "numeric",
+												month: "short",
+											})}
+										</p>
+									</div>
 									<p className="text-zinc-500 dark:text-zinc-400 text-sm">
 										{post.description}
 									</p>

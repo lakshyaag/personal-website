@@ -19,6 +19,7 @@ export type AnimatedBackgroundProps = {
   className?: string
   transition?: Transition
   enableHover?: boolean
+  fullWidth?: boolean
 }
 
 export function AnimatedBackground({
@@ -28,6 +29,7 @@ export function AnimatedBackground({
   className,
   transition,
   enableHover = false,
+  fullWidth = false,
 }: AnimatedBackgroundProps) {
   const [activeId, setActiveId] = useState<string | null>(null)
   const uniqueId = useId()
@@ -83,7 +85,7 @@ export function AnimatedBackground({
             />
           )}
         </AnimatePresence>
-        <div className="z-10">{child.props.children}</div>
+        <div className={cn('z-10', fullWidth && 'w-full')}>{child.props.children}</div>
       </>,
     )
   })
