@@ -142,6 +142,11 @@ export default function BookshelfPage() {
 											{book.progress}%
 										</p>
 									)}
+									{book.notes && (
+										<p className="text-xs text-zinc-500 dark:text-zinc-500 italic line-clamp-2 pt-1">
+											"{book.notes}"
+										</p>
+									)}
 								</div>
 							</motion.div>
 						))}
