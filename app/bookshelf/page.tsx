@@ -12,6 +12,18 @@ import {
 
 type FilterStatus = "all" | "reading" | "completed" | "want-to-read";
 
+function formatDate(dateStr: string): string {
+	try {
+		const date = new Date(dateStr);
+		return date.toLocaleDateString("en-US", {
+			month: "short",
+			year: "numeric",
+		});
+	} catch {
+		return dateStr;
+	}
+}
+
 export default function BookshelfPage() {
 	const [books, setBooks] = useState<BookEntry[]>([]);
 	const [filter, setFilter] = useState<FilterStatus>("all");
@@ -256,14 +268,14 @@ export default function BookshelfPage() {
 									{(selectedBook.dateStarted || selectedBook.dateCompleted) && (
 										<div className="text-sm text-zinc-500 dark:text-zinc-400">
 											{selectedBook.dateStarted && (
-												<span>{selectedBook.dateStarted}</span>
+												<span>{formatDate(selectedBook.dateStarted)}</span>
 											)}
 											{selectedBook.dateStarted &&
 												selectedBook.dateCompleted && (
 													<span className="mx-2">→</span>
 												)}
 											{selectedBook.dateCompleted && (
-												<span>{selectedBook.dateCompleted}</span>
+												<span>{formatDate(selectedBook.dateCompleted)}</span>
 											)}
 										</div>
 									)}
