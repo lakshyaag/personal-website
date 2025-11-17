@@ -67,7 +67,7 @@ export default function BookCard({
 						</div>
 
 						{/* Progress Bar */}
-						{book.progress > 0 && (
+						{book.progress && book.progress > 0 && (
 							<div className="mt-3 pt-3 border-t border-zinc-200 dark:border-zinc-800">
 								<div className="flex items-center justify-between mb-2">
 									<span className="text-xs font-medium text-zinc-600 dark:text-zinc-400">

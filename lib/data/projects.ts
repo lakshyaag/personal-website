@@ -1,6 +1,25 @@
 export const PROJECTS: Project[] = [
 	{
 		isFeatured: true,
+		name: "Polymarket Terminal",
+		description:
+			"A dashboard for the latest Polymarket markets in your terminal, with AI-powered market research",
+		link: "https://github.com/lakshyaag/polymarket-gemini",
+		id: "polymarket-terminal",
+		date: "2025-08-23",
+		video: "/projects/polymarket-terminal.mp4",
+		tech: ["Python", "TUI", "LLM", "Web Research", "Polymarket"],
+		external: [
+			{
+				label: "GitHub",
+				link: "https://github.com/lakshyaag/polymarket-gemini",
+			},
+		],
+		content:
+			"This is a terminal application that fetches the latest [Polymarket](https://www.polymarket.com/) markets and allows you to browse around and view the spread, orderbook, and other market information, similar to the Bloomberg Terminal. It features an LLM integration with swappable web research APIs to generate real-time trading recommendations for any market.",
+	},
+	{
+		isFeatured: false,
 		name: "Pokemon Battling",
 		description:
 			"A Pokemon battling game, implemented fully in TypeScript with an in-browser game engine and websocket support for real-time multiplayer",

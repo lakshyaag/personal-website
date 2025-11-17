@@ -152,7 +152,7 @@ export default function AdminBooksPage() {
 				coverUrl: form.coverUrl || undefined,
 				description: form.description || undefined,
 				categories: form.categories.length > 0 ? form.categories : undefined,
-				progress: form.progress,
+				progress: form.status === "reading" && form.progress > 0 ? form.progress : undefined,
 				status: form.status,
 				dateStarted: form.dateStarted,
 				dateCompleted: form.dateCompleted || undefined,
@@ -227,7 +227,7 @@ export default function AdminBooksPage() {
 			coverUrl: book.coverUrl || "",
 			description: book.description || "",
 			categories: book.categories || [],
-			progress: book.progress,
+			progress: book.progress || 0,
 			status: book.status,
 			dateStarted: book.dateStarted,
 			dateCompleted: book.dateCompleted || "",
@@ -499,25 +499,7 @@ export default function AdminBooksPage() {
 					</div>
 
 					<div className="grid grid-cols-2 gap-4">
-						<div>
-							<label className="mb-2 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
-								Progress (%)
-							</label>
-							<input
-								type="number"
-								min="0"
-								max="100"
-								value={form.progress}
-								onChange={(e) =>
-									updateForm({
-										progress: Math.min(100, Math.max(0, parseInt(e.target.value) || 0)),
-									})
-								}
-								className="w-full rounded-lg border border-zinc-300 bg-white px-4 py-2 text-zinc-900 focus:border-zinc-500 focus:outline-none focus:ring-2 focus:ring-zinc-500/20 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
-							/>
-						</div>
-
-						<div>
+						<div className={form.status === "reading" ? "" : "col-span-2"}>
 							<label className="mb-2 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
 								Status
 							</label>
@@ -535,6 +517,26 @@ export default function AdminBooksPage() {
 								<option value="want-to-read">Want to read</option>
 							</select>
 						</div>
+
+						{form.status === "reading" && (
+							<div>
+								<label className="mb-2 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
+									Progress (%) (optional)
+								</label>
+								<input
+									type="number"
+									min="0"
+									max="100"
+									value={form.progress}
+									onChange={(e) =>
+										updateForm({
+											progress: Math.min(100, Math.max(0, parseInt(e.target.value) || 0)),
+										})
+									}
+									className="w-full rounded-lg border border-zinc-300 bg-white px-4 py-2 text-zinc-900 focus:border-zinc-500 focus:outline-none focus:ring-2 focus:ring-zinc-500/20 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
+								/>
+							</div>
+						)}
 					</div>
 
 					<label className="flex items-center gap-3 rounded-lg border border-zinc-300 bg-white px-4 py-3 cursor-pointer transition-colors hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900/50 dark:hover:bg-zinc-900">
@@ -602,15 +604,29 @@ export default function AdminBooksPage() {
 					<div className="space-y-4">
 						<h2 className="text-xl font-medium">All Books</h2>
 						<div className="space-y-2">
-							{books.map((book) => (
-								<BookCard
-									key={book.id}
-									book={book}
-									onEdit={editBook}
-									onSetCurrent={makeCurrentBook}
-									showSetCurrent={!book.isCurrent}
-								/>
-							))}
+							{books
+								.sort((a, b) => {
+									// Sort by completed date first, then by start date
+									const dateA = a.dateCompleted || a.dateStarted;
+									const dateB = b.dateCompleted || b.dateStarted;
+
+									if (!dateA || !dateB) {
+										// If no dates, put items without dates at the end
+										return dateA ? -1 : dateB ? 1 : 0;
+									}
+
+									// Sort in descending order (most recent first)
+									return new Date(dateB).getTime() - new Date(dateA).getTime();
+								})
+								.map((book) => (
+									<BookCard
+										key={book.id}
+										book={book}
+										onEdit={editBook}
+										onSetCurrent={makeCurrentBook}
+										showSetCurrent={!book.isCurrent}
+									/>
+								))}
 						</div>
 					</div>
 				</motion.section>

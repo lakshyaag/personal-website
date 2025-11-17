@@ -12,7 +12,7 @@ export const SOCIAL_LINKS: SocialLink[] = [
 	{
 		label: "Resume",
 		link: "/resume.pdf",
-		showHeader: true,
+		showHeader: false,
 	},
 	{
 		label: "LinkedIn",

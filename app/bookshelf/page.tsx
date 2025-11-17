@@ -40,10 +40,23 @@ export default function BookshelfPage() {
 			.catch(() => setLoading(false));
 	}, []);
 
-	const filteredBooks =
+	const filteredBooks = (
 		filter === "all"
 			? books
-			: books.filter((book) => book.status === filter);
+			: books.filter((book) => book.status === filter)
+	).sort((a, b) => {
+		// Sort by completed date first, then by start date
+		const dateA = a.dateCompleted || a.dateStarted;
+		const dateB = b.dateCompleted || b.dateStarted;
+
+		if (!dateA || !dateB) {
+			// If no dates, put items without dates at the end
+			return dateA ? -1 : dateB ? 1 : 0;
+		}
+
+		// Sort in descending order (most recent first)
+		return new Date(dateB).getTime() - new Date(dateA).getTime();
+	});
 
 	const statusCounts = {
 		all: books.length,
@@ -79,11 +92,10 @@ export default function BookshelfPage() {
 							<button
 								key={key}
 								onClick={() => setFilter(key)}
-								className={`px-3 py-1.5 rounded-md font-medium transition-colors ${
-									filter === key
-										? "bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900"
-										: "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100"
-								}`}
+								className={`px-3 py-1.5 rounded-md font-medium transition-colors ${filter === key
+									? "bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900"
+									: "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100"
+									}`}
 							>
 								{label} ({statusCounts[key]})
 							</button>
@@ -135,15 +147,22 @@ export default function BookshelfPage() {
 											</div>
 										)}
 
-										{/* Progress Bar (for reading books) */}
-										{book.status === "reading" && book.progress > 0 && (
-											<div className="absolute bottom-0 left-0 right-0 h-1 bg-zinc-900/20 dark:bg-zinc-100/20">
-												<div
-													className="h-full bg-zinc-900 dark:bg-zinc-100"
-													style={{ width: `${book.progress}%` }}
-												/>
-											</div>
-										)}
+										{/* Status Badge */}
+										<div className="absolute top-2 right-2">
+											{book.status === "reading" ? (
+												<span className="text-[10px] sm:text-xs font-semibold px-2 py-1 rounded-md bg-blue-600/90 text-white">
+													{book.progress}%
+												</span>
+											) : book.status === "completed" ? (
+												<span className="text-[10px] sm:text-xs font-semibold px-2 py-1 rounded-md bg-green-600/90 text-white">
+													Done
+												</span>
+											) : (
+												<span className="text-[10px] sm:text-xs font-semibold px-2 py-1 rounded-md bg-gray-600/90 text-white">
+													Want
+												</span>
+											)}
+										</div>
 									</div>
 
 									{/* Book Info */}
@@ -154,11 +173,7 @@ export default function BookshelfPage() {
 										<p className="text-[10px] sm:text-xs text-zinc-600 dark:text-zinc-400 line-clamp-1">
 											{book.author}
 										</p>
-										{book.status === "reading" && book.progress > 0 && (
-											<p className="text-[10px] sm:text-xs text-zinc-500 dark:text-zinc-500">
-												{book.progress}%
-											</p>
-										)}
+
 									</div>
 								</motion.div>
 							))}
@@ -247,14 +262,14 @@ export default function BookshelfPage() {
 												{selectedBook.status.replace("-", " ")}
 											</span>
 											{selectedBook.status === "reading" &&
-												selectedBook.progress > 0 && (
+												selectedBook.progress && selectedBook.progress > 0 && (
 													<span className="text-sm text-zinc-600 dark:text-zinc-400">
 														{selectedBook.progress}%
 													</span>
 												)}
 										</div>
 										{selectedBook.status === "reading" &&
-											selectedBook.progress > 0 && (
+											selectedBook.progress && selectedBook.progress > 0 && (
 												<div className="mt-3 w-full h-2 bg-zinc-200 dark:bg-zinc-800 rounded-full overflow-hidden">
 													<div
 														className="h-full bg-zinc-900 dark:bg-zinc-100 transition-all"
@@ -265,18 +280,9 @@ export default function BookshelfPage() {
 									</div>
 
 									{/* Dates */}
-									{(selectedBook.dateStarted || selectedBook.dateCompleted) && (
+									{(selectedBook.dateCompleted) && (
 										<div className="text-sm text-zinc-500 dark:text-zinc-400">
-											{selectedBook.dateStarted && (
-												<span>{formatDate(selectedBook.dateStarted)}</span>
-											)}
-											{selectedBook.dateStarted &&
-												selectedBook.dateCompleted && (
-													<span className="mx-2">→</span>
-												)}
-											{selectedBook.dateCompleted && (
-												<span>{formatDate(selectedBook.dateCompleted)}</span>
-											)}
+											<span>{formatDate(selectedBook.dateCompleted)}</span>
 										</div>
 									)}
 

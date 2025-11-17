@@ -59,8 +59,79 @@ export default function Personal() {
 						{LANDING_INTRO}
 					</ReactMarkdown>
 				</div>
-				<CollapsibleCurrentlyReading />
 			</motion.section>
+
+			<motion.section
+				variants={VARIANTS_SECTION}
+				transition={TRANSITION_SECTION}
+			>
+
+				<CollapsibleCurrentlyReading />
+
+			</motion.section>
+
+			<motion.section
+				variants={VARIANTS_SECTION}
+				transition={TRANSITION_SECTION}
+			>
+				<div className="flex justify-between items-center mb-3">
+					<h3 className="text-lg font-medium">Blog</h3>
+					<Link
+						href="/blogs"
+						className="font-base group relative inline-flex items-center gap-[1px] font-[450] text-zinc-900 dark:text-zinc-50"
+					>
+						View all posts
+						<SvgArrowRight
+							link="/blogs"
+							className="opacity-0 transition-opacity duration-200 group-hover:opacity-100"
+						/>
+						<span className="absolute bottom-0.5 left-0 block h-[1px] w-full max-w-0 bg-zinc-900 transition-all duration-200 group-hover:max-w-full" />
+					</Link>
+				</div>
+				<div className="flex flex-col space-y-0">
+					<AnimatedBackground
+						enableHover
+						fullWidth
+						className="h-full w-full rounded-lg bg-zinc-100 dark:bg-zinc-900/80"
+						transition={{
+							type: "spring",
+							bounce: 0,
+							duration: 0.2,
+						}}
+					>
+						{BLOG_POSTS.sort(
+							(a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
+						)
+							.slice(0, 5)
+							.map((post) => (
+								<Link
+									key={post.uid}
+									className="-mx-3 rounded-xl px-3 py-3"
+									href={post.link}
+									data-id={post.uid}
+								>
+									<div className="flex flex-col space-y-1 w-full">
+										<div className="flex justify-between items-start gap-4 w-full">
+											<h4 className="font-normal dark:text-zinc-100 flex-1">
+												{post.title}
+											</h4>
+											<p className="text-zinc-500 dark:text-zinc-400 text-sm whitespace-nowrap flex-shrink-0">
+												{new Date(post.date).toLocaleDateString("en-US", {
+													year: "numeric",
+													month: "short",
+												})}
+											</p>
+										</div>
+										<p className="text-zinc-500 dark:text-zinc-400 text-sm">
+											{post.description}
+										</p>
+									</div>
+								</Link>
+							))}
+					</AnimatedBackground>
+				</div>
+			</motion.section>
+
 
 			<motion.section
 				variants={VARIANTS_SECTION}
@@ -87,7 +158,7 @@ export default function Personal() {
 						)
 						.map((project) => (
 							<ProjectItem key={project.name} project={project} />
-						))}
+						)).slice(0, 6)}
 				</div>
 			</motion.section>
 
@@ -134,67 +205,6 @@ export default function Personal() {
 				</div>
 			</motion.section>
 
-			<motion.section
-				variants={VARIANTS_SECTION}
-				transition={TRANSITION_SECTION}
-			>
-				<div className="flex justify-between items-center mb-3">
-					<h3 className="text-lg font-medium">Blog</h3>
-					<Link
-						href="/blogs"
-						className="font-base group relative inline-flex items-center gap-[1px] font-[450] text-zinc-900 dark:text-zinc-50"
-					>
-						View all posts
-						<SvgArrowRight
-							link="/blogs"
-							className="opacity-0 transition-opacity duration-200 group-hover:opacity-100"
-						/>
-						<span className="absolute bottom-0.5 left-0 block h-[1px] w-full max-w-0 bg-zinc-900 transition-all duration-200 group-hover:max-w-full" />
-					</Link>
-				</div>
-				<div className="flex flex-col space-y-0">
-					<AnimatedBackground
-						enableHover
-						fullWidth
-						className="h-full w-full rounded-lg bg-zinc-100 dark:bg-zinc-900/80"
-						transition={{
-							type: "spring",
-							bounce: 0,
-							duration: 0.2,
-						}}
-					>
-						{BLOG_POSTS.sort(
-							(a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
-						)
-							.slice(0, 5)
-							.map((post) => (
-							<Link
-								key={post.uid}
-								className="-mx-3 rounded-xl px-3 py-3"
-								href={post.link}
-								data-id={post.uid}
-							>
-								<div className="flex flex-col space-y-1 w-full">
-									<div className="flex justify-between items-start gap-4 w-full">
-										<h4 className="font-normal dark:text-zinc-100 flex-1">
-											{post.title}
-										</h4>
-										<p className="text-zinc-500 dark:text-zinc-400 text-sm whitespace-nowrap flex-shrink-0">
-											{new Date(post.date).toLocaleDateString("en-US", {
-												year: "numeric",
-												month: "short",
-											})}
-										</p>
-									</div>
-									<p className="text-zinc-500 dark:text-zinc-400 text-sm">
-										{post.description}
-									</p>
-								</div>
-							</Link>
-						))}
-					</AnimatedBackground>
-				</div>
-			</motion.section>
 
 			<motion.section
 				variants={VARIANTS_SECTION}
@@ -215,6 +225,6 @@ export default function Personal() {
 					))}
 				</div>
 			</motion.section>
-		</motion.main>
+		</motion.main >
 	);
 }
