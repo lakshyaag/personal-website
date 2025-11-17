@@ -101,7 +101,7 @@ export default function BookshelfPage() {
 
 					{/* Books Grid */}
 					{!loading && filteredBooks.length > 0 && (
-						<div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
+						<div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4 sm:gap-6">
 							{filteredBooks.map((book) => (
 								<motion.div
 									key={book.id}
@@ -110,7 +110,7 @@ export default function BookshelfPage() {
 									onClick={() => setSelectedBook(book)}
 								>
 									{/* Book Cover */}
-									<div className="relative aspect-[2/3] mb-3 rounded-lg overflow-hidden bg-zinc-100 dark:bg-zinc-800">
+									<div className="relative aspect-[2/3] mb-2 rounded-md overflow-hidden bg-zinc-100 dark:bg-zinc-800 shadow-sm hover:shadow-md transition-shadow">
 										{book.coverUrl ? (
 											<img
 												src={book.coverUrl}
@@ -119,7 +119,7 @@ export default function BookshelfPage() {
 											/>
 										) : (
 											<div className="w-full h-full flex items-center justify-center">
-												<BookOpen className="w-12 h-12 text-zinc-400 dark:text-zinc-600" />
+												<BookOpen className="w-8 h-8 sm:w-12 sm:h-12 text-zinc-400 dark:text-zinc-600" />
 											</div>
 										)}
 
@@ -135,15 +135,15 @@ export default function BookshelfPage() {
 									</div>
 
 									{/* Book Info */}
-									<div className="space-y-1">
-										<h4 className="font-medium text-sm text-zinc-900 dark:text-zinc-100 line-clamp-2 leading-tight">
+									<div className="space-y-0.5">
+										<h4 className="font-medium text-xs sm:text-sm text-zinc-900 dark:text-zinc-100 line-clamp-2 leading-tight">
 											{book.title}
 										</h4>
-										<p className="text-xs text-zinc-600 dark:text-zinc-400 line-clamp-1">
+										<p className="text-[10px] sm:text-xs text-zinc-600 dark:text-zinc-400 line-clamp-1">
 											{book.author}
 										</p>
 										{book.status === "reading" && book.progress > 0 && (
-											<p className="text-xs text-zinc-500 dark:text-zinc-500">
+											<p className="text-[10px] sm:text-xs text-zinc-500 dark:text-zinc-500">
 												{book.progress}%
 											</p>
 										)}
@@ -174,9 +174,9 @@ export default function BookshelfPage() {
 							animate={{ x: 0 }}
 							exit={{ x: "100%" }}
 							transition={{ type: "spring", damping: 30, stiffness: 300 }}
-							className="fixed right-0 top-0 bottom-0 w-full sm:w-[500px] bg-white dark:bg-zinc-900 shadow-2xl z-50 overflow-y-auto"
+							className="fixed right-0 top-0 bottom-0 w-full sm:w-[90vw] sm:max-w-[500px] bg-white dark:bg-zinc-900 shadow-2xl z-50 overflow-y-auto"
 						>
-							<div className="p-6 space-y-6">
+							<div className="p-4 sm:p-6 space-y-6">
 								{/* Close Button */}
 								<button
 									onClick={() => setSelectedBook(null)}
@@ -186,8 +186,8 @@ export default function BookshelfPage() {
 								</button>
 
 								{/* Book Cover */}
-								<div className="flex justify-center">
-									<div className="relative w-48 aspect-[2/3] rounded-lg overflow-hidden bg-zinc-100 dark:bg-zinc-800 shadow-lg">
+								<div className="flex justify-center pt-4">
+									<div className="relative w-40 sm:w-48 aspect-[2/3] rounded-lg overflow-hidden bg-zinc-100 dark:bg-zinc-800 shadow-lg">
 										{selectedBook.coverUrl ? (
 											<img
 												src={selectedBook.coverUrl}
@@ -203,12 +203,12 @@ export default function BookshelfPage() {
 								</div>
 
 								{/* Book Details */}
-								<div className="space-y-4">
+								<div className="space-y-5">
 									<div>
-										<h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100">
+										<h2 className="text-xl sm:text-2xl font-bold text-zinc-900 dark:text-zinc-100">
 											{selectedBook.title}
 										</h2>
-										<p className="text-lg text-zinc-600 dark:text-zinc-400 mt-1">
+										<p className="text-base sm:text-lg text-zinc-600 dark:text-zinc-400 mt-1">
 											{selectedBook.author}
 										</p>
 									</div>
@@ -216,28 +216,20 @@ export default function BookshelfPage() {
 									{/* Categories */}
 									{selectedBook.categories &&
 										selectedBook.categories.length > 0 && (
-											<div>
-												<h3 className="text-sm font-medium text-zinc-900 dark:text-zinc-100 mb-2">
-													Categories
-												</h3>
-												<div className="flex flex-wrap gap-2">
-													{selectedBook.categories.map((cat, idx) => (
-														<span
-															key={idx}
-															className="text-xs px-3 py-1 rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300"
-														>
-															{cat}
-														</span>
-													))}
-												</div>
+											<div className="flex flex-wrap gap-2">
+												{selectedBook.categories.map((cat, idx) => (
+													<span
+														key={idx}
+														className="text-xs px-3 py-1 rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300"
+													>
+														{cat}
+													</span>
+												))}
 											</div>
 										)}
 
 									{/* Status & Progress */}
 									<div>
-										<h3 className="text-sm font-medium text-zinc-900 dark:text-zinc-100 mb-2">
-											Status
-										</h3>
 										<div className="flex items-center gap-3">
 											<span className="text-sm px-3 py-1 rounded-md bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 capitalize">
 												{selectedBook.status.replace("-", " ")}
@@ -245,7 +237,7 @@ export default function BookshelfPage() {
 											{selectedBook.status === "reading" &&
 												selectedBook.progress > 0 && (
 													<span className="text-sm text-zinc-600 dark:text-zinc-400">
-														{selectedBook.progress}% complete
+														{selectedBook.progress}%
 													</span>
 												)}
 										</div>
@@ -261,29 +253,18 @@ export default function BookshelfPage() {
 									</div>
 
 									{/* Dates */}
-									<div>
-										<h3 className="text-sm font-medium text-zinc-900 dark:text-zinc-100 mb-2">
-											Timeline
-										</h3>
-										<div className="text-sm text-zinc-600 dark:text-zinc-400 space-y-1">
+									{(selectedBook.dateStarted || selectedBook.dateCompleted) && (
+										<div className="text-sm text-zinc-500 dark:text-zinc-400">
 											{selectedBook.dateStarted && (
-												<p>Started: {selectedBook.dateStarted}</p>
+												<span>{selectedBook.dateStarted}</span>
 											)}
+											{selectedBook.dateStarted &&
+												selectedBook.dateCompleted && (
+													<span className="mx-2">→</span>
+												)}
 											{selectedBook.dateCompleted && (
-												<p>Completed: {selectedBook.dateCompleted}</p>
+												<span>{selectedBook.dateCompleted}</span>
 											)}
-										</div>
-									</div>
-
-									{/* Description */}
-									{selectedBook.description && (
-										<div>
-											<h3 className="text-sm font-medium text-zinc-900 dark:text-zinc-100 mb-2">
-												Description
-											</h3>
-											<p className="text-sm text-zinc-600 dark:text-zinc-400 leading-relaxed">
-												{selectedBook.description}
-											</p>
 										</div>
 									)}
 
@@ -293,7 +274,7 @@ export default function BookshelfPage() {
 											<h3 className="text-sm font-medium text-zinc-900 dark:text-zinc-100 mb-2">
 												My Notes
 											</h3>
-											<div className="bg-zinc-50 dark:bg-zinc-800/50 rounded-lg p-4 border border-zinc-200 dark:border-zinc-700">
+											<div className="bg-zinc-50 dark:bg-zinc-800/50 rounded-lg p-3 sm:p-4 border border-zinc-200 dark:border-zinc-700">
 												<p className="text-sm text-zinc-700 dark:text-zinc-300 italic leading-relaxed">
 													"{selectedBook.notes}"
 												</p>
@@ -301,14 +282,14 @@ export default function BookshelfPage() {
 										</div>
 									)}
 
-									{/* ISBN */}
-									{selectedBook.isbn && (
+									{/* Description */}
+									{selectedBook.description && (
 										<div>
 											<h3 className="text-sm font-medium text-zinc-900 dark:text-zinc-100 mb-2">
-												ISBN
+												Description
 											</h3>
-											<p className="text-sm text-zinc-600 dark:text-zinc-400 font-mono">
-												{selectedBook.isbn}
+											<p className="text-sm text-zinc-600 dark:text-zinc-400 leading-relaxed">
+												{selectedBook.description}
 											</p>
 										</div>
 									)}
