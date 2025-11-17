@@ -5,7 +5,7 @@ import { motion } from "motion/react";
 import type { BookEntry } from "@/lib/books";
 import BookCard from "./BookCard";
 import Link from "next/link";
-import { Library } from "lucide-react";
+import { SvgArrowRight } from "@/components/ui/svg-arrow-right";
 
 export default function CollapsibleCurrentlyReading() {
 	const [book, setBook] = useState<BookEntry | null>(null);
@@ -88,10 +88,13 @@ export default function CollapsibleCurrentlyReading() {
 					<BookCard book={book} compact />
 					<Link
 						href="/bookshelf"
-						className="flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-zinc-100 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 rounded-lg transition-colors"
+						className="font-base group relative inline-flex items-center gap-[1px] font-[450] text-zinc-900 dark:text-zinc-50 text-sm"
 					>
-						<Library className="w-4 h-4" />
-						View Full Bookshelf
+						View full bookshelf
+						<SvgArrowRight
+							link="/bookshelf"
+							className="opacity-0 transition-opacity duration-200 group-hover:opacity-100"
+						/>
 					</Link>
 				</div>
 			</motion.div>
