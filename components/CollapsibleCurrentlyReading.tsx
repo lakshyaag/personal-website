@@ -4,6 +4,8 @@ import { useState, useEffect } from "react";
 import { motion } from "motion/react";
 import type { BookEntry } from "@/lib/books";
 import BookCard from "./BookCard";
+import Link from "next/link";
+import { Library } from "lucide-react";
 
 export default function CollapsibleCurrentlyReading() {
 	const [book, setBook] = useState<BookEntry | null>(null);
@@ -82,8 +84,15 @@ export default function CollapsibleCurrentlyReading() {
 				transition={{ duration: 0.3 }}
 				className="overflow-hidden border-t border-zinc-300 dark:border-zinc-700"
 			>
-				<div className="p-4">
+				<div className="p-4 space-y-4">
 					<BookCard book={book} compact />
+					<Link
+						href="/bookshelf"
+						className="flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-zinc-100 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 rounded-lg transition-colors"
+					>
+						<Library className="w-4 h-4" />
+						View Full Bookshelf
+					</Link>
 				</div>
 			</motion.div>
 		</motion.div>
