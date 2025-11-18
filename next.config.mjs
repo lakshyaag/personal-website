@@ -9,6 +9,10 @@ import rehypeHighlight from 'rehype-highlight';
 const nextConfig = {
 	reactStrictMode: true,
 	pageExtensions: ["js", "jsx", "ts", "tsx", "md", "mdx"],
+	turbopack: {},
+	images: {
+		remotePatterns: [new URL("https://books.google.com")],
+	},
 };
 
 const withMDX = createMDX({
