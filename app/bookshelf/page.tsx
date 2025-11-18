@@ -9,6 +9,7 @@ import {
 	VARIANTS_SECTION,
 	TRANSITION_SECTION,
 } from "@/lib/utils";
+import Image from "next/image";
 
 type FilterStatus = "all" | "reading" | "completed" | "want-to-read";
 
@@ -40,23 +41,29 @@ export default function BookshelfPage() {
 			.catch(() => setLoading(false));
 	}, []);
 
-	const filteredBooks = (
-		filter === "all"
-			? books
-			: books.filter((book) => book.status === filter)
-	).sort((a, b) => {
-		// Sort by completed date first, then by start date
+	const sortByDate = (a: BookEntry, b: BookEntry) => {
 		const dateA = a.dateCompleted || a.dateStarted;
 		const dateB = b.dateCompleted || b.dateStarted;
 
 		if (!dateA || !dateB) {
-			// If no dates, put items without dates at the end
 			return dateA ? -1 : dateB ? 1 : 0;
 		}
 
-		// Sort in descending order (most recent first)
 		return new Date(dateB).getTime() - new Date(dateA).getTime();
-	});
+	};
+
+	const filteredBooks = (
+		filter === "all"
+			? books
+			: books.filter((book) => book.status === filter)
+	).sort(sortByDate);
+
+	// Organize books by status: reading, completed, want-to-read
+	const organizedBooks = [
+		...books.filter((b) => b.status === "reading").sort(sortByDate),
+		...books.filter((b) => b.status === "completed").sort(sortByDate),
+		...books.filter((b) => b.status === "want-to-read").sort(sortByDate),
+	];
 
 	const statusCounts = {
 		all: books.length,
@@ -123,10 +130,10 @@ export default function BookshelfPage() {
 						</div>
 					)}
 
-					{/* Books Grid */}
+					{/* Books Grid - Organized by status when "all", otherwise filtered */}
 					{!loading && filteredBooks.length > 0 && (
 						<div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4 sm:gap-6">
-							{filteredBooks.map((book) => (
+							{(filter === "all" ? organizedBooks : filteredBooks).map((book) => (
 								<motion.div
 									key={book.id}
 									layout
@@ -136,16 +143,29 @@ export default function BookshelfPage() {
 									{/* Book Cover */}
 									<div className="relative aspect-[2/3] mb-2 rounded-md overflow-hidden bg-zinc-100 dark:bg-zinc-800 shadow-sm hover:shadow-md transition-shadow">
 										{book.coverUrl ? (
-											<img
+											<Image
+												fill
 												src={book.coverUrl}
 												alt={`${book.title} cover`}
-												className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+												className="object-cover group-hover:scale-105 transition-transform duration-300"
+												sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, (max-width: 1024px) 25vw, 16vw"
+												loading="lazy"
+												unoptimized
+												onError={(e) => {
+													e.currentTarget.style.display = "none";
+													if (e.currentTarget.nextElementSibling) {
+														(
+															e.currentTarget.nextElementSibling as HTMLElement
+														).style.display = "flex";
+													}
+												}}
 											/>
-										) : (
-											<div className="w-full h-full flex items-center justify-center">
-												<BookOpen className="w-8 h-8 sm:w-12 sm:h-12 text-zinc-400 dark:text-zinc-600" />
-											</div>
-										)}
+										) : null}
+										<div
+											className={`w-full h-full flex items-center justify-center ${book.coverUrl ? "hidden" : ""}`}
+										>
+											<BookOpen className="w-8 h-8 sm:w-12 sm:h-12 text-zinc-400 dark:text-zinc-600" />
+										</div>
 
 										{/* Status Badge */}
 										<div className="absolute top-2 right-2">
@@ -173,7 +193,6 @@ export default function BookshelfPage() {
 										<p className="text-[10px] sm:text-xs text-zinc-600 dark:text-zinc-400 line-clamp-1">
 											{book.author}
 										</p>
-
 									</div>
 								</motion.div>
 							))}
@@ -216,16 +235,25 @@ export default function BookshelfPage() {
 								<div className="flex justify-center pt-4">
 									<div className="relative w-40 sm:w-48 aspect-[2/3] rounded-lg overflow-hidden bg-zinc-100 dark:bg-zinc-800 shadow-lg">
 										{selectedBook.coverUrl ? (
-											<img
+											<Image
+												fill
 												src={selectedBook.coverUrl}
 												alt={`${selectedBook.title} cover`}
-												className="w-full h-full object-cover"
+												className="object-cover"
+												sizes="(max-width: 640px) 160px, 192px"
+												priority
+												unoptimized
+												onError={(e) => {
+													e.currentTarget.style.display = 'none';
+													if (e.currentTarget.nextElementSibling) {
+														(e.currentTarget.nextElementSibling as HTMLElement).style.display = 'flex';
+													}
+												}}
 											/>
-										) : (
-											<div className="w-full h-full flex items-center justify-center">
-												<BookOpen className="w-16 h-16 text-zinc-400 dark:text-zinc-600" />
-											</div>
-										)}
+										) : null}
+										<div className={`w-full h-full flex items-center justify-center ${selectedBook.coverUrl ? 'hidden' : ''}`}>
+											<BookOpen className="w-16 h-16 text-zinc-400 dark:text-zinc-600" />
+										</div>
 									</div>
 								</div>
 

@@ -75,6 +75,14 @@ export default function AdminBooksPage() {
 		loadBooks();
 	}, []);
 
+	useEffect(() => {
+		return () => {
+			if (debounceTimer) {
+				clearTimeout(debounceTimer);
+			}
+		};
+	}, [debounceTimer]);
+
 	async function loadBooks() {
 		try {
 			const res = await fetch("/api/books");
@@ -168,9 +176,17 @@ export default function AdminBooksPage() {
 
 			if (!res.ok) throw new Error("Save failed");
 
+			// Wait for books to reload before resetting form
+			try {
+				await loadBooks();
+			} catch (loadErr) {
+				console.error("Failed to reload books:", loadErr);
+				// Book was saved successfully, just reload failed
+				toast.warning("Book saved, but failed to refresh list. Please refresh the page.");
+			}
+
 			toast.success(form.id ? "Book updated successfully!" : "Book added to library!");
 			resetForm();
-			await loadBooks();
 		} catch (err) {
 			console.error("Save error:", err);
 			toast.error("Failed to save book");
