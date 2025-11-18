@@ -8,15 +8,15 @@
 		"url": "https://lakshyaag.com"
 	},
 	"scripts": {
-		"dev": "next dev",
-		"build": "next build",
+		"dev": "next dev --webpack",
+		"build": "next build --webpack",
 		"start": "next start",
 		"lint": "next lint"
 	},
 	"dependencies": {
 		"@mdx-js/loader": "^3.0.1",
 		"@mdx-js/react": "^3.0.1",
-		"@next/mdx": "^14.2.13",
+		"@next/mdx": "^16.0.3",
 		"@tailwindcss/typography": "^0.5.15",
 		"@types/leaflet": "^1.9.21",
 		"@types/mdx": "^2.0.13",
