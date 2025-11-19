@@ -177,12 +177,12 @@ export default function AdminBooksPage() {
 			coverUrl: rec.bookCoverUrl || "",
 			status: "want-to-read",
 			dateStarted: new Date().toISOString().split("T")[0],
-			notes: `Recommended by ${rec.recommenderName || "Anonymous"}: ${rec.comment ? `"${rec.comment}"` : ""}`,
+			notes: `Recommended by ${rec.recommenderName || "Anonymous"}${rec.comment ? `: "${rec.comment}"` : ""}`,
 		};
 
 		if (rec.googleBooksId) {
 			try {
-				toast.loading("Fetching full book details...");
+				toast.loading("Fetching book details...");
 				const res = await fetch(`https://www.googleapis.com/books/v1/volumes/${rec.googleBooksId}`);
 				const data = await res.json();
 
@@ -216,7 +216,7 @@ export default function AdminBooksPage() {
 
 		// Scroll to top to see form
 		window.scrollTo({ top: 0, behavior: "smooth" });
-		toast.info("Recommendation details loaded into form. Review and save to add.");
+		toast.info("Recommendation loaded! Review before adding.");
 	}
 
 	async function deleteRecommendation(id: string) {
