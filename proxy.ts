@@ -93,6 +93,11 @@ function verifySession(token: string): boolean {
 	return true;
 }
 
+// Routes that don't require authentication even for POST/PUT/DELETE
+const PUBLIC_API_ROUTES = [
+	"/api/recommend"
+];
+
 export async function proxy(req: NextRequest) {
 	const { pathname } = req.nextUrl;
 	const clientIp = getClientIp(req);
@@ -105,9 +110,11 @@ export async function proxy(req: NextRequest) {
 	}
 
 	// Check if path needs authentication
+	const isPublicApiRoute = PUBLIC_API_ROUTES.includes(pathname);
 	const needsAuth =
 		pathname.startsWith("/admin") ||
 		(pathname.startsWith("/api") &&
+			!isPublicApiRoute &&
 			(req.method === "POST" ||
 				req.method === "PUT" ||
 				req.method === "DELETE"));

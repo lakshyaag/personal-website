@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { motion } from "motion/react";
 import { toast } from "sonner";
 import type { BookEntry } from "@/lib/books";
+import type { Recommendation } from "@/lib/recommendations-storage";
 import BookCard from "@/components/BookCard";
 import {
 	VARIANTS_CONTAINER,
@@ -59,6 +60,19 @@ const INITIAL_FORM_STATE: FormState = {
 	isCurrent: false,
 };
 
+function stripHtmlTags(html: string): string {
+	return html
+		.replace(/<br>/g, "\n")
+		.replace(/<[^>]*>/g, "")
+		.replace(/&nbsp;/g, " ")
+		.replace(/&amp;/g, "&")
+		.replace(/&lt;/g, "<")
+		.replace(/&gt;/g, ">")
+		.replace(/&quot;/g, '"')
+		.replace(/&#39;/g, "'")
+		.replace(/&copy;/g, "©")
+}
+
 export default function AdminBooksPage() {
 	const [query, setQuery] = useState("");
 	const [searchResults, setSearchResults] = useState<GoogleBooksResult[]>([]);
@@ -68,11 +82,13 @@ export default function AdminBooksPage() {
 
 	const [form, setForm] = useState<FormState>(INITIAL_FORM_STATE);
 	const [books, setBooks] = useState<BookEntry[]>([]);
+	const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
+	const [acceptedRecId, setAcceptedRecId] = useState<string | null>(null);
 	const [saving, setSaving] = useState(false);
 	const [loading, setLoading] = useState(true);
 
 	useEffect(() => {
-		loadBooks();
+		Promise.all([loadBooks(), loadRecommendations()]).finally(() => setLoading(false));
 	}, []);
 
 	useEffect(() => {
@@ -90,8 +106,16 @@ export default function AdminBooksPage() {
 			setBooks(data);
 		} catch (err) {
 			console.error("Failed to load books:", err);
-		} finally {
-			setLoading(false);
+		}
+	}
+
+	async function loadRecommendations() {
+		try {
+			const res = await fetch("/api/recommend");
+			const data = await res.json();
+			setRecommendations(data);
+		} catch (err) {
+			console.error("Failed to load recommendations:", err);
 		}
 	}
 
@@ -136,12 +160,81 @@ export default function AdminBooksPage() {
 			author: info.authors?.join(", ") || "",
 			isbn: isbnId?.identifier || "",
 			coverUrl: info.imageLinks?.thumbnail || "",
-			description: info.description || "",
+			description: info.description ? stripHtmlTags(info.description) : "",
 			categories: info.categories || [],
 		});
 
 		setQuery("");
 		setSearchResults([]);
+	}
+
+	async function acceptRecommendation(rec: Recommendation) {
+		setAcceptedRecId(rec.id);
+
+		let bookDetails: Partial<FormState> = {
+			title: rec.bookName,
+			author: rec.bookAuthor || "",
+			coverUrl: rec.bookCoverUrl || "",
+			status: "want-to-read",
+			dateStarted: new Date().toISOString().split("T")[0],
+			notes: `Recommended by ${rec.recommenderName || "Anonymous"}${rec.comment ? `: "${rec.comment}"` : ""}`,
+		};
+
+		if (rec.googleBooksId) {
+			try {
+				toast.loading("Fetching book details...");
+				const res = await fetch(`https://www.googleapis.com/books/v1/volumes/${rec.googleBooksId}`);
+				const data = await res.json();
+
+				if (data.volumeInfo) {
+					const info = data.volumeInfo;
+					const isbnId = info.industryIdentifiers?.find(
+						(id: { type: string; identifier: string }) => id.type === "ISBN_13" || id.type === "ISBN_10",
+					);
+
+
+					bookDetails = {
+						...bookDetails,
+						title: info.title,
+						author: info.authors?.join(", ") || bookDetails.author,
+						isbn: isbnId?.identifier || "",
+						coverUrl: info.imageLinks?.thumbnail || bookDetails.coverUrl,
+						description: info.description ? stripHtmlTags(info.description) : "",
+						categories: info.categories || [],
+					};
+					toast.success("Full book details loaded!");
+				}
+			} catch (error) {
+				console.error("Failed to fetch Google Books details:", error);
+				toast.error("Could not fetch full details, using basic info.");
+			} finally {
+				toast.dismiss();
+			}
+		}
+
+		updateForm(bookDetails);
+
+		// Scroll to top to see form
+		window.scrollTo({ top: 0, behavior: "smooth" });
+		toast.info("Recommendation loaded! Review before adding.");
+	}
+
+	async function deleteRecommendation(id: string) {
+		if (!confirm("Are you sure you want to delete this recommendation?")) return;
+
+		try {
+			const res = await fetch(`/api/recommend?id=${id}`, {
+				method: "DELETE",
+			});
+
+			if (!res.ok) throw new Error("Delete failed");
+
+			toast.success("Recommendation deleted");
+			await loadRecommendations();
+		} catch (err) {
+			console.error("Delete error:", err);
+			toast.error("Failed to delete recommendation");
+		}
 	}
 
 	async function saveBook() {
@@ -176,16 +269,38 @@ export default function AdminBooksPage() {
 
 			if (!res.ok) throw new Error("Save failed");
 
+			// Book saved successfully - now clean up the recommendation if this was from one
+			let recommendationCleanupFailed = false;
+			if (acceptedRecId) {
+				try {
+					const delRes = await fetch(`/api/recommend?id=${acceptedRecId}`, {
+						method: "DELETE",
+					});
+
+					if (!delRes.ok) {
+						throw new Error("Failed to delete recommendation");
+					}
+
+					setAcceptedRecId(null);
+				} catch (delErr) {
+					console.error("Failed to cleanup recommendation:", delErr);
+					recommendationCleanupFailed = true;
+					toast.error("Book saved, but failed to remove recommendation. Please delete it manually.");
+				}
+			}
+
 			// Wait for books to reload before resetting form
 			try {
-				await loadBooks();
+				await Promise.all([loadBooks(), loadRecommendations()]);
 			} catch (loadErr) {
-				console.error("Failed to reload books:", loadErr);
-				// Book was saved successfully, just reload failed
+				console.error("Failed to reload data:", loadErr);
 				toast.warning("Book saved, but failed to refresh list. Please refresh the page.");
 			}
 
-			toast.success(form.id ? "Book updated successfully!" : "Book added to library!");
+			// Show success message only if everything went well
+			if (!recommendationCleanupFailed) {
+				toast.success(form.id ? "Book updated successfully!" : "Book added to library!");
+			}
 			resetForm();
 		} catch (err) {
 			console.error("Save error:", err);
@@ -253,6 +368,7 @@ export default function AdminBooksPage() {
 		setQuery("");
 		setSearchResults([]);
 		setSelectedBook(null);
+		setAcceptedRecId(null);
 	}
 
 	function resetForm() {
@@ -260,6 +376,7 @@ export default function AdminBooksPage() {
 		setQuery("");
 		setSearchResults([]);
 		setSelectedBook(null);
+		setAcceptedRecId(null);
 	}
 
 	const isEditing = !!form.id;
@@ -611,6 +728,68 @@ export default function AdminBooksPage() {
 					</div>
 				</div>
 			</motion.section>
+
+			{recommendations.length > 0 && (
+				<motion.section
+					variants={VARIANTS_SECTION}
+					transition={TRANSITION_SECTION}
+				>
+					<div className="space-y-4">
+						<h2 className="text-xl font-medium">Community Recommendations</h2>
+						<div className="grid gap-4 md:grid-cols-2">
+							{recommendations.map((rec) => (
+								<div
+									key={rec.id}
+									className="rounded-lg border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900/50"
+								>
+									<div className="flex gap-4">
+										{rec.bookCoverUrl && (
+											<img
+												src={rec.bookCoverUrl}
+												alt={rec.bookName}
+												className="h-24 w-16 rounded object-cover"
+											/>
+										)}
+										<div className="flex-1">
+											<h3 className="font-medium dark:text-zinc-100">
+												{rec.bookName}
+											</h3>
+											{rec.bookAuthor && (
+												<p className="text-sm text-zinc-500 dark:text-zinc-400">
+													{rec.bookAuthor}
+												</p>
+											)}
+											<div className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
+												<p>
+													<span className="font-medium">Recommended by:</span>{" "}
+													{rec.recommenderName || "Anonymous"}
+												</p>
+												{rec.comment && (
+													<p className="mt-1 italic">"{rec.comment}"</p>
+												)}
+											</div>
+										</div>
+									</div>
+									<div className="mt-4 flex gap-2">
+										<button
+											onClick={() => acceptRecommendation(rec)}
+											className="flex-1 rounded-md bg-zinc-900 px-3 py-1.5 text-sm text-white transition-colors hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200"
+										>
+											Add to library
+										</button>
+										<button
+											onClick={() => deleteRecommendation(rec.id)}
+											className="rounded-md border border-red-200 px-3 py-1.5 text-sm text-red-600 transition-colors hover:bg-red-50 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-950/50"
+										>
+											Reject
+										</button>
+									</div>
+								</div>
+							))}
+						</div>
+					</div>
+				</motion.section>
+			)}
 
 			{books.length > 0 && (
 				<motion.section

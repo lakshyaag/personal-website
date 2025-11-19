@@ -10,6 +10,8 @@ import {
 	TRANSITION_SECTION,
 } from "@/lib/utils";
 import Image from "next/image";
+import { RecommendationForm } from "@/components/recommendation-form";
+import { RecommendationList } from "@/components/recommendation-list";
 
 type FilterStatus = "all" | "reading" | "completed" | "want-to-read";
 
@@ -86,6 +88,7 @@ export default function BookshelfPage() {
 				>
 					<div className="flex justify-between items-center mb-5">
 						<h3 className="text-lg font-medium">Bookshelf</h3>
+						<RecommendationForm />
 					</div>
 
 					{/* Filter Tabs */}
@@ -199,7 +202,18 @@ export default function BookshelfPage() {
 						</div>
 					)}
 				</motion.section>
-			</motion.main>
+
+
+
+				<motion.section
+					variants={VARIANTS_SECTION}
+					transition={TRANSITION_SECTION}
+				>
+					<RecommendationList />
+				</motion.section>
+			</motion.main >
+
+
 
 			{/* Book Detail Drawer */}
 			<AnimatePresence>
