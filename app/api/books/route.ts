@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
-import { getBooks, saveBooks } from "@/lib/books-storage";
+import { getBooks, saveBook, deleteBook } from "@/lib/books-db";
 import type { BookEntry } from "@/lib/books";
+import { randomUUID } from "crypto";
 
 export async function GET() {
 	try {
@@ -19,12 +20,8 @@ export async function POST(req: Request) {
 	try {
 		const body = (await req.json()) as Omit<BookEntry, "id"> & { id?: string };
 
-		const books = await getBooks();
-		const existingIndex = books.findIndex((b) => b.id === body.id);
-		const existingBook = existingIndex >= 0 ? books[existingIndex] : null;
-
 		const book: BookEntry = {
-			id: body.id || `book-${Date.now()}`,
+			id: body.id || randomUUID(),
 			title: body.title,
 			author: body.author,
 			isbn: body.isbn,
@@ -36,20 +33,12 @@ export async function POST(req: Request) {
 			dateStarted: body.dateStarted,
 			dateCompleted: body.dateCompleted,
 			notes: body.notes,
-			isCurrent: body.isCurrent !== undefined ? body.isCurrent : existingBook?.isCurrent,
+			isCurrent: body.isCurrent ?? false,
 		};
 
-		// If updating existing book
-		if (existingIndex >= 0) {
-			books[existingIndex] = book;
-		} else {
-			// New book goes to top (becomes current)
-			books.unshift(book);
-		}
+		const id = await saveBook(book);
 
-		await saveBooks(books);
-
-		return NextResponse.json({ ok: true, id: book.id });
+		return NextResponse.json({ ok: true, id });
 	} catch (error) {
 		console.error("Error in POST /api/books:", error);
 		return NextResponse.json(
@@ -71,10 +60,7 @@ export async function DELETE(req: Request) {
 			);
 		}
 
-		const books = await getBooks();
-		const filtered = books.filter((b) => b.id !== id);
-
-		await saveBooks(filtered);
+		await deleteBook(id);
 
 		return NextResponse.json({ ok: true });
 	} catch (error) {
