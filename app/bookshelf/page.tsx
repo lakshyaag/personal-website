@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { BookEntry } from "@/lib/books";
+import { BookEntry } from "@/lib/models";
 import { motion, AnimatePresence } from "motion/react";
 import { BookOpen, X } from "lucide-react";
 import {

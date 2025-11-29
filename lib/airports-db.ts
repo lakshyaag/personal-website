@@ -4,7 +4,7 @@
  */
 
 import { supabaseAdmin } from "./supabase-client";
-import { Airport } from "./types";
+import { Airport } from "./models";
 
 /**
  * Get all airports

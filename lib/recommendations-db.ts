@@ -9,7 +9,7 @@ import {
 	RecommendationDbRow,
 	transformRecommendationFromDb,
 	transformRecommendationToDb,
-} from "./types";
+} from "./models";
 
 /**
  * Get all recommendations, ordered by creation date (most recent first)

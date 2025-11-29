@@ -9,7 +9,7 @@ import {
 	VisitDbRow,
 	transformVisitFromDb,
 	transformVisitToDb,
-} from "./types";
+} from "./models";
 
 /**
  * Get all visits, ordered by date (most recent first)

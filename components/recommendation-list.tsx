@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import type { Recommendation } from "@/lib/recommendations-storage";
+import type { Recommendation } from "@/lib/models";
 import { motion } from "motion/react";
 
 function formatDate(timestamp: number): string {

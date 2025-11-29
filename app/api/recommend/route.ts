@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { saveRecommendation, getRecommendations, deleteRecommendation } from "@/lib/recommendations-db";
-import type { Recommendation } from "@/lib/types";
+import type { Recommendation } from "@/lib/models";
 
 export async function GET() {
     try {

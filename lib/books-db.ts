@@ -9,7 +9,7 @@ import {
 	BookDbRow,
 	transformBookFromDb,
 	transformBookToDb,
-} from "./books";
+} from "./models";
 
 /**
  * Get all books, ordered by date started (most recent first)

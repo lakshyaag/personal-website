@@ -4,7 +4,7 @@ import { useState, useMemo, useEffect } from "react";
 import { motion } from "motion/react";
 import dynamic from "next/dynamic";
 import airports from "@/data/airports.min.json";
-import type { Visit, Airport } from "@/lib/types";
+import type { Visit, Airport } from "@/lib/models";
 import {
 	VARIANTS_CONTAINER,
 	VARIANTS_SECTION,
