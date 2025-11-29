@@ -4,7 +4,7 @@ import { useMemo } from "react";
 import { MapContainer, TileLayer, CircleMarker } from "react-leaflet";
 import { useTheme } from "next-themes";
 import airports from "@/data/airports.min.json";
-import type { Visit, Airport } from "@/lib/airports";
+import type { Visit, Airport } from "@/lib/types";
 import type { LatLngExpression } from "leaflet";
 
 interface MapProps {

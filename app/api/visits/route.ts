@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getVisits, saveVisit, deleteVisit } from "@/lib/visits-db";
-import type { Visit } from "@/lib/airports";
+import type { Visit } from "@/lib/types";
 import { randomUUID } from "crypto";
 
 export async function GET() {
