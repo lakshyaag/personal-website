@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import type { Visit, Airport } from "@/lib/airports";
+import type { Visit, Airport } from "@/lib/models";
 import { ChevronDown, Plane, Mountain, MapPin } from "lucide-react";
 
 interface AirportListProps {

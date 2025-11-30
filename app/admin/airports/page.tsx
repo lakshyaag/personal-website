@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { motion } from "motion/react";
 import airports from "@/data/airports.min.json";
-import type { Visit, Airport } from "@/lib/airports";
+import type { Visit, Airport } from "@/lib/models";
 import {
 	VARIANTS_CONTAINER,
 	VARIANTS_SECTION,

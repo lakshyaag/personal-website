@@ -1,6 +1,6 @@
 "use client";
 
-import type { BookEntry } from "@/lib/books";
+import type { BookEntry } from "@/lib/models";
 
 interface BookCardProps {
 	book: BookEntry;
@@ -140,8 +140,8 @@ export default function BookCard({
 					<div className="mt-2 flex gap-2">
 						<span className="inline-block px-2 py-1 text-xs rounded bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-300">
 							{book.status === "completed"
-								? `Finished (${book.progress}%)`
-								: `${book.progress}%`}
+								? `Finished${book.progress ? ` (${book.progress}%)` : ""}`
+								: book.progress ? `${book.progress}%` : "Not started"}
 						</span>
 					</div>
 				</div>

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
-import { getVisits, saveVisits } from "@/lib/visits-storage";
-import type { Visit } from "@/lib/airports";
+import { getVisits, saveVisit, deleteVisit } from "@/lib/visits-db";
+import type { Visit } from "@/lib/models";
+import { randomUUID } from "node:crypto";
 
 export async function GET() {
 	try {
@@ -19,11 +20,8 @@ export async function POST(req: Request) {
 	try {
 		const body = (await req.json()) as Omit<Visit, "id"> & { id?: string };
 
-		const visits = await getVisits();
-		const id =
-			body.id ?? `${body.airportIdent}-${body.date}-${Date.now()}`;
 		const newVisit: Visit = {
-			id,
+			id: body.id || randomUUID(),
 			airportIdent: body.airportIdent,
 			date: body.date,
 			flightNumbers: body.flightNumbers,
@@ -32,14 +30,7 @@ export async function POST(req: Request) {
 			photos: body.photos,
 		};
 
-		const existingIndex = visits.findIndex((v) => v.id === id);
-		if (existingIndex >= 0) {
-			visits[existingIndex] = newVisit;
-		} else {
-			visits.push(newVisit);
-		}
-
-		await saveVisits(visits);
+		const id = await saveVisit(newVisit);
 
 		return NextResponse.json({ ok: true, id });
 	} catch (error) {
@@ -63,10 +54,7 @@ export async function DELETE(req: Request) {
 			);
 		}
 
-		const visits = await getVisits();
-		const filtered = visits.filter((v) => v.id !== id);
-
-		await saveVisits(filtered);
+		await deleteVisit(id);
 
 		return NextResponse.json({ ok: true });
 	} catch (error) {

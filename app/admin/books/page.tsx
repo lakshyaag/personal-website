@@ -3,8 +3,7 @@
 import { useState, useEffect } from "react";
 import { motion } from "motion/react";
 import { toast } from "sonner";
-import type { BookEntry } from "@/lib/books";
-import type { Recommendation } from "@/lib/recommendations-storage";
+import type { BookEntry, Recommendation } from "@/lib/models";
 import BookCard from "@/components/BookCard";
 import {
 	VARIANTS_CONTAINER,

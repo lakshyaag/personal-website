@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { saveRecommendation, getRecommendations, deleteRecommendation, type Recommendation } from "@/lib/recommendations-storage";
+import { saveRecommendation, getRecommendations, deleteRecommendation } from "@/lib/recommendations-db";
+import type { Recommendation } from "@/lib/models";
 
 export async function GET() {
     try {
@@ -26,15 +27,13 @@ export async function POST(req: Request) {
             );
         }
 
-        const recommendation: Recommendation = {
-            id: crypto.randomUUID(),
+        const recommendation: Omit<Recommendation, "id" | "timestamp"> = {
             bookName: bookName.trim(),
             bookAuthor: bookAuthor?.trim(),
             bookCoverUrl: bookCoverUrl?.trim(),
             googleBooksId: googleBooksId?.trim(),
             recommenderName: recommenderName?.trim(),
             comment: comment?.trim(),
-            timestamp: Date.now(),
         };
 
         await saveRecommendation(recommendation);

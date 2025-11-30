@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { motion } from "motion/react";
-import type { BookEntry } from "@/lib/books";
+import type { BookEntry } from "@/lib/models";
 import BookCard from "./BookCard";
 import Link from "next/link";
 import { SvgArrowRight } from "@/components/ui/svg-arrow-right";
