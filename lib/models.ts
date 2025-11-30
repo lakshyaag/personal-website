@@ -190,3 +190,46 @@ export function transformBookToDb(
         is_current: entry.isCurrent ?? false,
     };
 }
+
+export interface WorkoutLog {
+    id: string;
+    content?: string;
+    weight?: number;
+    photos?: string[];
+    date: string; // YYYY-MM-DD
+}
+
+// Database row type for workout_logs (snake_case columns)
+export interface WorkoutLogDbRow {
+    id: string;
+    content: string | null;
+    weight: number | null;
+    photos: string[] | null;
+    log_date: string;
+    created_at: string;
+    updated_at: string;
+}
+
+// Transform database row to application type
+export function transformWorkoutLogFromDb(row: WorkoutLogDbRow): WorkoutLog {
+    return {
+        id: row.id,
+        content: row.content ?? undefined,
+        weight: row.weight ?? undefined,
+        photos: row.photos ?? undefined,
+        date: row.log_date,
+    };
+}
+
+// Transform application type to database row
+export function transformWorkoutLogToDb(
+    log: WorkoutLog
+): Omit<WorkoutLogDbRow, "created_at" | "updated_at"> {
+    return {
+        id: log.id,
+        content: log.content ?? null,
+        weight: log.weight ?? null,
+        photos: log.photos ?? null,
+        log_date: log.date,
+    };
+}

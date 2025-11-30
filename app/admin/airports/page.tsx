@@ -63,7 +63,8 @@ export default function AdminAirportsPage() {
 			for (const file of Array.from(files)) {
 				const form = new FormData();
 				form.append("file", file);
-				form.append("airportIdent", selectedAirport.ident);
+				form.append("folder", "airports");
+				form.append("identifier", selectedAirport.ident);
 
 				const res = await fetch("/api/upload", {
 					method: "POST",
@@ -93,12 +94,15 @@ export default function AdminAirportsPage() {
 
 		setSaving(true);
 		try {
-			const filteredFlightNumbers = flightNumbers.filter(fn => fn.trim() !== "");
+			const filteredFlightNumbers = flightNumbers.filter(
+				(fn) => fn.trim() !== "",
+			);
 			const visitData = {
 				id: editingVisit?.id,
 				airportIdent: selectedAirport.ident,
 				date,
-				flightNumbers: filteredFlightNumbers.length > 0 ? filteredFlightNumbers : undefined,
+				flightNumbers:
+					filteredFlightNumbers.length > 0 ? filteredFlightNumbers : undefined,
 				isLayover: isLayover || undefined,
 				notes: notes || undefined,
 				photos: uploadedPhotos.length > 0 ? uploadedPhotos : undefined,
@@ -156,7 +160,11 @@ export default function AdminAirportsPage() {
 
 		setSelectedAirport(airport);
 		setDate(visit.date);
-		setFlightNumbers(visit.flightNumbers && visit.flightNumbers.length > 0 ? visit.flightNumbers : [""]);
+		setFlightNumbers(
+			visit.flightNumbers && visit.flightNumbers.length > 0
+				? visit.flightNumbers
+				: [""],
+		);
 		setIsLayover(visit.isLayover || false);
 		setNotes(visit.notes || "");
 		setUploadedPhotos(visit.photos || []);
@@ -193,12 +201,12 @@ export default function AdminAirportsPage() {
 			</motion.section>
 
 			<motion.section
-			className="space-y-8"
-			variants={VARIANTS_SECTION}
-			transition={TRANSITION_SECTION}
+				className="space-y-8"
+				variants={VARIANTS_SECTION}
+				transition={TRANSITION_SECTION}
 			>
-			{/* Form */}
-			<div className="space-y-4">
+				{/* Form */}
+				<div className="space-y-4">
 					<h2 className="text-xl font-medium">
 						{editingVisit ? "Edit Visit" : "Add New Visit"}
 					</h2>
@@ -244,13 +252,16 @@ export default function AdminAirportsPage() {
 
 						{selectedAirport && (
 							<div className="mt-2 rounded-lg bg-zinc-100 px-4 py-2 dark:bg-zinc-900/50">
-								<div className="font-medium">Selected: {selectedAirport.name}</div>
+								<div className="font-medium">
+									Selected: {selectedAirport.name}
+								</div>
 								<div className="text-sm text-zinc-600 dark:text-zinc-400">
 									{selectedAirport.ident}
 									{selectedAirport.iata_code
 										? ` (${selectedAirport.iata_code})`
 										: ""}{" "}
-									— {selectedAirport.municipality}, {selectedAirport.iso_country}
+									— {selectedAirport.municipality},{" "}
+									{selectedAirport.iso_country}
 								</div>
 							</div>
 						)}
@@ -381,7 +392,9 @@ export default function AdminAirportsPage() {
 										<button
 											type="button"
 											onClick={() =>
-												setUploadedPhotos(uploadedPhotos.filter((_, i) => i !== idx))
+												setUploadedPhotos(
+													uploadedPhotos.filter((_, i) => i !== idx),
+												)
 											}
 											className="absolute right-1 top-1 rounded-full bg-red-500 px-2 py-1 text-xs text-white hover:bg-red-600"
 										>
@@ -400,7 +413,11 @@ export default function AdminAirportsPage() {
 							disabled={saving || !selectedAirport || !date}
 							className="rounded-lg bg-zinc-900 px-6 py-2 text-white transition-colors hover:bg-zinc-800 disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200"
 						>
-							{saving ? "Saving..." : editingVisit ? "Update Visit" : "Save Visit"}
+							{saving
+								? "Saving..."
+								: editingVisit
+									? "Update Visit"
+									: "Save Visit"}
 						</button>
 						{editingVisit && (
 							<button
@@ -421,11 +438,16 @@ export default function AdminAirportsPage() {
 			>
 				{/* Visits List */}
 				<div className="space-y-4">
-					<h2 className="text-xl font-medium">Existing Visits ({visits.length})</h2>
+					<h2 className="text-xl font-medium">
+						Existing Visits ({visits.length})
+					</h2>
 
 					<div className="space-y-2">
 						{visits
-							.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+							.sort(
+								(a, b) =>
+									new Date(b.date).getTime() - new Date(a.date).getTime(),
+							)
 							.map((visit) => {
 								const airport = (airports as Airport[]).find(
 									(a) => a.ident === visit.airportIdent,

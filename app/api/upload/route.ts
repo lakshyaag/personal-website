@@ -5,8 +5,9 @@ export async function POST(req: Request) {
 	try {
 		const form = await req.formData();
 		const file = form.get("file") as File | null;
-		const airportIdent =
-			(form.get("airportIdent") as string) || "misc";
+		const folder = (form.get("folder") as string) || "airports";
+		const identifier =
+			(form.get("identifier") as string) || "misc";
 
 		if (!file) {
 			return NextResponse.json(
@@ -15,8 +16,8 @@ export async function POST(req: Request) {
 			);
 		}
 
-		const filename = `${airportIdent}/${Date.now()}-${file.name}`;
-		const { url } = await put(`airports/photos/${filename}`, file, {
+		const filename = `${identifier}/${Date.now()}-${file.name}`;
+		const { url } = await put(`${folder}/photos/${filename}`, file, {
 			access: "public",
 			contentType: file.type,
 		});
