@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { BookEntry } from "@/lib/models";
+import type { BookEntry } from "@/lib/models";
 import { motion, AnimatePresence } from "motion/react";
 import { BookOpen, X } from "lucide-react";
 import {
@@ -55,9 +55,7 @@ export default function BookshelfPage() {
 	};
 
 	const filteredBooks = (
-		filter === "all"
-			? books
-			: books.filter((book) => book.status === filter)
+		filter === "all" ? books : books.filter((book) => book.status === filter)
 	).sort(sortByDate);
 
 	// Organize books by status: reading, completed, want-to-read
@@ -102,10 +100,11 @@ export default function BookshelfPage() {
 							<button
 								key={key}
 								onClick={() => setFilter(key)}
-								className={`px-3 py-1.5 rounded-md font-medium transition-colors ${filter === key
-									? "bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900"
-									: "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100"
-									}`}
+								className={`px-3 py-1.5 rounded-md font-medium transition-colors ${
+									filter === key
+										? "bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900"
+										: "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100"
+								}`}
 							>
 								{label} ({statusCounts[key]})
 							</button>
@@ -136,74 +135,75 @@ export default function BookshelfPage() {
 					{/* Books Grid - Organized by status when "all", otherwise filtered */}
 					{!loading && filteredBooks.length > 0 && (
 						<div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4 sm:gap-6">
-							{(filter === "all" ? organizedBooks : filteredBooks).map((book) => (
-								<motion.div
-									key={book.id}
-									layout
-									className="group cursor-pointer"
-									onClick={() => setSelectedBook(book)}
-								>
-									{/* Book Cover */}
-									<div className="relative aspect-[2/3] mb-2 rounded-md overflow-hidden bg-zinc-100 dark:bg-zinc-800 shadow-sm hover:shadow-md transition-shadow">
-										{book.coverUrl ? (
-											<Image
-												fill
-												src={book.coverUrl}
-												alt={`${book.title} cover`}
-												className="object-cover group-hover:scale-105 transition-transform duration-300"
-												sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, (max-width: 1024px) 25vw, 16vw"
-												loading="lazy"
-												unoptimized
-												onError={(e) => {
-													e.currentTarget.style.display = "none";
-													if (e.currentTarget.nextElementSibling) {
-														(
-															e.currentTarget.nextElementSibling as HTMLElement
-														).style.display = "flex";
-													}
-												}}
-											/>
-										) : null}
-										<div
-											className={`w-full h-full flex items-center justify-center ${book.coverUrl ? "hidden" : ""}`}
-										>
-											<BookOpen className="w-8 h-8 sm:w-12 sm:h-12 text-zinc-400 dark:text-zinc-600" />
+							{(filter === "all" ? organizedBooks : filteredBooks).map(
+								(book) => (
+									<motion.div
+										key={book.id}
+										layout
+										className="group cursor-pointer"
+										onClick={() => setSelectedBook(book)}
+									>
+										{/* Book Cover */}
+										<div className="relative aspect-[2/3] mb-2 rounded-md overflow-hidden bg-zinc-100 dark:bg-zinc-800 shadow-sm hover:shadow-md transition-shadow">
+											{book.coverUrl ? (
+												<Image
+													fill
+													src={book.coverUrl}
+													alt={`${book.title} cover`}
+													className="object-cover group-hover:scale-105 transition-transform duration-300"
+													sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, (max-width: 1024px) 25vw, 16vw"
+													loading="lazy"
+													unoptimized
+													onError={(e) => {
+														e.currentTarget.style.display = "none";
+														if (e.currentTarget.nextElementSibling) {
+															(
+																e.currentTarget
+																	.nextElementSibling as HTMLElement
+															).style.display = "flex";
+														}
+													}}
+												/>
+											) : null}
+											<div
+												className={`w-full h-full flex items-center justify-center ${book.coverUrl ? "hidden" : ""}`}
+											>
+												<BookOpen className="w-8 h-8 sm:w-12 sm:h-12 text-zinc-400 dark:text-zinc-600" />
+											</div>
+
+											{/* Status Badge */}
+											<div className="absolute top-2 right-2">
+												{book.status === "reading" ? (
+													<span className="text-[10px] sm:text-xs font-semibold px-2 py-1 rounded-md bg-blue-600/90 text-white">
+														{book.progress}%
+													</span>
+												) : book.status === "completed" ? (
+													<span className="text-[10px] sm:text-xs font-semibold px-2 py-1 rounded-md bg-green-600/90 text-white">
+														Done
+													</span>
+												) : (
+													<span className="text-[10px] sm:text-xs font-semibold px-2 py-1 rounded-md bg-gray-600/90 text-white">
+														Want
+													</span>
+												)}
+											</div>
 										</div>
 
-										{/* Status Badge */}
-										<div className="absolute top-2 right-2">
-											{book.status === "reading" ? (
-												<span className="text-[10px] sm:text-xs font-semibold px-2 py-1 rounded-md bg-blue-600/90 text-white">
-													{book.progress}%
-												</span>
-											) : book.status === "completed" ? (
-												<span className="text-[10px] sm:text-xs font-semibold px-2 py-1 rounded-md bg-green-600/90 text-white">
-													Done
-												</span>
-											) : (
-												<span className="text-[10px] sm:text-xs font-semibold px-2 py-1 rounded-md bg-gray-600/90 text-white">
-													Want
-												</span>
-											)}
+										{/* Book Info */}
+										<div className="space-y-0.5">
+											<h4 className="font-medium text-xs sm:text-sm text-zinc-900 dark:text-zinc-100 line-clamp-2 leading-tight">
+												{book.title}
+											</h4>
+											<p className="text-[10px] sm:text-xs text-zinc-600 dark:text-zinc-400 line-clamp-1">
+												{book.author}
+											</p>
 										</div>
-									</div>
-
-									{/* Book Info */}
-									<div className="space-y-0.5">
-										<h4 className="font-medium text-xs sm:text-sm text-zinc-900 dark:text-zinc-100 line-clamp-2 leading-tight">
-											{book.title}
-										</h4>
-										<p className="text-[10px] sm:text-xs text-zinc-600 dark:text-zinc-400 line-clamp-1">
-											{book.author}
-										</p>
-									</div>
-								</motion.div>
-							))}
+									</motion.div>
+								),
+							)}
 						</div>
 					)}
 				</motion.section>
-
-
 
 				<motion.section
 					variants={VARIANTS_SECTION}
@@ -211,9 +211,7 @@ export default function BookshelfPage() {
 				>
 					<RecommendationList />
 				</motion.section>
-			</motion.main >
-
-
+			</motion.main>
 
 			{/* Book Detail Drawer */}
 			<AnimatePresence>
@@ -258,14 +256,18 @@ export default function BookshelfPage() {
 												priority
 												unoptimized
 												onError={(e) => {
-													e.currentTarget.style.display = 'none';
+													e.currentTarget.style.display = "none";
 													if (e.currentTarget.nextElementSibling) {
-														(e.currentTarget.nextElementSibling as HTMLElement).style.display = 'flex';
+														(
+															e.currentTarget.nextElementSibling as HTMLElement
+														).style.display = "flex";
 													}
 												}}
 											/>
 										) : null}
-										<div className={`w-full h-full flex items-center justify-center ${selectedBook.coverUrl ? 'hidden' : ''}`}>
+										<div
+											className={`w-full h-full flex items-center justify-center ${selectedBook.coverUrl ? "hidden" : ""}`}
+										>
 											<BookOpen className="w-16 h-16 text-zinc-400 dark:text-zinc-600" />
 										</div>
 									</div>
@@ -304,14 +306,16 @@ export default function BookshelfPage() {
 												{selectedBook.status.replace("-", " ")}
 											</span>
 											{selectedBook.status === "reading" &&
-												selectedBook.progress && selectedBook.progress > 0 && (
+												selectedBook.progress &&
+												selectedBook.progress > 0 && (
 													<span className="text-sm text-zinc-600 dark:text-zinc-400">
 														{selectedBook.progress}%
 													</span>
 												)}
 										</div>
 										{selectedBook.status === "reading" &&
-											selectedBook.progress && selectedBook.progress > 0 && (
+											selectedBook.progress &&
+											selectedBook.progress > 0 && (
 												<div className="mt-3 w-full h-2 bg-zinc-200 dark:bg-zinc-800 rounded-full overflow-hidden">
 													<div
 														className="h-full bg-zinc-900 dark:bg-zinc-100 transition-all"
@@ -322,7 +326,7 @@ export default function BookshelfPage() {
 									</div>
 
 									{/* Dates */}
-									{(selectedBook.dateCompleted) && (
+									{selectedBook.dateCompleted && (
 										<div className="text-sm text-zinc-500 dark:text-zinc-400">
 											<span>{formatDate(selectedBook.dateCompleted)}</span>
 										</div>

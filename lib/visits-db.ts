@@ -5,8 +5,8 @@
 
 import { supabaseAdmin } from "./supabase-client";
 import {
-	Visit,
-	VisitDbRow,
+	type Visit,
+	type VisitDbRow,
 	transformVisitFromDb,
 	transformVisitToDb,
 } from "./models";

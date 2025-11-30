@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getBooks, saveBook, deleteBook } from "@/lib/books-db";
 import type { BookEntry } from "@/lib/models";
-import { randomUUID } from "crypto";
+import { randomUUID } from "node:crypto";
 
 export async function GET() {
 	try {

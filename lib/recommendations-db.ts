@@ -5,8 +5,8 @@
 
 import { supabaseAdmin } from "./supabase-client";
 import {
-	Recommendation,
-	RecommendationDbRow,
+	type Recommendation,
+	type RecommendationDbRow,
 	transformRecommendationFromDb,
 	transformRecommendationToDb,
 } from "./models";

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getVisits, saveVisit, deleteVisit } from "@/lib/visits-db";
 import type { Visit } from "@/lib/models";
-import { randomUUID } from "crypto";
+import { randomUUID } from "node:crypto";
 
 export async function GET() {
 	try {

@@ -5,8 +5,8 @@
 
 import { supabaseAdmin } from "./supabase-client";
 import {
-	BookEntry,
-	BookDbRow,
+	type BookEntry,
+	type BookDbRow,
 	transformBookFromDb,
 	transformBookToDb,
 } from "./models";
