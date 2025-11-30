@@ -1,7 +1,10 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { motion } from "motion/react";
+import { createClient } from "@/lib/supabase-client";
+import { toast } from "sonner";
 import {
 	VARIANTS_CONTAINER,
 	VARIANTS_SECTION,
@@ -9,6 +12,7 @@ import {
 } from "@/lib/utils";
 
 export default function AdminPage() {
+	const router = useRouter();
 	const sections = [
 		{
 			title: "Books",
@@ -22,6 +26,14 @@ export default function AdminPage() {
 		},
 	];
 
+	const handleLogout = async () => {
+		const supabase = createClient();
+		await supabase.auth.signOut();
+		toast.success("Logged out successfully");
+		router.push("/admin/login");
+		router.refresh();
+	};
+
 	return (
 		<motion.main
 			className="space-y-8 pb-16"
@@ -33,7 +45,16 @@ export default function AdminPage() {
 				variants={VARIANTS_SECTION}
 				transition={TRANSITION_SECTION}
 			>
-				<h1 className="mb-4 text-3xl font-medium">Admin</h1>
+				<div className="flex items-center justify-between mb-4">
+					<h1 className="text-3xl font-medium">Admin</h1>
+					<button
+						type="button"
+						onClick={handleLogout}
+						className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700 transition-colors"
+					>
+						Logout
+					</button>
+				</div>
 				<p className="text-zinc-600 dark:text-zinc-400">
 					Manage your personal data.
 				</p>
