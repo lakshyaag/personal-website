@@ -29,6 +29,11 @@ export default function AdminPage() {
 			description: "Track your fitness journey",
 			href: "/admin/workouts",
 		},
+		{
+			title: "Journal",
+			description: "Write and view journal entries",
+			href: "/admin/journal",
+		},
 	];
 
 	const handleLogout = async () => {

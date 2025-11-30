@@ -233,3 +233,44 @@ export function transformWorkoutLogToDb(
         log_date: log.date,
     };
 }
+
+export interface JournalEntry {
+    id: string;
+    content?: string;
+    photos?: string[];
+    date: string; // YYYY-MM-DD
+    createdAt: string; // ISO timestamp
+}
+
+// Database row type for journal_entries (snake_case columns)
+export interface JournalEntryDbRow {
+    id: string;
+    content: string | null;
+    photos: string[] | null;
+    entry_date: string;
+    created_at: string;
+    updated_at: string;
+}
+
+// Transform database row to application type
+export function transformJournalEntryFromDb(row: JournalEntryDbRow): JournalEntry {
+    return {
+        id: row.id,
+        content: row.content ?? undefined,
+        photos: row.photos ?? undefined,
+        date: row.entry_date,
+        createdAt: row.created_at,
+    };
+}
+
+// Transform application type to database row
+export function transformJournalEntryToDb(
+    entry: JournalEntry
+): Omit<JournalEntryDbRow, "created_at" | "updated_at"> {
+    return {
+        id: entry.id,
+        content: entry.content ?? null,
+        photos: entry.photos ?? null,
+        entry_date: entry.date,
+    };
+}
