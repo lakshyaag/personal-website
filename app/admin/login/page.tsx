@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { motion } from "motion/react";
 import { createClient } from "@/lib/supabase-client";
@@ -11,7 +11,7 @@ import {
 	TRANSITION_SECTION,
 } from "@/lib/utils";
 
-export default function AdminLogin() {
+function LoginForm() {
 	const [email, setEmail] = useState("");
 	const [password, setPassword] = useState("");
 	const [loading, setLoading] = useState(false);
@@ -123,5 +123,17 @@ export default function AdminLogin() {
 				</form>
 			</motion.div>
 		</motion.main>
+	);
+}
+
+export default function AdminLogin() {
+	return (
+		<Suspense fallback={
+			<div className="flex min-h-[calc(100vh-12rem)] items-center justify-center">
+				<p className="text-zinc-600 dark:text-zinc-400">Loading...</p>
+			</div>
+		}>
+			<LoginForm />
+		</Suspense>
 	);
 }
