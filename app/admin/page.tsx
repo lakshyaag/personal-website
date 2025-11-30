@@ -24,6 +24,11 @@ export default function AdminPage() {
 			description: "Track visited airports",
 			href: "/admin/airports",
 		},
+		{
+			title: "Workouts",
+			description: "Track your fitness journey",
+			href: "/admin/workouts",
+		},
 	];
 
 	const handleLogout = async () => {
