@@ -3,6 +3,7 @@ import {
     getJournalEntries,
     getEntriesByDate,
     getEntriesGroupedByDate,
+    getJournalEntryById,
     saveJournalEntry,
     deleteJournalEntry,
 } from "@/lib/journal-db";
@@ -14,12 +15,26 @@ import type { JournalEntry } from "@/lib/models";
  * Query params:
  * - date: Get entries for a specific date (YYYY-MM-DD)
  * - grouped: If "true", return entries grouped by date
+ * - id: Get a single entry by ID
  */
 export async function GET(req: Request) {
     try {
         const { searchParams } = new URL(req.url);
         const date = searchParams.get("date");
         const grouped = searchParams.get("grouped");
+        const id = searchParams.get("id");
+
+        if (id) {
+            // Get entry by ID
+            const entry = await getJournalEntryById(id);
+            if (!entry) {
+                return NextResponse.json(
+                    { error: "Entry not found" },
+                    { status: 404 },
+                );
+            }
+            return NextResponse.json(entry);
+        }
 
         if (date) {
             // Get entries for specific date

@@ -48,6 +48,29 @@ export async function getEntriesByDate(date: string): Promise<JournalEntry[]> {
 }
 
 /**
+ * Get a journal entry by ID
+ * @param id - Entry ID
+ */
+export async function getJournalEntryById(id: string): Promise<JournalEntry | null> {
+    const { data, error } = await supabaseAdmin
+        .from("journal_entries")
+        .select("*")
+        .eq("id", id)
+        .single();
+
+    if (error) {
+        if (error.code === "PGRST116") {
+            // No rows returned
+            return null;
+        }
+        console.error("Error fetching journal entry by ID:", error);
+        throw error;
+    }
+
+    return transformJournalEntryFromDb(data as JournalEntryDbRow);
+}
+
+/**
  * Get journal entries grouped by date
  * Returns an object with dates as keys and arrays of entries as values
  */

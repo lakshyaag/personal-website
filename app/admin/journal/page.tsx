@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useCallback, useMemo, useRef, Suspense } from "react";
 import { motion } from "motion/react";
 import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import type { JournalEntry } from "@/lib/models";
 import {
 	VARIANTS_CONTAINER,
@@ -11,38 +12,88 @@ import {
 } from "@/lib/utils";
 import { toast } from "sonner";
 
-export default function AdminJournalPage() {
-	const [date, setDate] = useState("");
+function getTodayDate() {
+	return new Date().toISOString().split("T")[0];
+}
+
+function AdminJournalPageContent() {
+	const router = useRouter();
+	const searchParams = useSearchParams();
+	const editId = searchParams.get("edit");
+	const initializedRef = useRef(false);
+
+	// Initialize date from URL edit param or default to today
+	const initialDate = useMemo(() => getTodayDate(), []);
+
+	const [date, setDate] = useState(initialDate);
 	const [content, setContent] = useState("");
 	const [uploadedPhotos, setUploadedPhotos] = useState<string[]>([]);
 	const [uploading, setUploading] = useState(false);
 	const [saving, setSaving] = useState(false);
 	const [todaysEntries, setTodaysEntries] = useState<JournalEntry[]>([]);
 	const [editingEntry, setEditingEntry] = useState<JournalEntry | null>(null);
+	const [loadingEntries, setLoadingEntries] = useState(false);
 
-	useEffect(() => {
-		// Set today's date as default
-		const today = new Date().toISOString().split("T")[0];
-		setDate(today);
-		loadTodaysEntries(today);
-	}, []);
+	const loadTodaysEntries = useCallback(async (selectedDate: string) => {
+		if (!selectedDate) return;
 
-	useEffect(() => {
-		// Load entries when date changes
-		if (date) {
-			loadTodaysEntries(date);
-		}
-	}, [date]);
-
-	async function loadTodaysEntries(selectedDate: string) {
+		setLoadingEntries(true);
 		try {
 			const res = await fetch(`/api/journal?date=${selectedDate}`);
+			if (!res.ok) throw new Error("Failed to fetch entries");
 			const data = await res.json();
 			setTodaysEntries(data);
 		} catch (err) {
 			console.error("Failed to load journal entries:", err);
+			toast.error("Failed to load entries");
+		} finally {
+			setLoadingEntries(false);
+		}
+	}, []);
+
+	const loadEntryForEdit = useCallback(
+		async (entryId: string) => {
+			try {
+				const res = await fetch(`/api/journal?id=${entryId}`);
+				if (!res.ok) {
+					if (res.status === 404) {
+						toast.error("Entry not found");
+						return;
+					}
+					throw new Error("Failed to load entry");
+				}
+				const entry = await res.json();
+				setDate(entry.date);
+				setContent(entry.content || "");
+				setUploadedPhotos(entry.photos || []);
+				setEditingEntry(entry);
+				// Load entries for the entry's date
+				await loadTodaysEntries(entry.date);
+			} catch (err) {
+				console.error("Failed to load entry for edit:", err);
+				toast.error("Failed to load entry");
+			}
+		},
+		[loadTodaysEntries],
+	);
+
+	// Initialize on mount (only once)
+	if (!initializedRef.current) {
+		initializedRef.current = true;
+		if (editId) {
+			loadEntryForEdit(editId);
+		} else {
+			loadTodaysEntries(initialDate);
 		}
 	}
+
+	const handleDateChange = useCallback(
+		(newDate: string) => {
+			setDate(newDate);
+			loadTodaysEntries(newDate);
+		},
+		[loadTodaysEntries],
+	);
 
 	async function handlePhotoUpload(files: FileList | null) {
 		if (!files || files.length === 0) return;
@@ -89,6 +140,7 @@ export default function AdminJournalPage() {
 		}
 
 		setSaving(true);
+		const savedDate = date; // Store the date before reset
 		try {
 			const entryData: JournalEntry = {
 				id: editingEntry?.id || crypto.randomUUID(),
@@ -111,8 +163,19 @@ export default function AdminJournalPage() {
 					? "Entry updated successfully!"
 					: "Entry saved successfully!",
 			);
-			resetForm();
-			await loadTodaysEntries(date);
+
+			// Reset form and reload entries for the saved date
+			const today = getTodayDate();
+			setDate(savedDate);
+			setContent("");
+			setUploadedPhotos([]);
+			setEditingEntry(null);
+			// Clear edit query parameter from URL
+			const url = new URL(window.location.href);
+			url.searchParams.delete("edit");
+			router.replace(url.pathname + url.search, { scroll: false });
+			// Reload entries for the date where we saved the entry
+			await loadTodaysEntries(savedDate);
 		} catch (err) {
 			console.error("Save error:", err);
 			toast.error("Failed to save entry");
@@ -132,9 +195,20 @@ export default function AdminJournalPage() {
 			if (!res.ok) throw new Error("Delete failed");
 
 			toast.success("Entry deleted successfully!");
-			await loadTodaysEntries(date);
 			if (editingEntry?.id === entryId) {
-				resetForm();
+				// If we were editing this entry, reset form and reload entries for today
+				const today = getTodayDate();
+				setDate(today);
+				setContent("");
+				setUploadedPhotos([]);
+				setEditingEntry(null);
+				const url = new URL(window.location.href);
+				url.searchParams.delete("edit");
+				router.replace(url.pathname + url.search, { scroll: false });
+				await loadTodaysEntries(today);
+			} else {
+				// Otherwise, just reload entries for current date
+				await loadTodaysEntries(date);
 			}
 		} catch (err) {
 			console.error("Delete error:", err);
@@ -147,14 +221,22 @@ export default function AdminJournalPage() {
 		setContent(entry.content || "");
 		setUploadedPhotos(entry.photos || []);
 		setEditingEntry(entry);
+		// Load entries for the entry's date
+		loadTodaysEntries(entry.date);
 	}
 
 	function resetForm() {
-		const today = new Date().toISOString().split("T")[0];
+		const today = getTodayDate();
 		setDate(today);
 		setContent("");
 		setUploadedPhotos([]);
 		setEditingEntry(null);
+		// Clear edit query parameter from URL
+		const url = new URL(window.location.href);
+		url.searchParams.delete("edit");
+		router.replace(url.pathname + url.search, { scroll: false });
+		// Reload entries for today
+		loadTodaysEntries(today);
 	}
 
 	function formatTime(isoString: string): string {
@@ -225,7 +307,7 @@ export default function AdminJournalPage() {
 							id="journal-date"
 							type="date"
 							value={date}
-							onChange={(e) => setDate(e.target.value)}
+							onChange={(e) => handleDateChange(e.target.value)}
 							className="w-full rounded-lg border border-zinc-300 bg-white px-4 py-2 text-zinc-900 focus:border-zinc-500 focus:outline-none focus:ring-2 focus:ring-zinc-500/20 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
 						/>
 					</div>
@@ -389,5 +471,34 @@ export default function AdminJournalPage() {
 				</div>
 			</motion.section>
 		</motion.main>
+	);
+}
+
+export default function AdminJournalPage() {
+	return (
+		<Suspense
+			fallback={
+				<motion.main
+					className="space-y-8 pb-16"
+					variants={VARIANTS_CONTAINER}
+					initial="hidden"
+					animate="visible"
+				>
+					<motion.section
+						variants={VARIANTS_SECTION}
+						transition={TRANSITION_SECTION}
+					>
+						<div className="flex items-center justify-between mb-4">
+							<h1 className="text-3xl font-medium">Journal</h1>
+						</div>
+						<p className="text-zinc-600 dark:text-zinc-400">
+							Loading...
+						</p>
+					</motion.section>
+				</motion.main>
+			}
+		>
+			<AdminJournalPageContent />
+		</Suspense>
 	);
 }
