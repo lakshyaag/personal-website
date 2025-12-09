@@ -15,6 +15,13 @@ function getTodayDate() {
 	return new Date().toISOString().split("T")[0];
 }
 
+function getCurrentTime() {
+	const now = new Date();
+	const hours = String(now.getHours()).padStart(2, "0");
+	const minutes = String(now.getMinutes()).padStart(2, "0");
+	return `${hours}:${minutes}`;
+}
+
 function AdminFoodPageContent() {
 	const router = useRouter();
 	const searchParams = useSearchParams();
@@ -23,8 +30,10 @@ function AdminFoodPageContent() {
 
 	// Initialize date from URL edit param or default to today
 	const initialDate = useMemo(() => getTodayDate(), []);
+	const initialTime = useMemo(() => getCurrentTime(), []);
 
 	const [date, setDate] = useState(initialDate);
+	const [time, setTime] = useState(initialTime);
 	const [description, setDescription] = useState("");
 	const [uploadedPhotos, setUploadedPhotos] = useState<string[]>([]);
 	const [uploading, setUploading] = useState(false);
@@ -63,6 +72,11 @@ function AdminFoodPageContent() {
 				}
 				const entry = await res.json();
 				setDate(entry.date);
+				// Extract time from createdAt timestamp
+				const entryTime = new Date(entry.createdAt);
+				const hours = String(entryTime.getHours()).padStart(2, "0");
+				const minutes = String(entryTime.getMinutes()).padStart(2, "0");
+				setTime(`${hours}:${minutes}`);
 				setDescription(entry.description || "");
 				setUploadedPhotos(entry.photos || []);
 				setEditingEntry(entry);
@@ -141,12 +155,17 @@ function AdminFoodPageContent() {
 		setSaving(true);
 		const savedDate = date; // Store the date before reset
 		try {
+			// Combine date and time into ISO timestamp
+			const [hours, minutes] = time.split(":");
+			const dateTime = new Date(date);
+			dateTime.setHours(parseInt(hours, 10), parseInt(minutes, 10), 0, 0);
+
 			const entryData: FoodEntry = {
 				id: editingEntry?.id || crypto.randomUUID(),
 				date,
 				description: description || undefined,
 				photos: uploadedPhotos.length > 0 ? uploadedPhotos : undefined,
-				createdAt: editingEntry?.createdAt || new Date().toISOString(),
+				createdAt: dateTime.toISOString(),
 			};
 
 			const res = await fetch("/api/food", {
@@ -166,6 +185,7 @@ function AdminFoodPageContent() {
 			// Reset form and reload entries for the saved date
 			const today = getTodayDate();
 			setDate(savedDate);
+			setTime(getCurrentTime());
 			setDescription("");
 			setUploadedPhotos([]);
 			setEditingEntry(null);
@@ -198,6 +218,7 @@ function AdminFoodPageContent() {
 				// If we were editing this entry, reset form and reload entries for today
 				const today = getTodayDate();
 				setDate(today);
+				setTime(getCurrentTime());
 				setDescription("");
 				setUploadedPhotos([]);
 				setEditingEntry(null);
@@ -217,6 +238,11 @@ function AdminFoodPageContent() {
 
 	function editEntry(entry: FoodEntry) {
 		setDate(entry.date);
+		// Extract time from createdAt timestamp
+		const entryTime = new Date(entry.createdAt);
+		const hours = String(entryTime.getHours()).padStart(2, "0");
+		const minutes = String(entryTime.getMinutes()).padStart(2, "0");
+		setTime(`${hours}:${minutes}`);
 		setDescription(entry.description || "");
 		setUploadedPhotos(entry.photos || []);
 		setEditingEntry(entry);
@@ -227,6 +253,7 @@ function AdminFoodPageContent() {
 	function resetForm() {
 		const today = getTodayDate();
 		setDate(today);
+		setTime(getCurrentTime());
 		setDescription("");
 		setUploadedPhotos([]);
 		setEditingEntry(null);
@@ -289,20 +316,37 @@ function AdminFoodPageContent() {
 						{editingEntry ? "Edit Entry" : "New Entry"}
 					</h2>
 
-					<div>
-						<label
-							htmlFor="food-date"
-							className="mb-2 block text-sm font-medium text-zinc-700 dark:text-zinc-300"
-						>
-							Date
-						</label>
-						<input
-							id="food-date"
-							type="date"
-							value={date}
-							onChange={(e) => handleDateChange(e.target.value)}
-							className="w-full rounded-lg border border-zinc-300 bg-white px-4 py-2 text-zinc-900 focus:border-zinc-500 focus:outline-none focus:ring-2 focus:ring-zinc-500/20 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
-						/>
+					<div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+						<div>
+							<label
+								htmlFor="food-date"
+								className="mb-2 block text-sm font-medium text-zinc-700 dark:text-zinc-300"
+							>
+								Date
+							</label>
+							<input
+								id="food-date"
+								type="date"
+								value={date}
+								onChange={(e) => handleDateChange(e.target.value)}
+								className="w-full rounded-lg border border-zinc-300 bg-white px-4 py-2 text-zinc-900 focus:border-zinc-500 focus:outline-none focus:ring-2 focus:ring-zinc-500/20 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
+							/>
+						</div>
+						<div>
+							<label
+								htmlFor="food-time"
+								className="mb-2 block text-sm font-medium text-zinc-700 dark:text-zinc-300"
+							>
+								Time
+							</label>
+							<input
+								id="food-time"
+								type="time"
+								value={time}
+								onChange={(e) => setTime(e.target.value)}
+								className="w-full rounded-lg border border-zinc-300 bg-white px-4 py-2 text-zinc-900 focus:border-zinc-500 focus:outline-none focus:ring-2 focus:ring-zinc-500/20 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
+							/>
+						</div>
 					</div>
 
 					<div>
