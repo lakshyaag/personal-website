@@ -274,3 +274,44 @@ export function transformJournalEntryToDb(
         entry_date: entry.date,
     };
 }
+
+export interface FoodEntry {
+    id: string;
+    description?: string;
+    photos?: string[];
+    date: string; // YYYY-MM-DD
+    createdAt: string; // ISO timestamp
+}
+
+// Database row type for food_entries (snake_case columns)
+export interface FoodEntryDbRow {
+    id: string;
+    description: string | null;
+    photos: string[] | null;
+    entry_date: string;
+    created_at: string;
+    updated_at: string;
+}
+
+// Transform database row to application type
+export function transformFoodEntryFromDb(row: FoodEntryDbRow): FoodEntry {
+    return {
+        id: row.id,
+        description: row.description ?? undefined,
+        photos: row.photos ?? undefined,
+        date: row.entry_date,
+        createdAt: row.created_at,
+    };
+}
+
+// Transform application type to database row
+export function transformFoodEntryToDb(
+    entry: FoodEntry
+): Omit<FoodEntryDbRow, "created_at" | "updated_at"> {
+    return {
+        id: entry.id,
+        description: entry.description ?? null,
+        photos: entry.photos ?? null,
+        entry_date: entry.date,
+    };
+}
