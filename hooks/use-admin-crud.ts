@@ -21,6 +21,7 @@ export function useAdminCrud<T extends { id: string }>(
 		generateId = () => crypto.randomUUID(),
 		onSaveSuccess,
 		onDeleteSuccess,
+		onReset,
 		toApi,
 		fromApi,
 	} = config;
@@ -33,6 +34,15 @@ export function useAdminCrud<T extends { id: string }>(
 	const [editing, setEditing] = useState<T | null>(null);
 	const [loading, setLoading] = useState(true);
 	const [saving, setSaving] = useState(false);
+
+	/**
+	 * Reset form to initial state
+	 */
+	const resetForm = useCallback(() => {
+		setFormData({ ...initialFormData, id: generateId() } as T);
+		setEditing(null);
+		onReset?.();
+	}, [initialFormData, generateId, onReset]);
 
 	/**
 	 * Load all items from API
@@ -112,6 +122,7 @@ export function useAdminCrud<T extends { id: string }>(
 			generateId,
 			toApi,
 			loadItems,
+			resetForm,
 			onSaveSuccess,
 		]
 	);
@@ -145,7 +156,7 @@ export function useAdminCrud<T extends { id: string }>(
 				);
 			}
 		},
-		[endpoint, entityName, editing, loadItems, onDeleteSuccess]
+		[endpoint, entityName, editing, loadItems, resetForm, onDeleteSuccess]
 	);
 
 	/**
@@ -161,7 +172,7 @@ export function useAdminCrud<T extends { id: string }>(
 	 */
 	const cancelEdit = useCallback(() => {
 		resetForm();
-	}, []);
+	}, [resetForm]);
 
 	/**
 	 * Update a single field in the form
@@ -179,14 +190,6 @@ export function useAdminCrud<T extends { id: string }>(
 	const updateFields = useCallback((updates: Partial<T>) => {
 		setFormData((prev) => ({ ...prev, ...updates }));
 	}, []);
-
-	/**
-	 * Reset form to initial state
-	 */
-	function resetForm() {
-		setFormData({ ...initialFormData, id: generateId() } as T);
-		setEditing(null);
-	}
 
 	// Load items on mount
 	useEffect(() => {

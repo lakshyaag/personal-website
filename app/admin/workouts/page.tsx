@@ -1,6 +1,7 @@
 "use client";
 
 import { motion } from "motion/react";
+import Link from "next/link";
 import type { WorkoutLog } from "@/lib/models";
 import {
 	VARIANTS_CONTAINER,
@@ -42,6 +43,7 @@ export default function AdminWorkoutsPage() {
 			content: "",
 			weight: undefined,
 			photos: [],
+			createdAt: new Date().toISOString(),
 		},
 	});
 
@@ -87,15 +89,23 @@ export default function AdminWorkoutsPage() {
 				initial="hidden"
 				animate="visible"
 			>
-				<motion.section
-					variants={VARIANTS_SECTION}
-					transition={TRANSITION_SECTION}
-				>
-					<h1 className="mb-4 text-3xl font-medium">Workout Tracker</h1>
-					<p className="text-zinc-600 dark:text-zinc-400">
-						Track your workouts with minimal friction.
-					</p>
-				</motion.section>
+			<motion.section
+				variants={VARIANTS_SECTION}
+				transition={TRANSITION_SECTION}
+			>
+				<div className="mb-4 flex items-center justify-between">
+					<h1 className="text-3xl font-medium">Workout Tracker</h1>
+					<Link
+						href="/admin/workouts/view"
+						className="text-sm text-blue-600 hover:text-blue-700 dark:text-blue-400"
+					>
+						View All Logs →
+					</Link>
+				</div>
+				<p className="text-zinc-600 dark:text-zinc-400">
+					Track your workouts with minimal friction.
+				</p>
+			</motion.section>
 
 				{/* Form */}
 				<motion.section

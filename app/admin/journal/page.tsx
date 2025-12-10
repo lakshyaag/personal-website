@@ -316,7 +316,7 @@ function AdminJournalPageContent() {
 								>
 									<div className="mb-2 flex items-start justify-between">
 										<div className="flex-1">
-											<div className="text-sm text-zinc-500 dark:text-zinc-500">
+											<div className="text-sm text-zinc-500">
 												{formatTime(entry.createdAt)}
 											</div>
 											{entry.content && (

@@ -209,29 +209,5 @@ export function useConfirmDialog() {
 	};
 }
 
-/**
- * Global confirm function (alternative to hook for cases where hooks can't be used)
- */
-export async function confirmDialog(options: {
-	title: string;
-	message: string;
-	variant?: "default" | "danger";
-	confirmLabel?: string;
-	cancelLabel?: string;
-}): Promise<boolean> {
-	return new Promise((resolve) => {
-		resolveCallback = resolve;
-		dialogState = {
-			isOpen: true,
-			title: options.title,
-			message: options.message,
-			variant: options.variant || "default",
-			confirmLabel: options.confirmLabel || "Confirm",
-			cancelLabel: options.cancelLabel || "Cancel",
-		};
-		notifyListeners();
-	});
-}
-
 // Export the component for direct use if needed
 export { ConfirmDialogComponent as ConfirmDialog };

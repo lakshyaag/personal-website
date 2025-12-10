@@ -6,6 +6,8 @@
 import { createCrudRoutes } from "@/lib/api-route-builder";
 import {
 	getWorkoutLogs,
+	getWorkoutLogsByDate,
+	getWorkoutLogsGrouped,
 	saveWorkoutLog,
 	deleteWorkoutLog,
 } from "@/lib/workouts-db";
@@ -14,6 +16,8 @@ import type { WorkoutLog } from "@/lib/models";
 export const { GET, POST, DELETE } = createCrudRoutes<WorkoutLog>({
 	dbOperations: {
 		getAll: getWorkoutLogs,
+		getByDate: getWorkoutLogsByDate,
+		getGrouped: getWorkoutLogsGrouped,
 		save: saveWorkoutLog,
 		delete: deleteWorkoutLog,
 	},

@@ -58,21 +58,3 @@ export function parseDateAndTime(date: string, time: string): Date {
 	const [hours, minutes] = time.split(":").map(Number);
 	return new Date(year, month - 1, day, hours, minutes);
 }
-
-/**
- * Group an array of entries by date
- * @example groupByDate(entries, (e) => e.date)
- */
-export function groupByDate<T>(
-	items: T[],
-	getDate: (item: T) => string
-): Map<string, T[]> {
-	const grouped = new Map<string, T[]>();
-	for (const item of items) {
-		const date = getDate(item);
-		const existing = grouped.get(date) || [];
-		existing.push(item);
-		grouped.set(date, existing);
-	}
-	return grouped;
-}

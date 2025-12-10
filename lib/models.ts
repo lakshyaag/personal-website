@@ -197,6 +197,7 @@ export interface WorkoutLog {
     weight?: number;
     photos?: string[];
     date: string; // YYYY-MM-DD
+    createdAt: string; // ISO timestamp
 }
 
 // Database row type for workout_logs (snake_case columns)
@@ -218,6 +219,7 @@ export function transformWorkoutLogFromDb(row: WorkoutLogDbRow): WorkoutLog {
         weight: row.weight ?? undefined,
         photos: row.photos ?? undefined,
         date: row.log_date,
+        createdAt: row.created_at,
     };
 }
 

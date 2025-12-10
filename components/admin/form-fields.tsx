@@ -1,7 +1,11 @@
 "use client";
 
 import { cn } from "@/lib/utils";
-import type { InputHTMLAttributes, TextareaHTMLAttributes } from "react";
+import type {
+	InputHTMLAttributes,
+	TextareaHTMLAttributes,
+	ButtonHTMLAttributes,
+} from "react";
 
 /**
  * Shared form field styles for admin modules
@@ -319,5 +323,93 @@ export function FormSelect({
 				<p className="mt-1 text-sm text-red-600 dark:text-red-400">{error}</p>
 			)}
 		</div>
+	);
+}
+
+/**
+ * Primary Button - Main action button
+ */
+interface PrimaryButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
+	loading?: boolean;
+	fullWidth?: boolean;
+}
+
+export function PrimaryButton({
+	children,
+	loading,
+	fullWidth,
+	disabled,
+	className,
+	...props
+}: PrimaryButtonProps) {
+	return (
+		<button
+			type="button"
+			disabled={disabled || loading}
+			className={cn(
+				"rounded-lg bg-zinc-900 px-6 py-2 text-white transition-colors hover:bg-zinc-800 disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200",
+				fullWidth && "w-full",
+				className
+			)}
+			{...props}
+		>
+			{loading ? "Saving..." : children}
+		</button>
+	);
+}
+
+/**
+ * Secondary Button - Cancel/secondary action button
+ */
+interface SecondaryButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
+	fullWidth?: boolean;
+}
+
+export function SecondaryButton({
+	children,
+	fullWidth,
+	className,
+	...props
+}: SecondaryButtonProps) {
+	return (
+		<button
+			type="button"
+			className={cn(
+				"rounded-lg border border-zinc-300 px-6 py-2 transition-colors hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-800",
+				fullWidth && "w-full",
+				className
+			)}
+			{...props}
+		>
+			{children}
+		</button>
+	);
+}
+
+/**
+ * Danger Button - Delete/destructive action button
+ */
+interface DangerButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
+	fullWidth?: boolean;
+}
+
+export function DangerButton({
+	children,
+	fullWidth,
+	className,
+	...props
+}: DangerButtonProps) {
+	return (
+		<button
+			type="button"
+			className={cn(
+				"rounded-lg border border-red-300 px-4 py-2 text-red-600 transition-colors hover:bg-red-50 dark:border-red-700 dark:text-red-400 dark:hover:bg-red-950",
+				fullWidth && "w-full",
+				className
+			)}
+			{...props}
+		>
+			{children}
+		</button>
 	);
 }
