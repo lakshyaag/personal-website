@@ -34,6 +34,11 @@ export default function AdminPage() {
 			description: "Write and view journal entries",
 			href: "/admin/journal",
 		},
+		{
+			title: "Food Tracker",
+			description: "Track your daily food intake",
+			href: "/admin/food",
+		},
 	];
 
 	const handleLogout = async () => {
