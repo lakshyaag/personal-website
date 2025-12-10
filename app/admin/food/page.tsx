@@ -163,7 +163,7 @@ function AdminFoodPageContent() {
 		router.replace(url.pathname + url.search, { scroll: false });
 	};
 
-	const resetForm() {
+	const resetForm = () => {
 		const today = getTodayDate();
 		setDate(today);
 		setTime(getCurrentTime());
@@ -181,7 +181,15 @@ function AdminFoodPageContent() {
 			<ConfirmDialog />
 			<motion.main className="space-y-8 pb-16" variants={VARIANTS_CONTAINER} initial="hidden" animate="visible">
 				<motion.section variants={VARIANTS_SECTION} transition={TRANSITION_SECTION}>
-					<h1 className="mb-4 text-3xl font-medium">Food Tracker</h1>
+					<div className="mb-4 flex items-center justify-between">
+						<h1 className="text-3xl font-medium">Food Tracker</h1>
+						<Link
+							href="/admin/food/view"
+							className="text-sm text-blue-600 hover:text-blue-700 dark:text-blue-400"
+						>
+							View All Entries →
+						</Link>
+					</div>
 					<p className="text-zinc-600 dark:text-zinc-400">Track what you eat throughout the day.</p>
 				</motion.section>
 
