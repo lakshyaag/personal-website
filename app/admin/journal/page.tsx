@@ -27,12 +27,13 @@ import { apiGet } from "@/lib/api-utils";
 import { usePhotoUpload } from "@/hooks/use-photo-upload";
 import { useAdminCrud } from "@/hooks/use-admin-crud";
 
-function toJournalEntry(data: JournalEntry): JournalEntry {
+function toJournalEntry(data: unknown): JournalEntry {
+	const entry = data as JournalEntry;
 	return {
-		...data,
-		content: data.content ?? "",
-		photos: data.photos ?? [],
-		createdAt: data.createdAt || new Date().toISOString(),
+		...entry,
+		content: entry.content ?? "",
+		photos: entry.photos ?? [],
+		createdAt: entry.createdAt || new Date().toISOString(),
 	};
 }
 
