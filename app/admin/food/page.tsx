@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, Suspense } from "react";
+import { useState, useEffect, useCallback, Suspense, useRef } from "react";
 import { motion } from "motion/react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -73,10 +73,14 @@ function AdminFoodPageContent() {
 
 	const [dateFilter, setDateFilter] = useState(getTodayDate());
 
+	// Memoize getQuery to prevent unnecessary re-renders
 	const getQuery = useCallback(
 		() => (dateFilter ? `?date=${dateFilter}` : ""),
 		[dateFilter]
 	);
+
+	// Memoize toApi to prevent config changes on every render
+	const toApi = useCallback((data: FoodForm) => toFoodEntry(data), []);
 
 	const {
 		items: entries,
@@ -102,7 +106,7 @@ function AdminFoodPageContent() {
 			createdAt: new Date().toISOString(),
 		},
 		getQuery,
-		toApi: toFoodEntry,
+		toApi,
 		fromApi: toFoodForm,
 	});
 
@@ -119,9 +123,23 @@ function AdminFoodPageContent() {
 		onPhotosChange: (newPhotos) => updateField("photos", newPhotos),
 	});
 
+	// Track if date change is from editing (skip reload in that case)
+	const isEditingDateChange = useRef(false);
+
+	// Load items when date filter changes (not on mount - hook handles that)
+	const [initialLoadDone, setInitialLoadDone] = useState(false);
 	useEffect(() => {
-		loadItems();
-	}, [dateFilter, loadItems]);
+		if (isEditingDateChange.current) {
+			isEditingDateChange.current = false;
+			return;
+		}
+		if (initialLoadDone) {
+			loadItems();
+		} else {
+			setInitialLoadDone(true);
+		}
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [dateFilter]);
 
 	useEffect(() => {
 		setPhotosList(formData.photos || []);
@@ -155,6 +173,8 @@ function AdminFoodPageContent() {
 			}
 
 			const entry = toFoodForm(result.data);
+			// Mark this date change as from editing to skip reload
+			isEditingDateChange.current = true;
 			setDateFilter(entry.date);
 			editItem(entry);
 			setPhotosList(entry.photos || []);
@@ -200,6 +220,8 @@ function AdminFoodPageContent() {
 
 	const handleEdit = (entry: FoodForm) => {
 		editItem(entry);
+		// Mark this date change as from editing to skip reload
+		isEditingDateChange.current = true;
 		setDateFilter(entry.date);
 		setPhotosList(entry.photos || []);
 

@@ -92,26 +92,9 @@ export default function AdminBooksPage() {
 	const [acceptedRecId, setAcceptedRecId] = useState<string | null>(null);
 	const [loadingRecs, setLoadingRecs] = useState(true);
 
-	// Use the admin CRUD hook for books
-	const {
-		items: books,
-		formData,
-		editing,
-		loading,
-		saving,
-		updateField,
-		updateFields,
-		saveItem,
-		deleteItem,
-		editItem,
-		resetForm: crudResetForm,
-		loadItems,
-	} = useAdminCrud<BookFormData>({
-		endpoint: "/api/books",
-		entityName: "book",
-		initialFormData: INITIAL_FORM_DATA,
-		generateId: () => `book-${Date.now()}`,
-		toApi: (data) => ({
+	// Memoize toApi to prevent config changes on every render
+	const toApi = useCallback(
+		(data: BookFormData) => ({
 			id: data.id,
 			title: data.title,
 			author: data.author,
@@ -132,14 +115,40 @@ export default function AdminBooksPage() {
 			notes: data.notes || undefined,
 			isCurrent: data.isCurrent ? true : undefined,
 		}),
-		fromApi: (data) => {
-			const book = data as BookEntry;
-			return {
-				...book,
-				categories: book.categories ?? [],
-				progress: book.progress ?? 0,
-			};
-		},
+		[]
+	);
+
+	// Memoize fromApi to prevent config changes on every render
+	const fromApi = useCallback((data: unknown) => {
+		const book = data as BookEntry;
+		return {
+			...book,
+			categories: book.categories ?? [],
+			progress: book.progress ?? 0,
+		};
+	}, []);
+
+	// Use the admin CRUD hook for books
+	const {
+		items: books,
+		formData,
+		editing,
+		loading,
+		saving,
+		updateField,
+		updateFields,
+		saveItem,
+		deleteItem,
+		editItem,
+		resetForm: crudResetForm,
+		loadItems,
+	} = useAdminCrud<BookFormData>({
+		endpoint: "/api/books",
+		entityName: "book",
+		initialFormData: INITIAL_FORM_DATA,
+		generateId: () => `book-${Date.now()}`,
+		toApi,
+		fromApi,
 	});
 
 	// Load recommendations on mount

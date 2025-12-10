@@ -2,7 +2,7 @@
 
 import { motion, AnimatePresence } from "motion/react";
 import { createPortal } from "react-dom";
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 
 interface ConfirmDialogProps {
@@ -26,13 +26,6 @@ function ConfirmDialogComponent({
 	onConfirm,
 	onCancel,
 }: ConfirmDialogProps) {
-	const [mounted, setMounted] = useState(false);
-
-	useEffect(() => {
-		setMounted(true);
-		return () => setMounted(false);
-	}, []);
-
 	useEffect(() => {
 		const handleEscape = (e: KeyboardEvent) => {
 			if (e.key === "Escape" && isOpen) {
@@ -51,7 +44,8 @@ function ConfirmDialogComponent({
 		};
 	}, [isOpen, onCancel]);
 
-	if (!mounted) return null;
+	// Avoid rendering on the server
+	if (typeof document === "undefined") return null;
 
 	return createPortal(
 		<AnimatePresence>

@@ -91,9 +91,7 @@ export default function AdminAirportsPage() {
 		setPhotosList(formData.photos || []);
 	}, [formData.photos, setPhotosList]);
 
-	useEffect(() => {
-		loadItems();
-	}, [loadItems]);
+	// Note: loadItems is called on mount by useAdminCrud hook
 
 	const showDropdown = query && !selectedAirport;
 	const results: Airport[] = showDropdown
