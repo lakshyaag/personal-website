@@ -8,22 +8,28 @@ import {
 	VARIANTS_SECTION,
 	TRANSITION_SECTION,
 } from "@/lib/utils";
+import { usePhotoUpload } from "@/hooks/usePhotoUpload";
+import { PhotoUploadInput, PhotoGrid } from "@/components/admin";
+import { formatDate, getTodayDate } from "@/lib/admin-utils";
+import { toast } from "sonner";
 
 export default function AdminWorkoutsPage() {
 	const [date, setDate] = useState("");
 	const [weight, setWeight] = useState("");
 	const [content, setContent] = useState("");
 	const [uploadedPhotos, setUploadedPhotos] = useState<string[]>([]);
-	const [uploading, setUploading] = useState(false);
 	const [saving, setSaving] = useState(false);
 	const [logs, setLogs] = useState<WorkoutLog[]>([]);
 	const [editingLog, setEditingLog] = useState<WorkoutLog | null>(null);
 
+	const { uploadPhotos, uploading } = usePhotoUpload({
+		folder: "workouts",
+		onUploadComplete: (urls) => setUploadedPhotos([...uploadedPhotos, ...urls]),
+	});
+
 	useEffect(() => {
 		loadLogs();
-		// Set today's date as default
-		const today = new Date().toISOString().split("T")[0];
-		setDate(today);
+		setDate(getTodayDate());
 	}, []);
 
 	async function loadLogs() {
@@ -33,44 +39,17 @@ export default function AdminWorkoutsPage() {
 			setLogs(data);
 		} catch (err) {
 			console.error("Failed to load workout logs:", err);
+			toast.error("Failed to load workout logs");
 		}
 	}
 
 	async function handlePhotoUpload(files: FileList | null) {
-		if (!files || files.length === 0) return;
-
-		setUploading(true);
-		try {
-			const urls: string[] = [];
-			for (const file of Array.from(files)) {
-				const form = new FormData();
-				form.append("file", file);
-				form.append("folder", "workouts");
-				form.append("identifier", date.replace(/-/g, ""));
-
-				const res = await fetch("/api/upload", {
-					method: "POST",
-					body: form,
-				});
-
-				if (!res.ok) throw new Error("Upload failed");
-
-				const { url } = await res.json();
-				urls.push(url);
-			}
-
-			setUploadedPhotos([...uploadedPhotos, ...urls]);
-		} catch (err) {
-			console.error("Upload error:", err);
-			alert("Failed to upload photos");
-		} finally {
-			setUploading(false);
-		}
+		await uploadPhotos(files, date.replace(/-/g, ""));
 	}
 
 	async function saveLog() {
 		if (!date) {
-			alert("Please select a date");
+			toast.error("Please select a date");
 			return;
 		}
 
@@ -92,7 +71,7 @@ export default function AdminWorkoutsPage() {
 
 			if (!res.ok) throw new Error("Save failed");
 
-			alert(
+			toast.success(
 				editingLog
 					? "Workout log updated successfully!"
 					: "Workout log saved successfully!",
@@ -101,7 +80,7 @@ export default function AdminWorkoutsPage() {
 			await loadLogs();
 		} catch (err) {
 			console.error("Save error:", err);
-			alert("Failed to save workout log");
+			toast.error("Failed to save workout log");
 		} finally {
 			setSaving(false);
 		}
@@ -117,14 +96,14 @@ export default function AdminWorkoutsPage() {
 
 			if (!res.ok) throw new Error("Delete failed");
 
-			alert("Workout log deleted successfully!");
+			toast.success("Workout log deleted successfully!");
 			await loadLogs();
 			if (editingLog?.id === logId) {
 				resetForm();
 			}
 		} catch (err) {
 			console.error("Delete error:", err);
-			alert("Failed to delete workout log");
+			toast.error("Failed to delete workout log");
 		}
 	}
 
@@ -137,24 +116,11 @@ export default function AdminWorkoutsPage() {
 	}
 
 	function resetForm() {
-		const today = new Date().toISOString().split("T")[0];
-		setDate(today);
+		setDate(getTodayDate());
 		setWeight("");
 		setContent("");
 		setUploadedPhotos([]);
 		setEditingLog(null);
-	}
-
-	function formatDate(dateStr: string): string {
-		// Parse date string as local date (YYYY-MM-DD format)
-		const [year, month, day] = dateStr.split("-").map(Number);
-		const date = new Date(year, month - 1, day);
-		return date.toLocaleDateString("en-US", {
-			weekday: "short",
-			year: "numeric",
-			month: "short",
-			day: "numeric",
-		});
 	}
 
 	return (
@@ -236,52 +202,16 @@ export default function AdminWorkoutsPage() {
 						/>
 					</div>
 
-					<div>
-						<label
-							htmlFor="workout-photos"
-							className="mb-2 block text-sm font-medium text-zinc-700 dark:text-zinc-300"
-						>
-							Photos (optional)
-						</label>
-						<input
-							id="workout-photos"
-							type="file"
-							accept="image/*"
-							multiple
-							onChange={(e) => handlePhotoUpload(e.target.files)}
-							disabled={uploading}
-							className="w-full rounded-lg border border-zinc-300 bg-white px-4 py-2 text-zinc-900 focus:border-zinc-500 focus:outline-none focus:ring-2 focus:ring-zinc-500/20 disabled:opacity-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
-						/>
-						{uploading && (
-							<p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
-								Uploading...
-							</p>
-						)}
-						{uploadedPhotos.length > 0 && (
-							<div className="mt-2 grid grid-cols-3 gap-2">
-								{uploadedPhotos.map((photo) => (
-									<div key={photo} className="relative">
-										<img
-											src={photo}
-											alt="Workout progress"
-											className="h-24 w-full rounded object-cover"
-										/>
-										<button
-											type="button"
-											onClick={() =>
-												setUploadedPhotos(
-													uploadedPhotos.filter((p) => p !== photo),
-												)
-											}
-											className="absolute right-1 top-1 rounded-full bg-red-500 px-2 py-1 text-xs text-white hover:bg-red-600"
-										>
-											×
-										</button>
-									</div>
-								))}
-							</div>
-						)}
-					</div>
+					<PhotoUploadInput
+						id="workout-photos"
+						photos={uploadedPhotos}
+						uploading={uploading}
+						onUpload={handlePhotoUpload}
+						onRemove={(photo) =>
+							setUploadedPhotos(uploadedPhotos.filter((p) => p !== photo))
+						}
+						previewColumns={3}
+					/>
 
 					<div className="flex gap-2">
 						<button
@@ -342,15 +272,11 @@ export default function AdminWorkoutsPage() {
 												</div>
 											)}
 											{log.photos && log.photos.length > 0 && (
-												<div className="mt-2 flex gap-2">
-													{log.photos.map((photo) => (
-														<img
-															key={photo}
-															src={photo}
-															alt="Workout progress"
-															className="h-16 w-16 rounded object-cover"
-														/>
-													))}
+												<div className="mt-2">
+													<PhotoGrid
+														photos={log.photos}
+														altText="Workout progress"
+													/>
 												</div>
 											)}
 										</div>

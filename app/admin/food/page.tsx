@@ -10,17 +10,15 @@ import {
 	TRANSITION_SECTION,
 } from "@/lib/utils";
 import { toast } from "sonner";
-
-function getTodayDate() {
-	return new Date().toISOString().split("T")[0];
-}
-
-function getCurrentTime() {
-	const now = new Date();
-	const hours = String(now.getHours()).padStart(2, "0");
-	const minutes = String(now.getMinutes()).padStart(2, "0");
-	return `${hours}:${minutes}`;
-}
+import { usePhotoUpload } from "@/hooks/usePhotoUpload";
+import { PhotoUploadInput, PhotoGrid } from "@/components/admin";
+import {
+	getTodayDate,
+	getCurrentTime,
+	formatDate,
+	formatTime,
+	extractTime,
+} from "@/lib/admin-utils";
 
 function AdminFoodPageContent() {
 	const router = useRouter();
@@ -36,8 +34,12 @@ function AdminFoodPageContent() {
 	const [time, setTime] = useState(initialTime);
 	const [description, setDescription] = useState("");
 	const [uploadedPhotos, setUploadedPhotos] = useState<string[]>([]);
-	const [uploading, setUploading] = useState(false);
 	const [saving, setSaving] = useState(false);
+
+	const { uploadPhotos, uploading } = usePhotoUpload({
+		folder: "food",
+		onUploadComplete: (urls) => setUploadedPhotos([...uploadedPhotos, ...urls]),
+	});
 	const [todaysEntries, setTodaysEntries] = useState<FoodEntry[]>([]);
 	const [allEntriesGrouped, setAllEntriesGrouped] = useState<
 		Record<string, FoodEntry[]>
@@ -91,11 +93,7 @@ function AdminFoodPageContent() {
 				}
 				const entry = await res.json();
 				setDate(entry.date);
-				// Extract time from createdAt timestamp
-				const entryTime = new Date(entry.createdAt);
-				const hours = String(entryTime.getHours()).padStart(2, "0");
-				const minutes = String(entryTime.getMinutes()).padStart(2, "0");
-				setTime(`${hours}:${minutes}`);
+				setTime(extractTime(entry.createdAt));
 				setDescription(entry.description || "");
 				setUploadedPhotos(entry.photos || []);
 				setEditingEntry(entry);
@@ -129,36 +127,7 @@ function AdminFoodPageContent() {
 	);
 
 	async function handlePhotoUpload(files: FileList | null) {
-		if (!files || files.length === 0) return;
-
-		setUploading(true);
-		try {
-			const urls: string[] = [];
-			for (const file of Array.from(files)) {
-				const form = new FormData();
-				form.append("file", file);
-				form.append("folder", "food");
-				form.append("identifier", date.replace(/-/g, ""));
-
-				const res = await fetch("/api/upload", {
-					method: "POST",
-					body: form,
-				});
-
-				if (!res.ok) throw new Error("Upload failed");
-
-				const { url } = await res.json();
-				urls.push(url);
-			}
-
-			setUploadedPhotos([...uploadedPhotos, ...urls]);
-			toast.success(`${urls.length} photo(s) uploaded successfully`);
-		} catch (err) {
-			console.error("Upload error:", err);
-			toast.error("Failed to upload photos");
-		} finally {
-			setUploading(false);
-		}
+		await uploadPhotos(files, date.replace(/-/g, ""));
 	}
 
 	async function saveEntry() {
@@ -263,11 +232,7 @@ function AdminFoodPageContent() {
 
 	function editEntry(entry: FoodEntry) {
 		setDate(entry.date);
-		// Extract time from createdAt timestamp
-		const entryTime = new Date(entry.createdAt);
-		const hours = String(entryTime.getHours()).padStart(2, "0");
-		const minutes = String(entryTime.getMinutes()).padStart(2, "0");
-		setTime(`${hours}:${minutes}`);
+		setTime(extractTime(entry.createdAt));
 		setDescription(entry.description || "");
 		setUploadedPhotos(entry.photos || []);
 		setEditingEntry(entry);
@@ -289,27 +254,6 @@ function AdminFoodPageContent() {
 		router.replace(url.pathname + url.search, { scroll: false });
 		// Reload entries for today
 		loadTodaysEntries(today);
-	}
-
-	function formatTime(isoString: string): string {
-		const date = new Date(isoString);
-		return date.toLocaleTimeString("en-US", {
-			hour: "numeric",
-			minute: "2-digit",
-			hour12: true,
-		});
-	}
-
-	function formatDate(dateStr: string): string {
-		// Parse date string as local date (YYYY-MM-DD format)
-		const [year, month, day] = dateStr.split("-").map(Number);
-		const date = new Date(year, month - 1, day);
-		return date.toLocaleDateString("en-US", {
-			weekday: "short",
-			year: "numeric",
-			month: "short",
-			day: "numeric",
-		});
 	}
 
 	return (
@@ -392,52 +336,15 @@ function AdminFoodPageContent() {
 						/>
 					</div>
 
-					<div>
-						<label
-							htmlFor="food-photos"
-							className="mb-2 block text-sm font-medium text-zinc-700 dark:text-zinc-300"
-						>
-							Photos (optional)
-						</label>
-						<input
-							id="food-photos"
-							type="file"
-							accept="image/*"
-							multiple
-							onChange={(e) => handlePhotoUpload(e.target.files)}
-							disabled={uploading}
-							className="w-full rounded-lg border border-zinc-300 bg-white px-4 py-2 text-zinc-900 focus:border-zinc-500 focus:outline-none focus:ring-2 focus:ring-zinc-500/20 disabled:opacity-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
-						/>
-						{uploading && (
-							<p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
-								Uploading...
-							</p>
-						)}
-						{uploadedPhotos.length > 0 && (
-							<div className="mt-2 grid grid-cols-3 gap-2 sm:grid-cols-4">
-								{uploadedPhotos.map((photo) => (
-									<div key={photo} className="relative">
-										<img
-											src={photo}
-											alt="Food"
-											className="h-24 w-full rounded object-cover"
-										/>
-										<button
-											type="button"
-											onClick={() =>
-												setUploadedPhotos(
-													uploadedPhotos.filter((p) => p !== photo),
-												)
-											}
-											className="absolute right-1 top-1 rounded-full bg-red-500 px-2 py-1 text-xs text-white hover:bg-red-600"
-										>
-											×
-										</button>
-									</div>
-								))}
-							</div>
-						)}
-					</div>
+					<PhotoUploadInput
+						id="food-photos"
+						photos={uploadedPhotos}
+						uploading={uploading}
+						onUpload={handlePhotoUpload}
+						onRemove={(photo) =>
+							setUploadedPhotos(uploadedPhotos.filter((p) => p !== photo))
+						}
+					/>
 
 					<div className="flex gap-2">
 						<button
@@ -531,16 +438,8 @@ function AdminFoodPageContent() {
 												</div>
 											)}
 											{entry.photos && entry.photos.length > 0 && (
-												<div className="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-4">
-													{entry.photos.map((photo) => (
-														<img
-															key={photo}
-															src={photo}
-															alt="Food"
-															className="h-20 w-full rounded object-cover cursor-pointer hover:opacity-80 transition-opacity"
-															onClick={() => window.open(photo, "_blank")}
-														/>
-													))}
+												<div className="mt-3">
+													<PhotoGrid photos={entry.photos} altText="Food" />
 												</div>
 											)}
 										</div>
@@ -603,16 +502,8 @@ function AdminFoodPageContent() {
 															</div>
 														)}
 														{entry.photos && entry.photos.length > 0 && (
-															<div className="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-4">
-																{entry.photos.map((photo) => (
-																	<img
-																		key={photo}
-																		src={photo}
-																		alt="Food"
-																		className="h-20 w-full rounded object-cover cursor-pointer hover:opacity-80 transition-opacity"
-																		onClick={() => window.open(photo, "_blank")}
-																	/>
-																))}
+															<div className="mt-3">
+																<PhotoGrid photos={entry.photos} altText="Food" />
 															</div>
 														)}
 													</div>
