@@ -9,7 +9,8 @@ import {
 	TRANSITION_SECTION,
 } from "@/lib/utils";
 import { usePhotoUpload } from "@/hooks/usePhotoUpload";
-import { PhotoUploadInput, PhotoGrid } from "@/components/admin";
+import { useEntryManager } from "@/hooks/useEntryManager";
+import { PhotoUploadInput, EntryCard } from "@/components/admin";
 import { formatDate, getTodayDate } from "@/lib/admin-utils";
 import { toast } from "sonner";
 
@@ -18,9 +19,18 @@ export default function AdminWorkoutsPage() {
 	const [weight, setWeight] = useState("");
 	const [content, setContent] = useState("");
 	const [uploadedPhotos, setUploadedPhotos] = useState<string[]>([]);
-	const [saving, setSaving] = useState(false);
-	const [logs, setLogs] = useState<WorkoutLog[]>([]);
-	const [editingLog, setEditingLog] = useState<WorkoutLog | null>(null);
+
+	const entryManager = useEntryManager<WorkoutLog>({
+		resourceName: "workout log",
+		apiEndpoint: "/api/workouts",
+		defaultEntry: () => ({
+			id: crypto.randomUUID(),
+			date: getTodayDate(),
+			weight: undefined,
+			content: undefined,
+			photos: undefined,
+		}),
+	});
 
 	const { uploadPhotos, uploading } = usePhotoUpload({
 		folder: "workouts",
@@ -28,20 +38,9 @@ export default function AdminWorkoutsPage() {
 	});
 
 	useEffect(() => {
-		loadLogs();
+		entryManager.loadEntries();
 		setDate(getTodayDate());
 	}, []);
-
-	async function loadLogs() {
-		try {
-			const res = await fetch("/api/workouts");
-			const data = await res.json();
-			setLogs(data);
-		} catch (err) {
-			console.error("Failed to load workout logs:", err);
-			toast.error("Failed to load workout logs");
-		}
-	}
 
 	async function handlePhotoUpload(files: FileList | null) {
 		await uploadPhotos(files, date.replace(/-/g, ""));
@@ -53,66 +52,41 @@ export default function AdminWorkoutsPage() {
 			return;
 		}
 
-		setSaving(true);
+		const logData: WorkoutLog = {
+			id: entryManager.editingEntry?.id || crypto.randomUUID(),
+			date,
+			weight: weight ? Number.parseFloat(weight) : undefined,
+			content: content || undefined,
+			photos: uploadedPhotos.length > 0 ? uploadedPhotos : undefined,
+		};
+
 		try {
-			const logData = {
-				id: editingLog?.id,
-				date,
-				weight: weight ? Number.parseFloat(weight) : undefined,
-				content: content || undefined,
-				photos: uploadedPhotos.length > 0 ? uploadedPhotos : undefined,
-			};
-
-			const res = await fetch("/api/workouts", {
-				method: "POST",
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify(logData),
-			});
-
-			if (!res.ok) throw new Error("Save failed");
-
-			toast.success(
-				editingLog
-					? "Workout log updated successfully!"
-					: "Workout log saved successfully!",
-			);
+			await entryManager.saveEntry(logData);
 			resetForm();
-			await loadLogs();
+			await entryManager.loadEntries();
 		} catch (err) {
-			console.error("Save error:", err);
-			toast.error("Failed to save workout log");
-		} finally {
-			setSaving(false);
+			// Error already handled by entryManager
 		}
 	}
 
-	async function deleteLog(logId: string) {
-		if (!confirm("Are you sure you want to delete this workout log?")) return;
-
+	async function handleDelete(logId: string) {
 		try {
-			const res = await fetch(`/api/workouts?id=${logId}`, {
-				method: "DELETE",
-			});
-
-			if (!res.ok) throw new Error("Delete failed");
-
-			toast.success("Workout log deleted successfully!");
-			await loadLogs();
-			if (editingLog?.id === logId) {
+			await entryManager.deleteEntry(logId);
+			if (entryManager.editingEntry?.id === logId) {
 				resetForm();
 			}
+			await entryManager.loadEntries();
 		} catch (err) {
-			console.error("Delete error:", err);
-			toast.error("Failed to delete workout log");
+			// Error already handled by entryManager
 		}
 	}
 
-	function editLog(log: WorkoutLog) {
+	function handleEdit(log: WorkoutLog) {
 		setDate(log.date);
 		setWeight(log.weight?.toString() || "");
 		setContent(log.content || "");
 		setUploadedPhotos(log.photos || []);
-		setEditingLog(log);
+		entryManager.startEditing(log);
 	}
 
 	function resetForm() {
@@ -120,7 +94,7 @@ export default function AdminWorkoutsPage() {
 		setWeight("");
 		setContent("");
 		setUploadedPhotos([]);
-		setEditingLog(null);
+		entryManager.cancelEditing();
 	}
 
 	return (
@@ -148,7 +122,7 @@ export default function AdminWorkoutsPage() {
 				{/* Form */}
 				<div className="space-y-4">
 					<h2 className="text-xl font-medium">
-						{editingLog ? "Edit Log" : "Quick Log"}
+						{entryManager.editingEntry ? "Edit Log" : "Quick Log"}
 					</h2>
 
 					<div>
@@ -217,12 +191,16 @@ export default function AdminWorkoutsPage() {
 						<button
 							type="button"
 							onClick={saveLog}
-							disabled={saving || !date}
+							disabled={entryManager.saving || !date}
 							className="rounded-lg bg-zinc-900 px-6 py-2 text-white transition-colors hover:bg-zinc-800 disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200"
 						>
-							{saving ? "Saving..." : editingLog ? "Update Log" : "Save Log"}
+							{entryManager.saving
+								? "Saving..."
+								: entryManager.editingEntry
+									? "Update Log"
+									: "Save Log"}
 						</button>
-						{editingLog && (
+						{entryManager.editingEntry && (
 							<button
 								type="button"
 								onClick={resetForm}
@@ -241,25 +219,28 @@ export default function AdminWorkoutsPage() {
 			>
 				{/* Logs List */}
 				<div className="space-y-4">
-					<h2 className="text-xl font-medium">Recent Logs ({logs.length})</h2>
+					<h2 className="text-xl font-medium">
+						Recent Logs ({entryManager.entries.length})
+					</h2>
 
 					<div className="space-y-2">
-						{logs
+						{entryManager.entries
 							.sort(
 								(a, b) =>
 									new Date(b.date).getTime() - new Date(a.date).getTime(),
 							)
 							.map((log) => (
-								<div
+								<EntryCard
 									key={log.id}
-									className="rounded-lg border border-zinc-300 bg-white p-4 dark:border-zinc-700 dark:bg-zinc-900/50"
-								>
-									<div className="mb-2 flex items-start justify-between">
-										<div className="flex-1">
+									entry={log}
+									onEdit={handleEdit}
+									onDelete={handleDelete}
+									showTime={false}
+									photoAltText="Workout progress"
+									renderCustomFields={(log) => (
+										<>
 											<div className="flex items-baseline gap-3">
-												<div className="font-medium">
-													{formatDate(log.date)}
-												</div>
+												<div className="font-medium">{formatDate(log.date)}</div>
 												{log.weight && (
 													<div className="text-sm text-zinc-600 dark:text-zinc-400">
 														{log.weight} kg
@@ -271,36 +252,12 @@ export default function AdminWorkoutsPage() {
 													{log.content}
 												</div>
 											)}
-											{log.photos && log.photos.length > 0 && (
-												<div className="mt-2">
-													<PhotoGrid
-														photos={log.photos}
-														altText="Workout progress"
-													/>
-												</div>
-											)}
-										</div>
-										<div className="flex gap-2">
-											<button
-												type="button"
-												onClick={() => editLog(log)}
-												className="text-sm text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
-											>
-												Edit
-											</button>
-											<button
-												type="button"
-												onClick={() => deleteLog(log.id)}
-												className="text-sm text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
-											>
-												Delete
-											</button>
-										</div>
-									</div>
-								</div>
+										</>
+									)}
+								/>
 							))}
 
-						{logs.length === 0 && (
+						{entryManager.entries.length === 0 && (
 							<p className="text-center text-zinc-600 dark:text-zinc-400">
 								No workout logs yet. Add your first entry!
 							</p>
