@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { motion } from "motion/react";
 import { toast } from "sonner";
 import airports from "@/data/airports.min.json";
@@ -21,6 +21,30 @@ export default function AdminAirportsPage() {
 
 	const [query, setQuery] = useState("");
 	const [selectedAirport, setSelectedAirport] = useState<Airport | null>(null);
+
+	const toApi = useCallback((data: Visit) => {
+		const filteredFlights = data.flightNumbers?.filter((fn) => fn.trim() !== "") || [];
+		return {
+			id: data.id,
+			airportIdent: data.airportIdent,
+			date: data.date,
+			flightNumbers: filteredFlights.length > 0 ? filteredFlights : undefined,
+			isLayover: data.isLayover || undefined,
+			notes: data.notes || undefined,
+			photos: data.photos && data.photos.length > 0 ? data.photos : undefined,
+		};
+	}, []);
+
+	const fromApi = useCallback((data: unknown) => {
+		const visit = data as Visit;
+		return {
+			...visit,
+			flightNumbers: visit.flightNumbers ?? [],
+			notes: visit.notes ?? "",
+			photos: visit.photos ?? [],
+			isLayover: visit.isLayover ?? false,
+		};
+	}, []);
 
 	const {
 		items: visits,
@@ -46,31 +70,8 @@ export default function AdminAirportsPage() {
 			notes: "",
 			photos: [],
 		},
-		toApi: (data) => {
-			const filteredFlights =
-				data.flightNumbers?.filter((fn) => fn.trim() !== "") || [];
-			return {
-				id: data.id,
-				airportIdent: data.airportIdent,
-				date: data.date,
-				flightNumbers:
-					filteredFlights.length > 0 ? filteredFlights : undefined,
-				isLayover: data.isLayover || undefined,
-				notes: data.notes || undefined,
-				photos:
-					data.photos && data.photos.length > 0 ? data.photos : undefined,
-			};
-		},
-		fromApi: (data) => {
-			const visit = data as Visit;
-			return {
-				...visit,
-				flightNumbers: visit.flightNumbers ?? [],
-				notes: visit.notes ?? "",
-				photos: visit.photos ?? [],
-				isLayover: visit.isLayover ?? false,
-			};
-		},
+		toApi,
+		fromApi,
 	});
 
 	const {
