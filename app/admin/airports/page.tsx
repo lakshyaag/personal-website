@@ -9,19 +9,32 @@ import {
 	VARIANTS_SECTION,
 	TRANSITION_SECTION,
 } from "@/lib/utils";
+import { useConfirmDialog } from "@/components/ui/confirm-dialog";
+import { FormDateInput, FormTextarea } from "@/components/admin/form-fields";
+import { EmptyState, LoadingText } from "@/components/admin/loading-states";
+import { usePhotoUpload } from "@/hooks/use-photo-upload";
+import { toast } from "sonner";
 
 export default function AdminAirportsPage() {
+	const { ConfirmDialog, confirm } = useConfirmDialog();
+
 	const [query, setQuery] = useState("");
 	const [date, setDate] = useState("");
 	const [flightNumbers, setFlightNumbers] = useState<string[]>([""]);
 	const [isLayover, setIsLayover] = useState(false);
 	const [notes, setNotes] = useState("");
 	const [selectedAirport, setSelectedAirport] = useState<Airport | null>(null);
-	const [uploadedPhotos, setUploadedPhotos] = useState<string[]>([]);
-	const [uploading, setUploading] = useState(false);
 	const [saving, setSaving] = useState(false);
+	const [loading, setLoading] = useState(false);
 	const [visits, setVisits] = useState<Visit[]>([]);
 	const [editingVisit, setEditingVisit] = useState<Visit | null>(null);
+
+	const { photos, uploading, uploadPhotos, removePhoto, setPhotosList } =
+		usePhotoUpload({
+			folder: "airports",
+			identifier: selectedAirport?.ident || "temp",
+			onPhotosChange: () => {},
+		});
 
 	const showDropdown = query && !selectedAirport;
 	const results: Airport[] = showDropdown
@@ -41,54 +54,32 @@ export default function AdminAirportsPage() {
 	}, []);
 
 	async function loadVisits() {
+		setLoading(true);
 		try {
 			const res = await fetch("/api/visits");
 			const data = await res.json();
 			setVisits(data);
 		} catch (err) {
 			console.error("Failed to load visits:", err);
+			toast.error("Failed to load visits");
+		} finally {
+			setLoading(false);
 		}
 	}
 
 	async function handlePhotoUpload(files: FileList | null) {
 		if (!files || files.length === 0) return;
 		if (!selectedAirport) {
-			alert("Please select an airport first");
+			toast.error("Please select an airport first");
 			return;
 		}
 
-		setUploading(true);
-		try {
-			const urls: string[] = [];
-			for (const file of Array.from(files)) {
-				const form = new FormData();
-				form.append("file", file);
-				form.append("folder", "airports");
-				form.append("identifier", selectedAirport.ident);
-
-				const res = await fetch("/api/upload", {
-					method: "POST",
-					body: form,
-				});
-
-				if (!res.ok) throw new Error("Upload failed");
-
-				const { url } = await res.json();
-				urls.push(url);
-			}
-
-			setUploadedPhotos([...uploadedPhotos, ...urls]);
-		} catch (err) {
-			console.error("Upload error:", err);
-			alert("Failed to upload photos");
-		} finally {
-			setUploading(false);
-		}
+		await uploadPhotos(files);
 	}
 
 	async function saveVisit() {
 		if (!selectedAirport || !date) {
-			alert("Please select an airport and date");
+			toast.error("Please select an airport and date");
 			return;
 		}
 
@@ -97,15 +88,15 @@ export default function AdminAirportsPage() {
 			const filteredFlightNumbers = flightNumbers.filter(
 				(fn) => fn.trim() !== "",
 			);
-			const visitData = {
-				id: editingVisit?.id,
+			const visitData: Visit = {
+				id: editingVisit?.id || crypto.randomUUID(),
 				airportIdent: selectedAirport.ident,
 				date,
 				flightNumbers:
 					filteredFlightNumbers.length > 0 ? filteredFlightNumbers : undefined,
 				isLayover: isLayover || undefined,
 				notes: notes || undefined,
-				photos: uploadedPhotos.length > 0 ? uploadedPhotos : undefined,
+				photos: photos.length > 0 ? photos : undefined,
 			};
 
 			const res = await fetch("/api/visits", {
@@ -116,23 +107,28 @@ export default function AdminAirportsPage() {
 
 			if (!res.ok) throw new Error("Save failed");
 
-			alert(
-				editingVisit
-					? "Visit updated successfully!"
-					: "Visit saved successfully!",
+			toast.success(
+				editingVisit ? "Visit updated" : "Visit saved successfully",
 			);
 			resetForm();
 			await loadVisits();
 		} catch (err) {
 			console.error("Save error:", err);
-			alert("Failed to save visit");
+			toast.error("Failed to save visit");
 		} finally {
 			setSaving(false);
 		}
 	}
 
 	async function deleteVisit(visitId: string) {
-		if (!confirm("Are you sure you want to delete this visit?")) return;
+		const confirmed = await confirm({
+			title: "Delete Visit?",
+			message: "This action cannot be undone.",
+			variant: "danger",
+			confirmLabel: "Delete",
+		});
+
+		if (!confirmed) return;
 
 		try {
 			const res = await fetch(`/api/visits?id=${visitId}`, {
@@ -141,14 +137,14 @@ export default function AdminAirportsPage() {
 
 			if (!res.ok) throw new Error("Delete failed");
 
-			alert("Visit deleted successfully!");
+			toast.success("Visit deleted successfully");
 			await loadVisits();
 			if (editingVisit?.id === visitId) {
 				resetForm();
 			}
 		} catch (err) {
 			console.error("Delete error:", err);
-			alert("Failed to delete visit");
+			toast.error("Failed to delete visit");
 		}
 	}
 
@@ -167,7 +163,7 @@ export default function AdminAirportsPage() {
 		);
 		setIsLayover(visit.isLayover || false);
 		setNotes(visit.notes || "");
-		setUploadedPhotos(visit.photos || []);
+		setPhotosList(visit.photos || []);
 		setEditingVisit(visit);
 		setQuery(airport.name);
 	}
@@ -179,26 +175,28 @@ export default function AdminAirportsPage() {
 		setIsLayover(false);
 		setNotes("");
 		setSelectedAirport(null);
-		setUploadedPhotos([]);
+		setPhotosList([]);
 		setEditingVisit(null);
 	}
 
 	return (
-		<motion.main
-			className="space-y-8 pb-16"
-			variants={VARIANTS_CONTAINER}
-			initial="hidden"
-			animate="visible"
-		>
-			<motion.section
-				variants={VARIANTS_SECTION}
-				transition={TRANSITION_SECTION}
+		<>
+			<ConfirmDialog />
+			<motion.main
+				className="space-y-8 pb-16"
+				variants={VARIANTS_CONTAINER}
+				initial="hidden"
+				animate="visible"
 			>
-				<h1 className="mb-4 text-3xl font-medium">Manage Airport Visits</h1>
-				<p className="text-zinc-600 dark:text-zinc-400">
-					Add, edit, and manage your airport visits.
-				</p>
-			</motion.section>
+				<motion.section
+					variants={VARIANTS_SECTION}
+					transition={TRANSITION_SECTION}
+				>
+					<h1 className="mb-4 text-3xl font-medium">Manage Airport Visits</h1>
+					<p className="text-zinc-600 dark:text-zinc-400">
+						Add, edit, and manage your airport visits.
+					</p>
+				</motion.section>
 
 			<motion.section
 				className="space-y-8"
@@ -267,17 +265,11 @@ export default function AdminAirportsPage() {
 						)}
 					</div>
 
-					<div>
-						<label className="mb-2 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
-							Visit Date
-						</label>
-						<input
-							type="date"
-							value={date}
-							onChange={(e) => setDate(e.target.value)}
-							className="w-full rounded-lg border border-zinc-300 bg-white px-4 py-2 text-zinc-900 focus:border-zinc-500 focus:outline-none focus:ring-2 focus:ring-zinc-500/20 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
-						/>
-					</div>
+					<FormDateInput
+						label="Visit Date"
+						value={date}
+						onChange={(e) => setDate(e.target.value)}
+					/>
 
 					<div>
 						<div className="mb-3 flex items-center gap-3">
@@ -350,18 +342,13 @@ export default function AdminAirportsPage() {
 						)}
 					</div>
 
-					<div>
-						<label className="mb-2 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
-							Notes (optional)
-						</label>
-						<textarea
-							value={notes}
-							onChange={(e) => setNotes(e.target.value)}
-							rows={3}
-							placeholder="Add any notes about this visit..."
-							className="w-full rounded-lg border border-zinc-300 bg-white px-4 py-2 text-zinc-900 focus:border-zinc-500 focus:outline-none focus:ring-2 focus:ring-zinc-500/20 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
-						/>
-					</div>
+					<FormTextarea
+						label="Notes (optional)"
+						value={notes}
+						onChange={(e) => setNotes(e.target.value)}
+						rows={3}
+						placeholder="Add any notes about this visit..."
+					/>
 
 					<div>
 						<label className="mb-2 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
@@ -380,22 +367,18 @@ export default function AdminAirportsPage() {
 								Uploading...
 							</p>
 						)}
-						{uploadedPhotos.length > 0 && (
+						{photos.length > 0 && (
 							<div className="mt-2 grid grid-cols-3 gap-2">
-								{uploadedPhotos.map((photo, idx) => (
-									<div key={idx} className="relative">
+								{photos.map((photo) => (
+									<div key={photo} className="relative">
 										<img
 											src={photo}
-											alt={`Upload ${idx + 1}`}
+											alt="Airport"
 											className="h-24 w-full rounded object-cover"
 										/>
 										<button
 											type="button"
-											onClick={() =>
-												setUploadedPhotos(
-													uploadedPhotos.filter((_, i) => i !== idx),
-												)
-											}
+											onClick={() => removePhoto(photo)}
 											className="absolute right-1 top-1 rounded-full bg-red-500 px-2 py-1 text-xs text-white hover:bg-red-600"
 										>
 											×
@@ -436,12 +419,18 @@ export default function AdminAirportsPage() {
 				variants={VARIANTS_SECTION}
 				transition={TRANSITION_SECTION}
 			>
-				{/* Visits List */}
-				<div className="space-y-4">
-					<h2 className="text-xl font-medium">
-						Existing Visits ({visits.length})
-					</h2>
+				<h2 className="mb-4 text-xl font-medium">
+					Existing Visits ({visits.length})
+				</h2>
 
+				{loading ? (
+					<LoadingText text="Loading visits..." />
+				) : visits.length === 0 ? (
+					<EmptyState
+						title="No visits yet"
+						message="Add your first airport visit above."
+					/>
+				) : (
 					<div className="space-y-2">
 						{visits
 							.sort(
@@ -497,15 +486,10 @@ export default function AdminAirportsPage() {
 									</div>
 								);
 							})}
-
-						{visits.length === 0 && (
-							<p className="text-center text-zinc-600 dark:text-zinc-400">
-								No visits yet. Add your first airport visit!
-							</p>
-						)}
 					</div>
-				</div>
+				)}
 			</motion.section>
 		</motion.main>
+		</>
 	);
 }
