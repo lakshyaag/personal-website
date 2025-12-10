@@ -10,6 +10,9 @@ import {
 	VARIANTS_SECTION,
 	TRANSITION_SECTION,
 } from "@/lib/utils";
+import { useConfirmDialog } from "@/components/ui/confirm-dialog";
+import { FormInput, FormDateInput, FormTextarea, FormSelect, FormCheckbox, FormNumberInput } from "@/components/admin/form-fields";
+import { EmptyState, LoadingText } from "@/components/admin/loading-states";
 
 interface GoogleBooksResult {
 	id: string;
@@ -73,6 +76,8 @@ function stripHtmlTags(html: string): string {
 }
 
 export default function AdminBooksPage() {
+	const { ConfirmDialog, confirm } = useConfirmDialog();
+
 	const [query, setQuery] = useState("");
 	const [searchResults, setSearchResults] = useState<GoogleBooksResult[]>([]);
 	const [searching, setSearching] = useState(false);
@@ -219,7 +224,14 @@ export default function AdminBooksPage() {
 	}
 
 	async function deleteRecommendation(id: string) {
-		if (!confirm("Are you sure you want to delete this recommendation?")) return;
+		const confirmed = await confirm({
+			title: "Delete Recommendation?",
+			message: "This action cannot be undone.",
+			variant: "danger",
+			confirmLabel: "Delete",
+		});
+
+		if (!confirmed) return;
 
 		try {
 			const res = await fetch(`/api/recommend?id=${id}`, {
@@ -310,7 +322,14 @@ export default function AdminBooksPage() {
 	}
 
 	async function deleteBook(bookId: string) {
-		if (!confirm("Are you sure you want to delete this book?")) return;
+		const confirmed = await confirm({
+			title: "Delete Book?",
+			message: "This action cannot be undone.",
+			variant: "danger",
+			confirmLabel: "Delete",
+		});
+
+		if (!confirmed) return;
 
 		try {
 			const res = await fetch(`/api/books?id=${bookId}`, {
@@ -319,7 +338,7 @@ export default function AdminBooksPage() {
 
 			if (!res.ok) throw new Error("Delete failed");
 
-			toast.success("Book deleted successfully!");
+			toast.success("Book deleted successfully");
 			await loadBooks();
 			if (form.id === bookId) {
 				resetForm();
@@ -388,18 +407,20 @@ export default function AdminBooksPage() {
 				initial="hidden"
 				animate="visible"
 			>
-				<p className="text-zinc-600 dark:text-zinc-400">Loading...</p>
+				<LoadingText text="Loading books..." />
 			</motion.main>
 		);
 	}
 
 	return (
-		<motion.main
-			className="space-y-8 pb-16"
-			variants={VARIANTS_CONTAINER}
-			initial="hidden"
-			animate="visible"
-		>
+		<>
+			<ConfirmDialog />
+			<motion.main
+				className="space-y-8 pb-16"
+				variants={VARIANTS_CONTAINER}
+				initial="hidden"
+				animate="visible"
+			>
 			<motion.section
 				variants={VARIANTS_SECTION}
 				transition={TRANSITION_SECTION}
@@ -487,55 +508,35 @@ export default function AdminBooksPage() {
 					</div>
 
 					<div className="grid grid-cols-2 gap-4">
-						<div>
-							<label className="mb-2 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
-								Title
-							</label>
-							<input
-								className="w-full rounded-lg border border-zinc-300 bg-white px-4 py-2 text-zinc-900 focus:border-zinc-500 focus:outline-none focus:ring-2 focus:ring-zinc-500/20 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
-								value={form.title}
-								onChange={(e) => updateForm({ title: e.target.value })}
-								placeholder="Book title"
-							/>
-						</div>
+						<FormInput
+							label="Title"
+							value={form.title}
+							onChange={(e) => updateForm({ title: e.target.value })}
+							placeholder="Book title"
+						/>
 
-						<div>
-							<label className="mb-2 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
-								Author
-							</label>
-							<input
-								className="w-full rounded-lg border border-zinc-300 bg-white px-4 py-2 text-zinc-900 focus:border-zinc-500 focus:outline-none focus:ring-2 focus:ring-zinc-500/20 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
-								value={form.author}
-								onChange={(e) => updateForm({ author: e.target.value })}
-								placeholder="Author name"
-							/>
-						</div>
+						<FormInput
+							label="Author"
+							value={form.author}
+							onChange={(e) => updateForm({ author: e.target.value })}
+							placeholder="Author name"
+						/>
 					</div>
 
 					<div className="grid grid-cols-2 gap-4">
-						<div>
-							<label className="mb-2 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
-								ISBN (optional)
-							</label>
-							<input
-								className="w-full rounded-lg border border-zinc-300 bg-white px-4 py-2 text-zinc-900 focus:border-zinc-500 focus:outline-none focus:ring-2 focus:ring-zinc-500/20 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
-								value={form.isbn}
-								onChange={(e) => updateForm({ isbn: e.target.value })}
-								placeholder="ISBN"
-							/>
-						</div>
+						<FormInput
+							label="ISBN (optional)"
+							value={form.isbn}
+							onChange={(e) => updateForm({ isbn: e.target.value })}
+							placeholder="ISBN"
+						/>
 
-						<div>
-							<label className="mb-2 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
-								Cover URL (optional)
-							</label>
-							<input
-								className="w-full rounded-lg border border-zinc-300 bg-white px-4 py-2 text-zinc-900 focus:border-zinc-500 focus:outline-none focus:ring-2 focus:ring-zinc-500/20 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
-								value={form.coverUrl}
-								onChange={(e) => updateForm({ coverUrl: e.target.value })}
-								placeholder="https://..."
-							/>
-						</div>
+						<FormInput
+							label="Cover URL (optional)"
+							value={form.coverUrl}
+							onChange={(e) => updateForm({ coverUrl: e.target.value })}
+							placeholder="https://..."
+						/>
 					</div>
 
 					{form.coverUrl && (
@@ -549,18 +550,13 @@ export default function AdminBooksPage() {
 						</div>
 					)}
 
-					<div>
-						<label className="mb-2 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
-							Description (optional)
-						</label>
-						<textarea
-							value={form.description}
-							onChange={(e) => updateForm({ description: e.target.value })}
-							rows={3}
-							placeholder="Book description or summary..."
-							className="w-full rounded-lg border border-zinc-300 bg-white px-4 py-2 text-zinc-900 focus:border-zinc-500 focus:outline-none focus:ring-2 focus:ring-zinc-500/20 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
-						/>
-					</div>
+					<FormTextarea
+						label="Description (optional)"
+						value={form.description}
+						onChange={(e) => updateForm({ description: e.target.value })}
+						rows={3}
+						placeholder="Book description or summary..."
+					/>
 
 					<div>
 						<label className="mb-2 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
@@ -605,96 +601,65 @@ export default function AdminBooksPage() {
 					</div>
 
 					<div className="grid grid-cols-2 gap-4">
-						<div>
-							<label className="mb-2 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
-								Date Started
-							</label>
-							<input
-								type="date"
-								value={form.dateStarted}
-								onChange={(e) => updateForm({ dateStarted: e.target.value })}
-								className="w-full rounded-lg border border-zinc-300 bg-white px-4 py-2 text-zinc-900 focus:border-zinc-500 focus:outline-none focus:ring-2 focus:ring-zinc-500/20 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
-							/>
-						</div>
+						<FormDateInput
+							label="Date Started"
+							value={form.dateStarted}
+							onChange={(e) => updateForm({ dateStarted: e.target.value })}
+						/>
 
-						<div>
-							<label className="mb-2 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
-								Date Completed (optional)
-							</label>
-							<input
-								type="date"
-								value={form.dateCompleted}
-								onChange={(e) => updateForm({ dateCompleted: e.target.value })}
-								className="w-full rounded-lg border border-zinc-300 bg-white px-4 py-2 text-zinc-900 focus:border-zinc-500 focus:outline-none focus:ring-2 focus:ring-zinc-500/20 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
-							/>
-						</div>
+						<FormDateInput
+							label="Date Completed (optional)"
+							value={form.dateCompleted}
+							onChange={(e) => updateForm({ dateCompleted: e.target.value })}
+						/>
 					</div>
 
 					<div className="grid grid-cols-2 gap-4">
 						<div className={form.status === "reading" ? "" : "col-span-2"}>
-							<label className="mb-2 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
-								Status
-							</label>
-							<select
+							<FormSelect
+								label="Status"
 								value={form.status}
 								onChange={(e) =>
 									updateForm({
 										status: e.target.value as "reading" | "completed" | "want-to-read",
 									})
 								}
-								className="w-full rounded-lg border border-zinc-300 bg-white px-4 py-2 text-zinc-900 focus:border-zinc-500 focus:outline-none focus:ring-2 focus:ring-zinc-500/20 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
-							>
-								<option value="reading">Reading</option>
-								<option value="completed">Completed</option>
-								<option value="want-to-read">Want to read</option>
-							</select>
+								options={[
+									{ value: "reading", label: "Reading" },
+									{ value: "completed", label: "Completed" },
+									{ value: "want-to-read", label: "Want to read" },
+								]}
+							/>
 						</div>
 
 						{form.status === "reading" && (
-							<div>
-								<label className="mb-2 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
-									Progress (%) (optional)
-								</label>
-								<input
-									type="number"
-									min="0"
-									max="100"
-									value={form.progress}
-									onChange={(e) =>
-										updateForm({
-											progress: Math.min(100, Math.max(0, parseInt(e.target.value) || 0)),
-										})
-									}
-									className="w-full rounded-lg border border-zinc-300 bg-white px-4 py-2 text-zinc-900 focus:border-zinc-500 focus:outline-none focus:ring-2 focus:ring-zinc-500/20 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
-								/>
-							</div>
+							<FormNumberInput
+								label="Progress (%) (optional)"
+								value={form.progress}
+								onChange={(e) =>
+									updateForm({
+										progress: Math.min(100, Math.max(0, parseInt(e.target.value) || 0)),
+									})
+								}
+								min={0}
+								max={100}
+							/>
 						)}
 					</div>
 
-					<label className="flex items-center gap-3 rounded-lg border border-zinc-300 bg-white px-4 py-3 cursor-pointer transition-colors hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900/50 dark:hover:bg-zinc-900">
-						<input
-							type="checkbox"
-							checked={form.isCurrent}
-							onChange={(e) => updateForm({ isCurrent: e.target.checked })}
-							className="rounded border-zinc-300 text-zinc-900 focus:ring-2 focus:ring-zinc-500/20 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
-						/>
-						<span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
-							Mark as Currently Reading
-						</span>
-					</label>
+					<FormCheckbox
+						label="Mark as Currently Reading"
+						checked={form.isCurrent}
+						onChange={(e) => updateForm({ isCurrent: e.target.checked })}
+					/>
 
-					<div>
-						<label className="mb-2 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
-							Notes (optional)
-						</label>
-						<textarea
-							value={form.notes}
-							onChange={(e) => updateForm({ notes: e.target.value })}
-							rows={3}
-							placeholder="Add any thoughts about this book..."
-							className="w-full rounded-lg border border-zinc-300 bg-white px-4 py-2 text-zinc-900 focus:border-zinc-500 focus:outline-none focus:ring-2 focus:ring-zinc-500/20 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
-						/>
-					</div>
+					<FormTextarea
+						label="Notes (optional)"
+						value={form.notes}
+						onChange={(e) => updateForm({ notes: e.target.value })}
+						rows={3}
+						placeholder="Add any thoughts about this book..."
+					/>
 
 					<div className="flex gap-2">
 						<button
@@ -826,5 +791,6 @@ export default function AdminBooksPage() {
 				</motion.section>
 			)}
 		</motion.main>
+		</>
 	);
 }
