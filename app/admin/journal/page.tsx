@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, Suspense } from "react";
 import { motion } from "motion/react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
+import { toast } from "sonner";
 import type { JournalEntry } from "@/lib/models";
 import {
 	VARIANTS_CONTAINER,
@@ -11,12 +12,29 @@ import {
 	TRANSITION_SECTION,
 } from "@/lib/utils";
 import { useConfirmDialog } from "@/components/ui/confirm-dialog";
-import { FormDateInput, FormTextarea, FormFileInput } from "@/components/admin/form-fields";
-import { EmptyState, LoadingOverlay, LoadingText } from "@/components/admin/loading-states";
+import {
+	FormDateInput,
+	FormTextarea,
+	FormFileInput,
+} from "@/components/admin/form-fields";
+import {
+	EmptyState,
+	LoadingOverlay,
+	LoadingText,
+} from "@/components/admin/loading-states";
 import { getTodayDate, formatDate, formatTime } from "@/lib/date-utils";
 import { apiGet } from "@/lib/api-utils";
 import { usePhotoUpload } from "@/hooks/use-photo-upload";
-import { toast } from "sonner";
+import { useAdminCrud } from "@/hooks/use-admin-crud";
+
+function toJournalEntry(data: JournalEntry): JournalEntry {
+	return {
+		...data,
+		content: data.content ?? "",
+		photos: data.photos ?? [],
+		createdAt: data.createdAt || new Date().toISOString(),
+	};
+}
 
 function AdminJournalPageContent() {
 	const router = useRouter();
@@ -24,161 +42,147 @@ function AdminJournalPageContent() {
 	const editId = searchParams.get("edit");
 	const { ConfirmDialog, confirm } = useConfirmDialog();
 
-	const [date, setDate] = useState(getTodayDate());
-	const [content, setContent] = useState("");
-	const [entries, setEntries] = useState<JournalEntry[]>([]);
-	const [editingEntry, setEditingEntry] = useState<JournalEntry | null>(null);
-	const [loading, setLoading] = useState(false);
-	const [saving, setSaving] = useState(false);
+	const [dateFilter, setDateFilter] = useState(getTodayDate());
 
-	// Photo upload
-	const { photos, uploading, uploadPhotos, removePhoto, setPhotosList } =
-		usePhotoUpload({
-			folder: "journal",
-			identifier: date.replace(/-/g, ""),
-			onPhotosChange: () => {}, // Photos managed separately for journal
+	const getQuery = useCallback(
+		() => (dateFilter ? `?date=${dateFilter}` : ""),
+		[dateFilter]
+	);
+
+	const {
+		items: entries,
+		formData,
+		editing,
+		loading,
+		saving,
+		updateField,
+		updateFields,
+		saveItem,
+		deleteItem,
+		editItem,
+		resetForm,
+		loadItems,
+	} = useAdminCrud<JournalEntry>({
+		endpoint: "/api/journal",
+		entityName: "journal entry",
+		initialFormData: {
+			date: dateFilter,
+			content: "",
+			photos: [],
+			createdAt: new Date().toISOString(),
+		},
+		getQuery,
+		toApi: (data) => ({
+			id: data.id,
+			date: data.date,
+			content: data.content || undefined,
+			photos: data.photos && data.photos.length > 0 ? data.photos : undefined,
+			createdAt: data.createdAt || new Date().toISOString(),
+		}),
+		fromApi: toJournalEntry,
+	});
+
+	const {
+		photos,
+		uploading,
+		uploadPhotos,
+		removePhoto,
+		setPhotosList,
+	} = usePhotoUpload({
+		folder: "journal",
+		identifier: formData.date.replace(/-/g, ""),
+		initialPhotos: formData.photos || [],
+		onPhotosChange: (newPhotos) => updateField("photos", newPhotos),
+	});
+
+	useEffect(() => {
+		loadItems();
+	}, [dateFilter, loadItems]);
+
+	useEffect(() => {
+		setPhotosList(formData.photos || []);
+	}, [formData.photos, setPhotosList]);
+
+	const clearEditParam = useCallback(() => {
+		const url = new URL(window.location.href);
+		url.searchParams.delete("edit");
+		router.replace(url.pathname + url.search, { scroll: false });
+	}, [router]);
+
+	const resetFormForDate = useCallback(() => {
+		resetForm();
+		updateFields({
+			date: dateFilter,
+			content: "",
+			photos: [],
+			createdAt: new Date().toISOString(),
 		});
+		setPhotosList([]);
+		clearEditParam();
+	}, [dateFilter, resetForm, updateFields, setPhotosList, clearEditParam]);
 
-	// Load entries for selected date
-	const loadEntries = useCallback(async (selectedDate: string) => {
-		setLoading(true);
-		try {
-			const result = await apiGet<JournalEntry[]>(`/api/journal?date=${selectedDate}`);
-			if (result.success && result.data) {
-				setEntries(result.data);
-			} else {
-				toast.error(result.error || "Failed to load entries");
+	const loadEntryForEdit = useCallback(
+		async (entryId: string) => {
+			const result = await apiGet<JournalEntry>(`/api/journal?id=${entryId}`);
+
+			if (!result.success || !result.data) {
+				toast.error(result.error || "Entry not found");
+				return;
 			}
-		} catch (err) {
-			console.error("Failed to load journal entries:", err);
-			toast.error("Failed to load entries");
-		} finally {
-			setLoading(false);
-		}
-	}, []);
 
-	// Load entry for editing from URL
+			const entry = toJournalEntry(result.data);
+			setDateFilter(entry.date);
+			editItem(entry);
+			setPhotosList(entry.photos || []);
+		},
+		[editItem, setPhotosList]
+	);
+
 	useEffect(() => {
 		if (editId) {
 			loadEntryForEdit(editId);
-		} else {
-			loadEntries(date);
 		}
-	}, [editId]); // eslint-disable-line react-hooks/exhaustive-deps
+	}, [editId, loadEntryForEdit]);
 
-	// Load when date changes (but not on mount with editId)
-	useEffect(() => {
-		if (!editId) {
-			loadEntries(date);
-		}
-	}, [date, editId, loadEntries]);
-
-	const loadEntryForEdit = async (entryId: string) => {
-		try {
-			const result = await apiGet<JournalEntry>(`/api/journal?id=${entryId}`);
-			if (result.success && result.data) {
-				const entry = result.data;
-				setDate(entry.date);
-				setContent(entry.content || "");
-				setPhotosList(entry.photos || []);
-				setEditingEntry(entry);
-				await loadEntries(entry.date);
-			} else {
-				toast.error("Entry not found");
-			}
-		} catch (err) {
-			console.error("Failed to load entry:", err);
-			toast.error("Failed to load entry");
-		}
-	};
-
-	const saveEntry = async () => {
-		if (!date) {
+	const handleSave = async () => {
+		if (!formData.date) {
 			toast.error("Please select a date");
 			return;
 		}
 
-		setSaving(true);
-		try {
-			const entryData: JournalEntry = {
-				id: editingEntry?.id || crypto.randomUUID(),
-				date,
-				content: content || undefined,
-				photos: photos.length > 0 ? photos : undefined,
-				createdAt: editingEntry?.createdAt || new Date().toISOString(),
-			};
-
-			const res = await fetch("/api/journal", {
-				method: "POST",
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify(entryData),
-			});
-
-			if (!res.ok) throw new Error("Save failed");
-
-			toast.success(
-				editingEntry ? "Entry updated successfully" : "Entry created successfully"
-			);
-			resetForm();
-			await loadEntries(date);
-		} catch (err) {
-			console.error("Save error:", err);
-			toast.error("Failed to save entry");
-		} finally {
-			setSaving(false);
-		}
+		await saveItem();
+		resetFormForDate();
+		await loadItems();
 	};
 
-	const deleteEntry = async (id: string) => {
+	const handleDelete = async (id: string) => {
 		const confirmed = await confirm({
 			title: "Delete Journal Entry?",
-			message: "This action cannot be undone. The entry will be permanently deleted.",
+			message:
+				"This action cannot be undone. The entry will be permanently deleted.",
 			variant: "danger",
 			confirmLabel: "Delete",
 		});
 
 		if (!confirmed) return;
 
-		try {
-			const res = await fetch(`/api/journal?id=${id}`, {
-				method: "DELETE",
-			});
+		await deleteItem(id);
 
-			if (!res.ok) throw new Error("Delete failed");
-
-			toast.success("Entry deleted successfully");
-			await loadEntries(date);
-
-			if (editingEntry?.id === id) {
-				resetForm();
-			}
-		} catch (err) {
-			console.error("Delete error:", err);
-			toast.error("Failed to delete entry");
+		if (editing?.id === id) {
+			resetFormForDate();
 		}
+
+		await loadItems();
 	};
 
-	const editEntry = (entry: JournalEntry) => {
-		setContent(entry.content || "");
+	const handleEdit = (entry: JournalEntry) => {
+		editItem(entry);
+		setDateFilter(entry.date);
 		setPhotosList(entry.photos || []);
-		setEditingEntry(entry);
-		// Update URL
+
 		const url = new URL(window.location.href);
 		url.searchParams.set("edit", entry.id);
 		router.replace(url.pathname + url.search, { scroll: false });
-	};
-
-	const resetForm = () => {
-		const today = getTodayDate();
-		setDate(today);
-		setContent("");
-		setPhotosList([]);
-		setEditingEntry(null);
-		// Clear URL params
-		const url = new URL(window.location.href);
-		url.searchParams.delete("edit");
-		router.replace(url.pathname + url.search, { scroll: false });
-		loadEntries(today);
 	};
 
 	return (
@@ -190,7 +194,10 @@ function AdminJournalPageContent() {
 				initial="hidden"
 				animate="visible"
 			>
-				<motion.section variants={VARIANTS_SECTION} transition={TRANSITION_SECTION}>
+				<motion.section
+					variants={VARIANTS_SECTION}
+					transition={TRANSITION_SECTION}
+				>
 					<div className="mb-4 flex items-center justify-between">
 						<h1 className="text-3xl font-medium">Journal</h1>
 						<Link
@@ -205,26 +212,28 @@ function AdminJournalPageContent() {
 					</p>
 				</motion.section>
 
-				{/* Form */}
 				<motion.section
 					className="space-y-4"
 					variants={VARIANTS_SECTION}
 					transition={TRANSITION_SECTION}
 				>
 					<h2 className="text-xl font-medium">
-						{editingEntry ? "Edit Entry" : "New Entry"}
+						{editing ? "Edit Entry" : "New Entry"}
 					</h2>
 
 					<FormDateInput
 						label="Date"
-						value={date}
-						onChange={(e) => setDate(e.target.value)}
+						value={formData.date}
+						onChange={(e) => {
+							setDateFilter(e.target.value);
+							updateField("date", e.target.value);
+						}}
 					/>
 
 					<FormTextarea
 						label="Content (optional)"
-						value={content}
-						onChange={(e) => setContent(e.target.value)}
+						value={formData.content || ""}
+						onChange={(e) => updateField("content", e.target.value)}
 						rows={6}
 						placeholder="What's on your mind?"
 					/>
@@ -264,16 +273,16 @@ function AdminJournalPageContent() {
 					<div className="flex gap-2">
 						<button
 							type="button"
-							onClick={saveEntry}
-							disabled={saving || !date}
+							onClick={handleSave}
+							disabled={saving || !formData.date}
 							className="rounded-lg bg-zinc-900 px-6 py-2 text-white transition-colors hover:bg-zinc-800 disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200"
 						>
-							{saving ? "Saving..." : editingEntry ? "Update Entry" : "Save Entry"}
+							{saving ? "Saving..." : editing ? "Update Entry" : "Save Entry"}
 						</button>
-						{editingEntry && (
+						{editing && (
 							<button
 								type="button"
-								onClick={resetForm}
+								onClick={resetFormForDate}
 								className="rounded-lg border border-zinc-300 px-6 py-2 transition-colors hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-800"
 							>
 								Cancel
@@ -282,10 +291,12 @@ function AdminJournalPageContent() {
 					</div>
 				</motion.section>
 
-				{/* Today's Entries */}
-				<motion.section variants={VARIANTS_SECTION} transition={TRANSITION_SECTION}>
+				<motion.section
+					variants={VARIANTS_SECTION}
+					transition={TRANSITION_SECTION}
+				>
 					<h2 className="mb-4 text-xl font-medium">
-						{formatDate(date)} ({entries.length})
+						{formatDate(dateFilter)} ({entries.length})
 					</h2>
 
 					{loading ? (
@@ -328,14 +339,14 @@ function AdminJournalPageContent() {
 										<div className="flex gap-2">
 											<button
 												type="button"
-												onClick={() => editEntry(entry)}
+												onClick={() => handleEdit(entry)}
 												className="text-sm text-blue-600 hover:text-blue-700 dark:text-blue-400"
 											>
 												Edit
 											</button>
 											<button
 												type="button"
-												onClick={() => deleteEntry(entry.id)}
+												onClick={() => handleDelete(entry.id)}
 												className="text-sm text-red-600 hover:text-red-700 dark:text-red-400"
 											>
 												Delete

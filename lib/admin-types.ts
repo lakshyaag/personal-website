@@ -19,6 +19,8 @@ export interface DateBasedEntry {
 export interface CrudConfig<T> {
 	/** API endpoint (e.g., "/api/workouts") */
 	endpoint: string;
+	/** Optional query string builder for GET requests (e.g., "?date=2025-01-01") */
+	getQuery?: () => string | null | undefined;
 	/** Entity name for display/errors (e.g., "workout") */
 	entityName: string;
 	/** Initial form state */

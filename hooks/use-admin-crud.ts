@@ -8,11 +8,14 @@ import { toast } from "sonner";
 import { apiGet, apiPost, apiDelete } from "@/lib/api-utils";
 import type { CrudConfig } from "@/lib/admin-types";
 
+type GetQuery = () => string | null | undefined;
+
 export function useAdminCrud<T extends { id: string }>(
 	config: CrudConfig<T>
 ) {
 	const {
 		endpoint,
+		getQuery,
 		entityName,
 		initialFormData,
 		generateId = () => crypto.randomUUID(),
@@ -37,7 +40,11 @@ export function useAdminCrud<T extends { id: string }>(
 	const loadItems = useCallback(async () => {
 		setLoading(true);
 		try {
-			const result = await apiGet<T[]>(endpoint);
+			const query = (getQuery as GetQuery | undefined)?.();
+			const url =
+				query && query.trim().length > 0 ? `${endpoint}${query}` : endpoint;
+
+			const result = await apiGet<T[]>(url);
 
 			if (!result.success || !result.data) {
 				throw new Error(result.error || "Failed to load items");
@@ -56,7 +63,7 @@ export function useAdminCrud<T extends { id: string }>(
 		} finally {
 			setLoading(false);
 		}
-	}, [endpoint, entityName, fromApi]);
+	}, [endpoint, entityName, fromApi, getQuery]);
 
 	/**
 	 * Save (create or update) an item
