@@ -28,6 +28,69 @@ export async function getWorkoutLogs(): Promise<WorkoutLog[]> {
 }
 
 /**
+ * Get workout logs for a specific date
+ * @param date - Date string in YYYY-MM-DD format
+ */
+export async function getLogsByDate(date: string): Promise<WorkoutLog[]> {
+    const { data, error } = await supabaseAdmin
+        .from("workout_logs")
+        .select("*")
+        .eq("log_date", date)
+        .order("log_date", { ascending: false });
+
+    if (error) {
+        console.error("Error fetching logs by date:", error);
+        throw error;
+    }
+
+    return (data as WorkoutLogDbRow[]).map(transformWorkoutLogFromDb);
+}
+
+/**
+ * Get a workout log by ID
+ * @param id - Log ID
+ */
+export async function getWorkoutLogById(id: string): Promise<WorkoutLog | null> {
+    const { data, error } = await supabaseAdmin
+        .from("workout_logs")
+        .select("*")
+        .eq("id", id)
+        .single();
+
+    if (error) {
+        if (error.code === "PGRST116") {
+            // No rows returned
+            return null;
+        }
+        console.error("Error fetching workout log by ID:", error);
+        throw error;
+    }
+
+    return transformWorkoutLogFromDb(data as WorkoutLogDbRow);
+}
+
+/**
+ * Get workout logs grouped by date
+ * Returns an object with dates as keys and arrays of logs as values
+ */
+export async function getLogsGroupedByDate(): Promise<
+    Record<string, WorkoutLog[]>
+> {
+    const logs = await getWorkoutLogs();
+
+    // Group logs by date
+    const grouped: Record<string, WorkoutLog[]> = {};
+    for (const log of logs) {
+        if (!grouped[log.date]) {
+            grouped[log.date] = [];
+        }
+        grouped[log.date].push(log);
+    }
+
+    return grouped;
+}
+
+/**
  * Create or update a workout log
  * @param log - Workout log entry to save
  * @returns The ID of the saved log
