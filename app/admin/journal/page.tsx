@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback, useMemo, useRef, Suspense } from "react";
+import PhotoUploader from "@/components/admin/PhotoUploader";
 import { motion } from "motion/react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -28,7 +29,6 @@ function AdminJournalPageContent() {
 	const [date, setDate] = useState(initialDate);
 	const [content, setContent] = useState("");
 	const [uploadedPhotos, setUploadedPhotos] = useState<string[]>([]);
-	const [uploading, setUploading] = useState(false);
 	const [saving, setSaving] = useState(false);
 	const [todaysEntries, setTodaysEntries] = useState<JournalEntry[]>([]);
 	const [editingEntry, setEditingEntry] = useState<JournalEntry | null>(null);
@@ -94,39 +94,6 @@ function AdminJournalPageContent() {
 		},
 		[loadTodaysEntries],
 	);
-
-	async function handlePhotoUpload(files: FileList | null) {
-		if (!files || files.length === 0) return;
-
-		setUploading(true);
-		try {
-			const urls: string[] = [];
-			for (const file of Array.from(files)) {
-				const form = new FormData();
-				form.append("file", file);
-				form.append("folder", "journal");
-				form.append("identifier", date.replace(/-/g, ""));
-
-				const res = await fetch("/api/upload", {
-					method: "POST",
-					body: form,
-				});
-
-				if (!res.ok) throw new Error("Upload failed");
-
-				const { url } = await res.json();
-				urls.push(url);
-			}
-
-			setUploadedPhotos([...uploadedPhotos, ...urls]);
-			toast.success(`${urls.length} photo(s) uploaded successfully`);
-		} catch (err) {
-			console.error("Upload error:", err);
-			toast.error("Failed to upload photos");
-		} finally {
-			setUploading(false);
-		}
-	}
 
 	async function saveEntry() {
 		if (!date) {
@@ -329,52 +296,17 @@ function AdminJournalPageContent() {
 						/>
 					</div>
 
-					<div>
-						<label
-							htmlFor="journal-photos"
-							className="mb-2 block text-sm font-medium text-zinc-700 dark:text-zinc-300"
-						>
-							Photos (optional)
-						</label>
-						<input
-							id="journal-photos"
-							type="file"
-							accept="image/*"
-							multiple
-							onChange={(e) => handlePhotoUpload(e.target.files)}
-							disabled={uploading}
-							className="w-full rounded-lg border border-zinc-300 bg-white px-4 py-2 text-zinc-900 focus:border-zinc-500 focus:outline-none focus:ring-2 focus:ring-zinc-500/20 disabled:opacity-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
-						/>
-						{uploading && (
-							<p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
-								Uploading...
-							</p>
-						)}
-						{uploadedPhotos.length > 0 && (
-							<div className="mt-2 grid grid-cols-3 gap-2 sm:grid-cols-4">
-								{uploadedPhotos.map((photo) => (
-									<div key={photo} className="relative">
-										<img
-											src={photo}
-											alt="Journal"
-											className="h-24 w-full rounded object-cover"
-										/>
-										<button
-											type="button"
-											onClick={() =>
-												setUploadedPhotos(
-													uploadedPhotos.filter((p) => p !== photo),
-												)
-											}
-											className="absolute right-1 top-1 rounded-full bg-red-500 px-2 py-1 text-xs text-white hover:bg-red-600"
-										>
-											×
-										</button>
-									</div>
-								))}
-							</div>
-						)}
-					</div>
+					<PhotoUploader
+						label="Photos (optional)"
+						photos={uploadedPhotos}
+						onChange={setUploadedPhotos}
+						folder="journal"
+						identifier={date.replace(/-/g, "")}
+						onSuccess={(urls) =>
+							toast.success(`${urls.length} photo(s) uploaded successfully`)
+						}
+						onError={() => toast.error("Failed to upload photos")}
+					/>
 
 					<div className="flex gap-2">
 						<button

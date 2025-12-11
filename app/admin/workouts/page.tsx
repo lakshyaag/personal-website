@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { motion } from "motion/react";
+import PhotoUploader from "@/components/admin/PhotoUploader";
 import type { WorkoutLog } from "@/lib/models";
 import {
 	VARIANTS_CONTAINER,
@@ -14,7 +15,6 @@ export default function AdminWorkoutsPage() {
 	const [weight, setWeight] = useState("");
 	const [content, setContent] = useState("");
 	const [uploadedPhotos, setUploadedPhotos] = useState<string[]>([]);
-	const [uploading, setUploading] = useState(false);
 	const [saving, setSaving] = useState(false);
 	const [logs, setLogs] = useState<WorkoutLog[]>([]);
 	const [editingLog, setEditingLog] = useState<WorkoutLog | null>(null);
@@ -33,38 +33,6 @@ export default function AdminWorkoutsPage() {
 			setLogs(data);
 		} catch (err) {
 			console.error("Failed to load workout logs:", err);
-		}
-	}
-
-	async function handlePhotoUpload(files: FileList | null) {
-		if (!files || files.length === 0) return;
-
-		setUploading(true);
-		try {
-			const urls: string[] = [];
-			for (const file of Array.from(files)) {
-				const form = new FormData();
-				form.append("file", file);
-				form.append("folder", "workouts");
-				form.append("identifier", date.replace(/-/g, ""));
-
-				const res = await fetch("/api/upload", {
-					method: "POST",
-					body: form,
-				});
-
-				if (!res.ok) throw new Error("Upload failed");
-
-				const { url } = await res.json();
-				urls.push(url);
-			}
-
-			setUploadedPhotos([...uploadedPhotos, ...urls]);
-		} catch (err) {
-			console.error("Upload error:", err);
-			alert("Failed to upload photos");
-		} finally {
-			setUploading(false);
 		}
 	}
 
@@ -236,52 +204,13 @@ export default function AdminWorkoutsPage() {
 						/>
 					</div>
 
-					<div>
-						<label
-							htmlFor="workout-photos"
-							className="mb-2 block text-sm font-medium text-zinc-700 dark:text-zinc-300"
-						>
-							Photos (optional)
-						</label>
-						<input
-							id="workout-photos"
-							type="file"
-							accept="image/*"
-							multiple
-							onChange={(e) => handlePhotoUpload(e.target.files)}
-							disabled={uploading}
-							className="w-full rounded-lg border border-zinc-300 bg-white px-4 py-2 text-zinc-900 focus:border-zinc-500 focus:outline-none focus:ring-2 focus:ring-zinc-500/20 disabled:opacity-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
-						/>
-						{uploading && (
-							<p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
-								Uploading...
-							</p>
-						)}
-						{uploadedPhotos.length > 0 && (
-							<div className="mt-2 grid grid-cols-3 gap-2">
-								{uploadedPhotos.map((photo) => (
-									<div key={photo} className="relative">
-										<img
-											src={photo}
-											alt="Workout progress"
-											className="h-24 w-full rounded object-cover"
-										/>
-										<button
-											type="button"
-											onClick={() =>
-												setUploadedPhotos(
-													uploadedPhotos.filter((p) => p !== photo),
-												)
-											}
-											className="absolute right-1 top-1 rounded-full bg-red-500 px-2 py-1 text-xs text-white hover:bg-red-600"
-										>
-											×
-										</button>
-									</div>
-								))}
-							</div>
-						)}
-					</div>
+					<PhotoUploader
+						label="Photos (optional)"
+						photos={uploadedPhotos}
+						onChange={setUploadedPhotos}
+						folder="workouts"
+						identifier={date.replace(/-/g, "")}
+					/>
 
 					<div className="flex gap-2">
 						<button
