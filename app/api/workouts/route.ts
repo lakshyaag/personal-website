@@ -3,6 +3,8 @@ import {
 	getWorkoutLogs,
 	saveWorkoutLog,
 	deleteWorkoutLog,
+	getWorkoutLogsByDate,
+	getWorkoutLogsGroupedByDate,
 } from "@/lib/workouts-db";
 import type { WorkoutLog } from "@/lib/models";
 import { randomUUID } from "node:crypto";
@@ -14,11 +16,13 @@ const crudHandlers = createCrudHandlers(
 		getAll: getWorkoutLogs,
 		save: saveWorkoutLog,
 		deleteById: deleteWorkoutLog,
+		getByDate: getWorkoutLogsByDate,
+		getGroupedByDate: getWorkoutLogsGroupedByDate,
 	},
 	{
 		entityName: "workout log",
-		supportsDateFilter: false,
-		supportsGrouped: false,
+		supportsDateFilter: true,
+		supportsGrouped: true,
 		supportsIdLookup: false,
 	},
 );

@@ -13,7 +13,7 @@ import {
 import AirportList from "./airport-list";
 import { ChevronDown, ChevronUp } from "lucide-react";
 
-const Map = dynamic(() => import("./map"), {
+const MapContainerComponent = dynamic(() => import("./map"), {
 	ssr: false,
 	loading: () => (
 		<div className="flex h-[480px] w-full items-center justify-center rounded-xl border border-zinc-200 bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900/50">
@@ -41,8 +41,7 @@ export default function AirportsPage() {
 	}, []);
 
 	const airportsByIdent = useMemo(
-		() =>
-			Object.fromEntries((airports as Airport[]).map((a) => [a.ident, a])),
+		() => Object.fromEntries((airports as Airport[]).map((a) => [a.ident, a])),
 		[],
 	);
 
@@ -81,9 +80,8 @@ export default function AirportsPage() {
 	}, [visits, selectedYears, selectedContinents, airportsByIdent]);
 
 	const stats = useMemo(() => {
-		const uniqueAirports = new Set(
-			filteredVisits.map((v) => v.airportIdent),
-		).size;
+		const uniqueAirports = new Set(filteredVisits.map((v) => v.airportIdent))
+			.size;
 		const countries = new Set(
 			filteredVisits.map((v) => airportsByIdent[v.airportIdent]?.iso_country),
 		);
@@ -125,7 +123,8 @@ export default function AirportsPage() {
 		AN: "Antarctica",
 	};
 
-	const hasActiveFilters = selectedYears.size > 0 || selectedContinents.size > 0;
+	const hasActiveFilters =
+		selectedYears.size > 0 || selectedContinents.size > 0;
 
 	return (
 		<motion.main
@@ -177,7 +176,9 @@ export default function AirportsPage() {
 						className="flex w-full items-center justify-between px-4 py-3 text-left transition-colors hover:bg-zinc-50 dark:hover:bg-zinc-900/50"
 					>
 						<span className="font-medium">
-							Filters {hasActiveFilters && `(${selectedYears.size + selectedContinents.size} active)`}
+							Filters{" "}
+							{hasActiveFilters &&
+								`(${selectedYears.size + selectedContinents.size} active)`}
 						</span>
 						<motion.div
 							animate={{ rotate: filtersExpanded ? 180 : 0 }}
@@ -198,19 +199,20 @@ export default function AirportsPage() {
 								{/* Year filter */}
 								{availableYears.length > 0 && (
 									<div>
-										<label className="mb-2 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
+										<span className="mb-2 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
 											Year
-										</label>
+										</span>
 										<div className="flex flex-wrap gap-2">
 											{availableYears.map((year) => (
 												<button
 													key={year}
 													type="button"
 													onClick={() => toggleYear(year)}
-													className={`rounded-lg px-3 py-1 text-sm transition-colors ${selectedYears.has(year)
+													className={`rounded-lg px-3 py-1 text-sm transition-colors ${
+														selectedYears.has(year)
 															? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900"
 															: "bg-zinc-200 text-zinc-700 hover:bg-zinc-300 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"
-														}`}
+													}`}
 												>
 													{year}
 												</button>
@@ -231,19 +233,20 @@ export default function AirportsPage() {
 								{/* Continent filter */}
 								{availableContinents.length > 0 && (
 									<div>
-										<label className="mb-2 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
+										<span className="mb-2 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
 											Continent
-										</label>
+										</span>
 										<div className="flex flex-wrap gap-2">
 											{availableContinents.map((continent) => (
 												<button
 													key={continent}
 													type="button"
 													onClick={() => toggleContinent(continent)}
-													className={`rounded-lg px-3 py-1 text-sm transition-colors ${selectedContinents.has(continent)
+													className={`rounded-lg px-3 py-1 text-sm transition-colors ${
+														selectedContinents.has(continent)
 															? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900"
 															: "bg-zinc-200 text-zinc-700 hover:bg-zinc-300 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"
-														}`}
+													}`}
 												>
 													{continentNames[continent] || continent}
 												</button>
@@ -266,7 +269,7 @@ export default function AirportsPage() {
 				</div>
 
 				{/* Map */}
-				<Map visits={filteredVisits} />
+				<MapContainerComponent visits={filteredVisits} />
 			</motion.section>
 
 			{filteredVisits.length > 0 && (
@@ -279,20 +282,22 @@ export default function AirportsPage() {
 							<button
 								type="button"
 								onClick={() => setViewMode("grouped")}
-								className={`rounded px-3 py-1 text-sm transition-colors ${viewMode === "grouped"
+								className={`rounded px-3 py-1 text-sm transition-colors ${
+									viewMode === "grouped"
 										? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900"
 										: "text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
-									}`}
+								}`}
 							>
 								By Airport
 							</button>
 							<button
 								type="button"
 								onClick={() => setViewMode("timeline")}
-								className={`rounded px-3 py-1 text-sm transition-colors ${viewMode === "timeline"
+								className={`rounded px-3 py-1 text-sm transition-colors ${
+									viewMode === "timeline"
 										? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900"
 										: "text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
-									}`}
+								}`}
 							>
 								Timeline
 							</button>

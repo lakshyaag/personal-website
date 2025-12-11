@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import PhotoUploader from "@/components/admin/PhotoUploader";
 import { DateInput } from "@/components/admin/DateTimeInputs";
 import { TextArea, NumberInput } from "@/components/admin/FormInputs";
@@ -12,8 +12,13 @@ import {
 	AdminPageWrapper,
 	AdminSection,
 } from "@/components/admin/AdminPageWrapper";
+import {
+	ViewModeToggle,
+	type ViewMode,
+} from "@/components/admin/ViewModeToggle";
+import { GroupedEntriesList } from "@/components/admin/GroupedEntriesList";
 import { useAdminCrud } from "@/hooks/useAdminCrud";
-import { formatDate } from "@/lib/date-utils";
+import { formatDate, getTodayDate } from "@/lib/date-utils";
 import type { WorkoutLog } from "@/lib/models";
 
 export default function AdminWorkoutsPage() {
@@ -22,19 +27,58 @@ export default function AdminWorkoutsPage() {
 	const [content, setContent] = useState("");
 	const [uploadedPhotos, setUploadedPhotos] = useState<string[]>([]);
 	const [editingLog, setEditingLog] = useState<WorkoutLog | null>(null);
+	const [todaysLogs, setTodaysLogs] = useState<WorkoutLog[]>([]);
+	const [allLogsGrouped, setAllLogsGrouped] = useState<
+		Record<string, WorkoutLog[]>
+	>({});
+	const [viewMode, setViewMode] = useState<ViewMode>("date");
 
-	const { items: logs, saving, loadAll, save, remove } = useAdminCrud<WorkoutLog>({
-		endpoint: "/api/workouts",
-		entityName: "workout log",
-		useAlert: true,
-	});
+	const { saving, loading, save, remove, loadByDate, loadGrouped } =
+		useAdminCrud<WorkoutLog>({
+			endpoint: "/api/workouts",
+			entityName: "workout log",
+			useAlert: true,
+		});
+
+	const loadTodaysLogs = useCallback(
+		async (selectedDate: string) => {
+			if (!selectedDate) return;
+			const logs = await loadByDate(selectedDate);
+			setTodaysLogs(logs);
+		},
+		[loadByDate],
+	);
+
+	const loadAllLogs = useCallback(async () => {
+		const grouped = await loadGrouped();
+		setAllLogsGrouped(grouped);
+	}, [loadGrouped]);
 
 	useEffect(() => {
-		loadAll();
-		// Set today's date as default
-		const today = new Date().toISOString().split("T")[0];
+		const today = getTodayDate();
 		setDate(today);
-	}, [loadAll]);
+		loadTodaysLogs(today);
+	}, [loadTodaysLogs]);
+
+	const handleDateChange = useCallback(
+		(newDate: string) => {
+			setDate(newDate);
+			loadTodaysLogs(newDate);
+		},
+		[loadTodaysLogs],
+	);
+
+	const handleViewModeChange = useCallback(
+		(mode: ViewMode) => {
+			setViewMode(mode);
+			if (mode === "all") {
+				loadAllLogs();
+			} else {
+				loadTodaysLogs(date);
+			}
+		},
+		[loadAllLogs, loadTodaysLogs, date],
+	);
 
 	async function saveLog() {
 		if (!date) {
@@ -42,6 +86,7 @@ export default function AdminWorkoutsPage() {
 			return;
 		}
 
+		const savedDate = date;
 		const logData: WorkoutLog = {
 			id: editingLog?.id || crypto.randomUUID(),
 			date,
@@ -53,16 +98,25 @@ export default function AdminWorkoutsPage() {
 		const success = await save(logData);
 		if (success) {
 			resetForm();
-			await loadAll();
+			if (viewMode === "all") {
+				await loadAllLogs();
+			} else {
+				setDate(savedDate);
+				await loadTodaysLogs(savedDate);
+			}
 		}
 	}
 
 	async function deleteLog(logId: string) {
 		const success = await remove(logId);
 		if (success) {
-			await loadAll();
 			if (editingLog?.id === logId) {
 				resetForm();
+			}
+			if (viewMode === "all") {
+				await loadAllLogs();
+			} else {
+				await loadTodaysLogs(date);
 			}
 		}
 	}
@@ -73,15 +127,53 @@ export default function AdminWorkoutsPage() {
 		setContent(log.content || "");
 		setUploadedPhotos(log.photos || []);
 		setEditingLog(log);
+		setViewMode("date");
+		loadTodaysLogs(log.date);
 	}
 
 	function resetForm() {
-		const today = new Date().toISOString().split("T")[0];
+		const today = getTodayDate();
 		setDate(today);
 		setWeight("");
 		setContent("");
 		setUploadedPhotos([]);
 		setEditingLog(null);
+	}
+
+	function renderLogCard(log: WorkoutLog, showDate = true) {
+		return (
+			<EntryCard onEdit={() => editLog(log)} onDelete={() => deleteLog(log.id)}>
+				<div className="flex items-baseline gap-3">
+					{showDate && (
+						<div className="font-medium">{formatDate(log.date)}</div>
+					)}
+					{log.weight && (
+						<div
+							className={`text-sm ${showDate ? "text-zinc-600 dark:text-zinc-400" : "font-medium text-zinc-900 dark:text-zinc-100"}`}
+						>
+							{log.weight} kg
+						</div>
+					)}
+				</div>
+				{log.content && (
+					<div className="mt-2 text-sm text-zinc-600 dark:text-zinc-400 whitespace-pre-wrap">
+						{log.content}
+					</div>
+				)}
+				{log.photos && log.photos.length > 0 && (
+					<div className="mt-2 flex gap-2">
+						{log.photos.map((photo) => (
+							<img
+								key={photo}
+								src={photo}
+								alt="Workout progress"
+								className="h-16 w-16 rounded object-cover"
+							/>
+						))}
+					</div>
+				)}
+			</EntryCard>
+		);
 	}
 
 	return (
@@ -99,7 +191,7 @@ export default function AdminWorkoutsPage() {
 						id="workout-date"
 						label="Date"
 						value={date}
-						onChange={setDate}
+						onChange={handleDateChange}
 					/>
 
 					<NumberInput
@@ -142,52 +234,45 @@ export default function AdminWorkoutsPage() {
 
 			<AdminSection>
 				<div className="space-y-4">
-					<SectionHeader title="Recent Logs" count={logs.length} />
+					<div className="flex items-center justify-between">
+						<SectionHeader title="Logs" />
+						<ViewModeToggle
+							viewMode={viewMode}
+							onViewModeChange={handleViewModeChange}
+							allLabel="All Logs"
+						/>
+					</div>
 
-					<EntryCardList>
-						{logs
-							.sort(
-								(a, b) =>
-									new Date(b.date).getTime() - new Date(a.date).getTime(),
-							)
-							.map((log) => (
-								<EntryCard
-									key={log.id}
-									onEdit={() => editLog(log)}
-									onDelete={() => deleteLog(log.id)}
-								>
-									<div className="flex items-baseline gap-3">
-										<div className="font-medium">{formatDate(log.date)}</div>
-										{log.weight && (
-											<div className="text-sm text-zinc-600 dark:text-zinc-400">
-												{log.weight} kg
-											</div>
-										)}
-									</div>
-									{log.content && (
-										<div className="mt-2 text-sm text-zinc-600 dark:text-zinc-400 whitespace-pre-wrap">
-											{log.content}
-										</div>
-									)}
-									{log.photos && log.photos.length > 0 && (
-										<div className="mt-2 flex gap-2">
-											{log.photos.map((photo) => (
-												<img
-													key={photo}
-													src={photo}
-													alt="Workout progress"
-													className="h-16 w-16 rounded object-cover"
-												/>
-											))}
-										</div>
-									)}
-								</EntryCard>
-							))}
+					{loading && (
+						<p className="text-center text-zinc-600 dark:text-zinc-400 py-8">
+							Loading...
+						</p>
+					)}
 
-						{logs.length === 0 && (
-							<EmptyState message="No workout logs yet. Add your first entry!" />
-						)}
-					</EntryCardList>
+					{!loading && viewMode === "date" && (
+						<div className="space-y-3">
+							<h3 className="text-lg font-medium text-zinc-700 dark:text-zinc-300">
+								{formatDate(date)} ({todaysLogs.length})
+							</h3>
+							<EntryCardList>
+								{todaysLogs.map((log) => (
+									<div key={log.id}>{renderLogCard(log)}</div>
+								))}
+								{todaysLogs.length === 0 && (
+									<EmptyState message="No logs for this day yet. Add your first entry!" />
+								)}
+							</EntryCardList>
+						</div>
+					)}
+
+					{!loading && viewMode === "all" && (
+						<GroupedEntriesList
+							groupedEntries={allLogsGrouped}
+							renderEntry={(log) => renderLogCard(log, false)}
+							getEntryKey={(log) => log.id}
+							emptyMessage="No workout logs yet. Add your first entry!"
+						/>
+					)}
 				</div>
 			</AdminSection>
 		</AdminPageWrapper>

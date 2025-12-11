@@ -1,10 +1,33 @@
 import { NextResponse } from "next/server";
-import { getVisits, saveVisit, deleteVisit } from "@/lib/visits-db";
+import {
+	getVisits,
+	saveVisit,
+	deleteVisit,
+	getVisitsByDate,
+	getVisitsGroupedByDate,
+} from "@/lib/visits-db";
 import type { Visit } from "@/lib/models";
 import { randomUUID } from "node:crypto";
 
-export async function GET() {
+export async function GET(req: Request) {
 	try {
+		const { searchParams } = new URL(req.url);
+		const date = searchParams.get("date");
+		const grouped = searchParams.get("grouped");
+
+		// Get by date
+		if (date) {
+			const visits = await getVisitsByDate(date);
+			return NextResponse.json(visits);
+		}
+
+		// Get grouped by date
+		if (grouped === "true") {
+			const groupedVisits = await getVisitsGroupedByDate();
+			return NextResponse.json(groupedVisits);
+		}
+
+		// Get all
 		const visits = await getVisits();
 		return NextResponse.json(visits);
 	} catch (error) {

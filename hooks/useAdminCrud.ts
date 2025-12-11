@@ -21,8 +21,8 @@ interface UseAdminCrudReturn<T> {
 	loading: boolean;
 	/** Whether a save operation is in progress */
 	saving: boolean;
-	/** Load all items from the API */
-	loadAll: () => Promise<void>;
+	/** Load all items from the API (stores in items state, returns void) */
+	loadAll: () => Promise<T[]>;
 	/** Load items for a specific date */
 	loadByDate: (date: string) => Promise<T[]>;
 	/** Load items grouped by date */
@@ -62,16 +62,18 @@ export function useAdminCrud<T extends { id?: string }>({
 		[useAlert],
 	);
 
-	const loadAll = useCallback(async () => {
+	const loadAll = useCallback(async (): Promise<T[]> => {
 		setLoading(true);
 		try {
 			const res = await fetch(endpoint);
 			if (!res.ok) throw new Error("Failed to fetch");
 			const data = await res.json();
 			setItems(data);
+			return data;
 		} catch (err) {
 			console.error(`Failed to load ${entityName}s:`, err);
 			notify("error", `Failed to load ${entityName}s`);
+			return [];
 		} finally {
 			setLoading(false);
 		}
