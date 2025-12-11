@@ -5,6 +5,7 @@ import { motion } from "motion/react";
 import { toast } from "sonner";
 import type { BookEntry, Recommendation } from "@/lib/models";
 import BookCard from "@/components/BookCard";
+import { DateInput } from "@/components/admin/DateTimeInputs";
 import {
 	VARIANTS_CONTAINER,
 	VARIANTS_SECTION,
@@ -605,29 +606,17 @@ export default function AdminBooksPage() {
 					</div>
 
 					<div className="grid grid-cols-2 gap-4">
-						<div>
-							<label className="mb-2 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
-								Date Started
-							</label>
-							<input
-								type="date"
-								value={form.dateStarted}
-								onChange={(e) => updateForm({ dateStarted: e.target.value })}
-								className="w-full rounded-lg border border-zinc-300 bg-white px-4 py-2 text-zinc-900 focus:border-zinc-500 focus:outline-none focus:ring-2 focus:ring-zinc-500/20 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
-							/>
-						</div>
-
-						<div>
-							<label className="mb-2 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
-								Date Completed (optional)
-							</label>
-							<input
-								type="date"
-								value={form.dateCompleted}
-								onChange={(e) => updateForm({ dateCompleted: e.target.value })}
-								className="w-full rounded-lg border border-zinc-300 bg-white px-4 py-2 text-zinc-900 focus:border-zinc-500 focus:outline-none focus:ring-2 focus:ring-zinc-500/20 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
-							/>
-						</div>
+						<DateInput
+							label="Date Started"
+							value={form.dateStarted}
+							onChange={(value) => updateForm({ dateStarted: value })}
+							required
+						/>
+						<DateInput
+							label="Date Completed (optional)"
+							value={form.dateCompleted}
+							onChange={(value) => updateForm({ dateCompleted: value })}
+						/>
 					</div>
 
 					<div className="grid grid-cols-2 gap-4">

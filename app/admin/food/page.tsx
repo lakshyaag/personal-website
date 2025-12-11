@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useMemo, useRef, Suspense } from "react";
 import PhotoUploader from "@/components/admin/PhotoUploader";
+import { DateTimeInput } from "@/components/admin/DateTimeInputs";
 import { motion } from "motion/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import type { FoodEntry } from "@/lib/models";
@@ -11,17 +12,12 @@ import {
 	TRANSITION_SECTION,
 } from "@/lib/utils";
 import { toast } from "sonner";
-
-function getTodayDate() {
-	return new Date().toISOString().split("T")[0];
-}
-
-function getCurrentTime() {
-	const now = new Date();
-	const hours = String(now.getHours()).padStart(2, "0");
-	const minutes = String(now.getMinutes()).padStart(2, "0");
-	return `${hours}:${minutes}`;
-}
+import {
+	formatDate,
+	formatTime,
+	getCurrentTime,
+	getTodayDate,
+} from "@/lib/date-utils";
 
 function AdminFoodPageContent() {
 	const router = useRouter();
@@ -258,27 +254,6 @@ function AdminFoodPageContent() {
 		loadTodaysEntries(today);
 	}
 
-	function formatTime(isoString: string): string {
-		const date = new Date(isoString);
-		return date.toLocaleTimeString("en-US", {
-			hour: "numeric",
-			minute: "2-digit",
-			hour12: true,
-		});
-	}
-
-	function formatDate(dateStr: string): string {
-		// Parse date string as local date (YYYY-MM-DD format)
-		const [year, month, day] = dateStr.split("-").map(Number);
-		const date = new Date(year, month - 1, day);
-		return date.toLocaleDateString("en-US", {
-			weekday: "short",
-			year: "numeric",
-			month: "short",
-			day: "numeric",
-		});
-	}
-
 	return (
 		<motion.main
 			className="space-y-8 pb-16"
@@ -309,38 +284,14 @@ function AdminFoodPageContent() {
 						{editingEntry ? "Edit Entry" : "New Entry"}
 					</h2>
 
-					<div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-						<div>
-							<label
-								htmlFor="food-date"
-								className="mb-2 block text-sm font-medium text-zinc-700 dark:text-zinc-300"
-							>
-								Date
-							</label>
-							<input
-								id="food-date"
-								type="date"
-								value={date}
-								onChange={(e) => handleDateChange(e.target.value)}
-								className="w-full rounded-lg border border-zinc-300 bg-white px-4 py-2 text-zinc-900 focus:border-zinc-500 focus:outline-none focus:ring-2 focus:ring-zinc-500/20 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
-							/>
-						</div>
-						<div>
-							<label
-								htmlFor="food-time"
-								className="mb-2 block text-sm font-medium text-zinc-700 dark:text-zinc-300"
-							>
-								Time
-							</label>
-							<input
-								id="food-time"
-								type="time"
-								value={time}
-								onChange={(e) => setTime(e.target.value)}
-								className="w-full rounded-lg border border-zinc-300 bg-white px-4 py-2 text-zinc-900 focus:border-zinc-500 focus:outline-none focus:ring-2 focus:ring-zinc-500/20 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
-							/>
-						</div>
-					</div>
+					<DateTimeInput
+						dateId="food-date"
+						timeId="food-time"
+						dateValue={date}
+						timeValue={time}
+						onDateChange={handleDateChange}
+						onTimeChange={setTime}
+					/>
 
 					<div>
 						<label

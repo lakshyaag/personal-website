@@ -3,6 +3,8 @@
 import { useState, useEffect } from "react";
 import { motion } from "motion/react";
 import PhotoUploader from "@/components/admin/PhotoUploader";
+import { DateInput } from "@/components/admin/DateTimeInputs";
+import { formatDate } from "@/lib/date-utils";
 import type { WorkoutLog } from "@/lib/models";
 import {
 	VARIANTS_CONTAINER,
@@ -113,18 +115,6 @@ export default function AdminWorkoutsPage() {
 		setEditingLog(null);
 	}
 
-	function formatDate(dateStr: string): string {
-		// Parse date string as local date (YYYY-MM-DD format)
-		const [year, month, day] = dateStr.split("-").map(Number);
-		const date = new Date(year, month - 1, day);
-		return date.toLocaleDateString("en-US", {
-			weekday: "short",
-			year: "numeric",
-			month: "short",
-			day: "numeric",
-		});
-	}
-
 	return (
 		<motion.main
 			className="space-y-8 pb-16"
@@ -153,21 +143,12 @@ export default function AdminWorkoutsPage() {
 						{editingLog ? "Edit Log" : "Quick Log"}
 					</h2>
 
-					<div>
-						<label
-							htmlFor="workout-date"
-							className="mb-2 block text-sm font-medium text-zinc-700 dark:text-zinc-300"
-						>
-							Date
-						</label>
-						<input
-							id="workout-date"
-							type="date"
-							value={date}
-							onChange={(e) => setDate(e.target.value)}
-							className="w-full rounded-lg border border-zinc-300 bg-white px-4 py-2 text-zinc-900 focus:border-zinc-500 focus:outline-none focus:ring-2 focus:ring-zinc-500/20 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
-						/>
-					</div>
+					<DateInput
+						id="workout-date"
+						label="Date"
+						value={date}
+						onChange={setDate}
+					/>
 
 					<div>
 						<label

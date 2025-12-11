@@ -10,6 +10,7 @@ import {
 	TRANSITION_SECTION,
 } from "@/lib/utils";
 import { toast } from "sonner";
+import { formatDate, formatTime } from "@/lib/date-utils";
 
 export default function JournalViewPage() {
 	const [groupedEntries, setGroupedEntries] = useState<
@@ -63,27 +64,6 @@ export default function JournalViewPage() {
 			console.error("Delete error:", err);
 			toast.error("Failed to delete entry");
 		}
-	}
-
-	function formatDate(dateStr: string): string {
-		// Parse date string as local date (YYYY-MM-DD format)
-		const [year, month, day] = dateStr.split("-").map(Number);
-		const date = new Date(year, month - 1, day);
-		return date.toLocaleDateString("en-US", {
-			weekday: "long",
-			year: "numeric",
-			month: "long",
-			day: "numeric",
-		});
-	}
-
-	function formatTime(isoString: string): string {
-		const date = new Date(isoString);
-		return date.toLocaleTimeString("en-US", {
-			hour: "numeric",
-			minute: "2-digit",
-			hour12: true,
-		});
 	}
 
 	function getRelativeDate(dateStr: string): string | null {
@@ -196,7 +176,12 @@ export default function JournalViewPage() {
 									<div className="flex items-center justify-between">
 										<div>
 											<div className="font-medium text-lg">
-												{formatDate(date)}
+												{formatDate(date, {
+													weekday: "long",
+													year: "numeric",
+													month: "long",
+													day: "numeric",
+												})}
 												{relativeDate && (
 													<span className="ml-2 text-sm text-zinc-500 dark:text-zinc-500">
 														({relativeDate})

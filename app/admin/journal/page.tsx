@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useMemo, useRef, Suspense } from "react";
 import PhotoUploader from "@/components/admin/PhotoUploader";
+import { DateInput } from "@/components/admin/DateTimeInputs";
 import { motion } from "motion/react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -12,10 +13,7 @@ import {
 	TRANSITION_SECTION,
 } from "@/lib/utils";
 import { toast } from "sonner";
-
-function getTodayDate() {
-	return new Date().toISOString().split("T")[0];
-}
+import { formatDate, formatTime, getTodayDate } from "@/lib/date-utils";
 
 function AdminJournalPageContent() {
 	const router = useRouter();
@@ -206,27 +204,6 @@ function AdminJournalPageContent() {
 		loadTodaysEntries(today);
 	}
 
-	function formatTime(isoString: string): string {
-		const date = new Date(isoString);
-		return date.toLocaleTimeString("en-US", {
-			hour: "numeric",
-			minute: "2-digit",
-			hour12: true,
-		});
-	}
-
-	function formatDate(dateStr: string): string {
-		// Parse date string as local date (YYYY-MM-DD format)
-		const [year, month, day] = dateStr.split("-").map(Number);
-		const date = new Date(year, month - 1, day);
-		return date.toLocaleDateString("en-US", {
-			weekday: "short",
-			year: "numeric",
-			month: "short",
-			day: "numeric",
-		});
-	}
-
 	return (
 		<motion.main
 			className="space-y-8 pb-16"
@@ -263,21 +240,12 @@ function AdminJournalPageContent() {
 						{editingEntry ? "Edit Entry" : "New Entry"}
 					</h2>
 
-					<div>
-						<label
-							htmlFor="journal-date"
-							className="mb-2 block text-sm font-medium text-zinc-700 dark:text-zinc-300"
-						>
-							Date
-						</label>
-						<input
-							id="journal-date"
-							type="date"
-							value={date}
-							onChange={(e) => handleDateChange(e.target.value)}
-							className="w-full rounded-lg border border-zinc-300 bg-white px-4 py-2 text-zinc-900 focus:border-zinc-500 focus:outline-none focus:ring-2 focus:ring-zinc-500/20 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
-						/>
-					</div>
+					<DateInput
+						id="journal-date"
+						label="Date"
+						value={date}
+						onChange={handleDateChange}
+					/>
 
 					<div>
 						<label

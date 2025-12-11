@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { motion } from "motion/react";
 import PhotoUploader from "@/components/admin/PhotoUploader";
+import { DateInput } from "@/components/admin/DateTimeInputs";
 import airports from "@/data/airports.min.json";
 import type { Visit, Airport } from "@/lib/models";
 import {
@@ -231,17 +232,11 @@ export default function AdminAirportsPage() {
 						)}
 					</div>
 
-					<div>
-						<label className="mb-2 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
-							Visit Date
-						</label>
-						<input
-							type="date"
-							value={date}
-							onChange={(e) => setDate(e.target.value)}
-							className="w-full rounded-lg border border-zinc-300 bg-white px-4 py-2 text-zinc-900 focus:border-zinc-500 focus:outline-none focus:ring-2 focus:ring-zinc-500/20 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
-						/>
-					</div>
+					<DateInput
+						label="Visit Date"
+						value={date}
+						onChange={setDate}
+					/>
 
 					<div>
 						<div className="mb-3 flex items-center gap-3">
