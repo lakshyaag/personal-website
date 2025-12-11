@@ -41,7 +41,7 @@ function AdminJournalPageContent() {
 	const { saving, loading, save, remove, loadByDate, loadGrouped, loadById } =
 		useAdminCrud<JournalEntry>({
 			endpoint: "/api/journal",
-			entityName: "entry",
+			entityName: "journal entry",
 		});
 
 	const loadTodaysEntries = useCallback(

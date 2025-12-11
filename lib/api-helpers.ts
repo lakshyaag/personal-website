@@ -3,6 +3,7 @@
  * Creates consistent GET, POST, DELETE handlers for CRUD operations
  */
 
+import pluralize from "pluralize";
 import { NextResponse } from "next/server";
 
 interface DbOperations<T> {
@@ -17,6 +18,8 @@ interface DbOperations<T> {
 interface CrudHandlersConfig {
 	/** Human-readable entity name for error messages (e.g., "journal entry") */
 	entityName: string;
+	/** Optional plural form for list responses (e.g., "journal entries") */
+	entityNamePlural?: string;
 	/** Fields that are required in POST requests */
 	requiredFields?: string[];
 	/** Whether this endpoint supports ?date= filtering */
@@ -42,11 +45,14 @@ export function createCrudHandlers<T>(
 ): CrudHandlers {
 	const {
 		entityName,
+		entityNamePlural,
 		requiredFields = [],
 		supportsDateFilter = false,
 		supportsGrouped = false,
 		supportsIdLookup = true,
 	} = config;
+
+	const pluralEntityName = entityNamePlural ?? pluralize(entityName);
 
 	async function GET(req: Request): Promise<NextResponse> {
 		try {
@@ -85,7 +91,7 @@ export function createCrudHandlers<T>(
 		} catch (error) {
 			console.error(`Error in GET /api/${entityName}:`, error);
 			return NextResponse.json(
-				{ error: `Failed to fetch ${entityName}` },
+				{ error: `Failed to fetch ${pluralEntityName}` },
 				{ status: 500 },
 			);
 		}

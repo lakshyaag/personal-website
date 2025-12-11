@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import pluralize from "pluralize";
+import { useState, useCallback, useMemo } from "react";
 import { toast } from "sonner";
 
 interface UseAdminCrudOptions<T> {
@@ -8,6 +9,8 @@ interface UseAdminCrudOptions<T> {
 	endpoint: string;
 	/** Human-readable entity name for messages (e.g., "entry", "log") */
 	entityName: string;
+	/** Optional plural form of the entity name (e.g., "entries") */
+	entityNamePlural?: string;
 	/** Use alert() instead of toast for notifications */
 	useAlert?: boolean;
 	/** Transform function before sending to API */
@@ -44,12 +47,18 @@ interface UseAdminCrudReturn<T> {
 export function useAdminCrud<T extends { id?: string }>({
 	endpoint,
 	entityName,
+	entityNamePlural,
 	useAlert = false,
 	transformForApi,
 }: UseAdminCrudOptions<T>): UseAdminCrudReturn<T> {
 	const [items, setItems] = useState<T[]>([]);
 	const [loading, setLoading] = useState(false);
 	const [saving, setSaving] = useState(false);
+
+	const pluralEntityName = useMemo(
+		() => entityNamePlural ?? pluralize(entityName),
+		[entityName, entityNamePlural],
+	);
 
 	const notify = useCallback(
 		(type: "success" | "error", message: string) => {
@@ -71,13 +80,13 @@ export function useAdminCrud<T extends { id?: string }>({
 			setItems(data);
 			return data;
 		} catch (err) {
-			console.error(`Failed to load ${entityName}s:`, err);
-			notify("error", `Failed to load ${entityName}s`);
+			console.error(`Failed to load ${pluralEntityName}:`, err);
+			notify("error", `Failed to load ${pluralEntityName}`);
 			return [];
 		} finally {
 			setLoading(false);
 		}
-	}, [endpoint, entityName, notify]);
+	}, [endpoint, notify, pluralEntityName]);
 
 	const loadByDate = useCallback(
 		async (date: string): Promise<T[]> => {
@@ -88,14 +97,14 @@ export function useAdminCrud<T extends { id?: string }>({
 				const data = await res.json();
 				return data;
 			} catch (err) {
-				console.error(`Failed to load ${entityName}s by date:`, err);
-				notify("error", `Failed to load ${entityName}s`);
+				console.error(`Failed to load ${pluralEntityName} by date:`, err);
+				notify("error", `Failed to load ${pluralEntityName}`);
 				return [];
 			} finally {
 				setLoading(false);
 			}
 		},
-		[endpoint, entityName, notify],
+		[endpoint, notify, pluralEntityName],
 	);
 
 	const loadGrouped = useCallback(async (): Promise<Record<string, T[]>> => {
@@ -105,13 +114,13 @@ export function useAdminCrud<T extends { id?: string }>({
 			if (!res.ok) throw new Error("Failed to fetch");
 			return await res.json();
 		} catch (err) {
-			console.error(`Failed to load grouped ${entityName}s:`, err);
-			notify("error", `Failed to load ${entityName}s`);
+			console.error(`Failed to load grouped ${pluralEntityName}:`, err);
+			notify("error", `Failed to load ${pluralEntityName}`);
 			return {};
 		} finally {
 			setLoading(false);
 		}
-	}, [endpoint, entityName, notify]);
+	}, [endpoint, notify, pluralEntityName]);
 
 	const loadById = useCallback(
 		async (id: string): Promise<T | null> => {

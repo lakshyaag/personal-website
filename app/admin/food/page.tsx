@@ -46,7 +46,7 @@ function AdminFoodPageContent() {
 	const { saving, loading, save, remove, loadByDate, loadGrouped, loadById } =
 		useAdminCrud<FoodEntry>({
 			endpoint: "/api/food",
-			entityName: "entry",
+			entityName: "food entry",
 		});
 
 	const loadTodaysEntries = useCallback(
