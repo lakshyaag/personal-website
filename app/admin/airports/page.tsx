@@ -1,14 +1,23 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { motion } from "motion/react";
-import airports from "@/data/airports.min.json";
-import type { Visit, Airport } from "@/lib/models";
+import { useState, useEffect, useCallback, useMemo } from "react";
+import PhotoUploader from "@/components/admin/PhotoUploader";
+import { DateInput } from "@/components/admin/DateTimeInputs";
+import { TextInput, TextArea } from "@/components/admin/FormInputs";
+import { FormActions } from "@/components/admin/FormActions";
+import { EntryCard, EntryCardList } from "@/components/admin/EntryCard";
+import { PageHeader, SectionHeader } from "@/components/admin/PageHeader";
+import { EmptyState } from "@/components/admin/EmptyState";
 import {
-	VARIANTS_CONTAINER,
-	VARIANTS_SECTION,
-	TRANSITION_SECTION,
-} from "@/lib/utils";
+	AdminPageWrapper,
+	AdminSection,
+} from "@/components/admin/AdminPageWrapper";
+import { useAdminCrud } from "@/hooks/useAdminCrud";
+import { formatDate, getTodayDate } from "@/lib/date-utils";
+import airportsData from "@/data/airports.min.json";
+import type { Visit, Airport } from "@/lib/models";
+
+type AirportViewMode = "byDate" | "byAirport";
 
 export default function AdminAirportsPage() {
 	const [query, setQuery] = useState("");
@@ -18,14 +27,15 @@ export default function AdminAirportsPage() {
 	const [notes, setNotes] = useState("");
 	const [selectedAirport, setSelectedAirport] = useState<Airport | null>(null);
 	const [uploadedPhotos, setUploadedPhotos] = useState<string[]>([]);
-	const [uploading, setUploading] = useState(false);
-	const [saving, setSaving] = useState(false);
-	const [visits, setVisits] = useState<Visit[]>([]);
 	const [editingVisit, setEditingVisit] = useState<Visit | null>(null);
+	const [allVisitsGrouped, setAllVisitsGrouped] = useState<
+		Record<string, Visit[]>
+	>({});
+	const [viewMode, setViewMode] = useState<AirportViewMode>("byDate");
 
 	const showDropdown = query && !selectedAirport;
 	const results: Airport[] = showDropdown
-		? (airports as Airport[])
+		? (airportsData as Airport[])
 				.filter(
 					(a) =>
 						a.ident?.toLowerCase().includes(query.toLowerCase()) ||
@@ -36,55 +46,58 @@ export default function AdminAirportsPage() {
 				.slice(0, 20)
 		: [];
 
+	const { saving, loading, save, remove, loadByDate, loadGrouped, loadAll } =
+		useAdminCrud<Visit>({
+			endpoint: "/api/visits",
+			entityName: "visit",
+			useAlert: true,
+		});
+
+	const loadAllVisitsByDate = useCallback(async () => {
+		const grouped = await loadGrouped();
+		setAllVisitsGrouped(grouped);
+	}, [loadGrouped]);
+
+	const loadAllVisitsByAirport = useCallback(async () => {
+		const allVisits = await loadAll();
+		// Group by airport
+		const grouped: Record<string, Visit[]> = {};
+		for (const visit of allVisits) {
+			if (!grouped[visit.airportIdent]) {
+				grouped[visit.airportIdent] = [];
+			}
+			grouped[visit.airportIdent].push(visit);
+		}
+		// Sort visits within each airport by date (most recent first)
+		for (const key of Object.keys(grouped)) {
+			grouped[key].sort(
+				(a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
+			);
+		}
+		setAllVisitsGrouped(grouped);
+	}, [loadAll]);
+
 	useEffect(() => {
-		loadVisits();
+		const today = getTodayDate();
+		setDate(today);
+		loadAllVisitsByDate();
+	}, [loadAllVisitsByDate]);
+
+	const handleDateChange = useCallback((newDate: string) => {
+		setDate(newDate);
 	}, []);
 
-	async function loadVisits() {
-		try {
-			const res = await fetch("/api/visits");
-			const data = await res.json();
-			setVisits(data);
-		} catch (err) {
-			console.error("Failed to load visits:", err);
-		}
-	}
-
-	async function handlePhotoUpload(files: FileList | null) {
-		if (!files || files.length === 0) return;
-		if (!selectedAirport) {
-			alert("Please select an airport first");
-			return;
-		}
-
-		setUploading(true);
-		try {
-			const urls: string[] = [];
-			for (const file of Array.from(files)) {
-				const form = new FormData();
-				form.append("file", file);
-				form.append("folder", "airports");
-				form.append("identifier", selectedAirport.ident);
-
-				const res = await fetch("/api/upload", {
-					method: "POST",
-					body: form,
-				});
-
-				if (!res.ok) throw new Error("Upload failed");
-
-				const { url } = await res.json();
-				urls.push(url);
+	const handleViewModeChange = useCallback(
+		(mode: AirportViewMode) => {
+			setViewMode(mode);
+			if (mode === "byDate") {
+				loadAllVisitsByDate();
+			} else if (mode === "byAirport") {
+				loadAllVisitsByAirport();
 			}
-
-			setUploadedPhotos([...uploadedPhotos, ...urls]);
-		} catch (err) {
-			console.error("Upload error:", err);
-			alert("Failed to upload photos");
-		} finally {
-			setUploading(false);
-		}
-	}
+		},
+		[loadAllVisitsByDate, loadAllVisitsByAirport],
+	);
 
 	async function saveVisit() {
 		if (!selectedAirport || !date) {
@@ -92,68 +105,48 @@ export default function AdminAirportsPage() {
 			return;
 		}
 
-		setSaving(true);
-		try {
-			const filteredFlightNumbers = flightNumbers.filter(
-				(fn) => fn.trim() !== "",
-			);
-			const visitData = {
-				id: editingVisit?.id,
-				airportIdent: selectedAirport.ident,
-				date,
-				flightNumbers:
-					filteredFlightNumbers.length > 0 ? filteredFlightNumbers : undefined,
-				isLayover: isLayover || undefined,
-				notes: notes || undefined,
-				photos: uploadedPhotos.length > 0 ? uploadedPhotos : undefined,
-			};
+		const savedDate = date;
+		const filteredFlightNumbers = flightNumbers.filter(
+			(fn) => fn.trim() !== "",
+		);
+		const visitData: Visit = {
+			id: editingVisit?.id || crypto.randomUUID(),
+			airportIdent: selectedAirport.ident,
+			date,
+			flightNumbers:
+				filteredFlightNumbers.length > 0 ? filteredFlightNumbers : undefined,
+			isLayover: isLayover || undefined,
+			notes: notes || undefined,
+			photos: uploadedPhotos.length > 0 ? uploadedPhotos : undefined,
+		};
 
-			const res = await fetch("/api/visits", {
-				method: "POST",
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify(visitData),
-			});
-
-			if (!res.ok) throw new Error("Save failed");
-
-			alert(
-				editingVisit
-					? "Visit updated successfully!"
-					: "Visit saved successfully!",
-			);
+		const success = await save(visitData);
+		if (success) {
 			resetForm();
-			await loadVisits();
-		} catch (err) {
-			console.error("Save error:", err);
-			alert("Failed to save visit");
-		} finally {
-			setSaving(false);
+			if (viewMode === "byDate") {
+				await loadAllVisitsByDate();
+			} else if (viewMode === "byAirport") {
+				await loadAllVisitsByAirport();
+			}
 		}
 	}
 
 	async function deleteVisit(visitId: string) {
-		if (!confirm("Are you sure you want to delete this visit?")) return;
-
-		try {
-			const res = await fetch(`/api/visits?id=${visitId}`, {
-				method: "DELETE",
-			});
-
-			if (!res.ok) throw new Error("Delete failed");
-
-			alert("Visit deleted successfully!");
-			await loadVisits();
+		const success = await remove(visitId);
+		if (success) {
 			if (editingVisit?.id === visitId) {
 				resetForm();
 			}
-		} catch (err) {
-			console.error("Delete error:", err);
-			alert("Failed to delete visit");
+			if (viewMode === "byDate") {
+				await loadAllVisitsByDate();
+			} else if (viewMode === "byAirport") {
+				await loadAllVisitsByAirport();
+			}
 		}
 	}
 
 	function editVisit(visit: Visit) {
-		const airport = (airports as Airport[]).find(
+		const airport = (airportsData as Airport[]).find(
 			(a) => a.ident === visit.airportIdent,
 		);
 		if (!airport) return;
@@ -174,7 +167,8 @@ export default function AdminAirportsPage() {
 
 	function resetForm() {
 		setQuery("");
-		setDate("");
+		const today = getTodayDate();
+		setDate(today);
 		setFlightNumbers([""]);
 		setIsLayover(false);
 		setNotes("");
@@ -183,39 +177,91 @@ export default function AdminAirportsPage() {
 		setEditingVisit(null);
 	}
 
-	return (
-		<motion.main
-			className="space-y-8 pb-16"
-			variants={VARIANTS_CONTAINER}
-			initial="hidden"
-			animate="visible"
-		>
-			<motion.section
-				variants={VARIANTS_SECTION}
-				transition={TRANSITION_SECTION}
-			>
-				<h1 className="mb-4 text-3xl font-medium">Manage Airport Visits</h1>
-				<p className="text-zinc-600 dark:text-zinc-400">
-					Add, edit, and manage your airport visits.
-				</p>
-			</motion.section>
+	function handleLayoverChange(checked: boolean) {
+		setIsLayover(checked);
+		if (checked && flightNumbers.length === 1) {
+			setFlightNumbers(["", ""]);
+		} else if (!checked && flightNumbers.length > 1) {
+			setFlightNumbers([flightNumbers[0] || ""]);
+		}
+	}
 
-			<motion.section
-				className="space-y-8"
-				variants={VARIANTS_SECTION}
-				transition={TRANSITION_SECTION}
-			>
-				{/* Form */}
+	function renderVisitCard(visit: Visit, showDate = true, showAirport = true) {
+		const airport = (airportsData as Airport[]).find(
+			(a) => a.ident === visit.airportIdent,
+		);
+
+		const title = showAirport ? airport?.name || visit.airportIdent : null;
+
+		const metaParts: string[] = [];
+		if (showAirport) metaParts.push(visit.airportIdent);
+		if (showDate) metaParts.push(formatDate(visit.date));
+		const meta = metaParts.length > 0 ? metaParts.join(" ") : null;
+
+		const body = (
+			<>
+				{visit.flightNumbers && visit.flightNumbers.length > 0 && (
+					<div className="mt-1">
+						{visit.isLayover ? "Flights: " : "Flight: "}
+						{visit.flightNumbers.join(" → ")}
+					</div>
+				)}
+				{visit.notes && <div className="mt-1">{visit.notes}</div>}
+			</>
+		);
+
+		return (
+			<EntryCard
+				onEdit={() => editVisit(visit)}
+				onDelete={() => deleteVisit(visit.id)}
+				title={title}
+				meta={meta}
+				body={body}
+				photos={visit.photos}
+			/>
+		);
+	}
+
+	// Get airport name for header
+	const getAirportName = useCallback((ident: string) => {
+		const airport = (airportsData as Airport[]).find((a) => a.ident === ident);
+		return airport ? `${airport.name} (${ident})` : ident;
+	}, []);
+
+	// Sort grouped entries by airport name or by date
+	const sortedGroupKeys = useMemo(() => {
+		const keys = Object.keys(allVisitsGrouped);
+		if (viewMode === "byAirport") {
+			return keys.sort((a, b) =>
+				getAirportName(a).localeCompare(getAirportName(b)),
+			);
+		}
+		// By date - sort descending
+		return keys.sort((a, b) => b.localeCompare(a));
+	}, [allVisitsGrouped, viewMode, getAirportName]);
+
+	return (
+		<AdminPageWrapper>
+			<PageHeader
+				title="Manage Airport Visits"
+				description="Add, edit, and manage your airport visits."
+			/>
+
+			<AdminSection className="space-y-8">
 				<div className="space-y-4">
-					<h2 className="text-xl font-medium">
-						{editingVisit ? "Edit Visit" : "Add New Visit"}
-					</h2>
+					<SectionHeader
+						title={editingVisit ? "Edit Visit" : "Add New Visit"}
+					/>
 
 					<div>
-						<label className="mb-2 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
+						<label
+							htmlFor="airport-search"
+							className="mb-2 block text-sm font-medium text-zinc-700 dark:text-zinc-300"
+						>
 							Search Airport
 						</label>
 						<input
+							id="airport-search"
 							className="w-full rounded-lg border border-zinc-300 bg-white px-4 py-2 text-zinc-900 focus:border-zinc-500 focus:outline-none focus:ring-2 focus:ring-zinc-500/20 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
 							placeholder="Search by ICAO, IATA, name, or city..."
 							value={query}
@@ -267,35 +313,26 @@ export default function AdminAirportsPage() {
 						)}
 					</div>
 
-					<div>
-						<label className="mb-2 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
-							Visit Date
-						</label>
-						<input
-							type="date"
-							value={date}
-							onChange={(e) => setDate(e.target.value)}
-							className="w-full rounded-lg border border-zinc-300 bg-white px-4 py-2 text-zinc-900 focus:border-zinc-500 focus:outline-none focus:ring-2 focus:ring-zinc-500/20 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
-						/>
-					</div>
+					<DateInput
+						label="Visit Date"
+						value={date}
+						onChange={handleDateChange}
+					/>
 
 					<div>
 						<div className="mb-3 flex items-center gap-3">
-							<label className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+							<span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
 								Flight Information (optional)
-							</label>
-							<label className="flex items-center gap-2">
+							</span>
+							<label
+								htmlFor="layover-checkbox"
+								className="flex items-center gap-2"
+							>
 								<input
+									id="layover-checkbox"
 									type="checkbox"
 									checked={isLayover}
-									onChange={(e) => {
-										setIsLayover(e.target.checked);
-										if (e.target.checked && flightNumbers.length === 1) {
-											setFlightNumbers(["", ""]);
-										} else if (!e.target.checked && flightNumbers.length > 1) {
-											setFlightNumbers([flightNumbers[0] || ""]);
-										}
-									}}
+									onChange={(e) => handleLayoverChange(e.target.checked)}
 									className="rounded border-zinc-300 text-zinc-900 focus:ring-2 focus:ring-zinc-500/20 dark:border-zinc-700"
 								/>
 								<span className="text-sm text-zinc-600 dark:text-zinc-400">
@@ -306,206 +343,143 @@ export default function AdminAirportsPage() {
 
 						{isLayover ? (
 							<div className="space-y-2">
-								<div>
-									<label className="mb-1 block text-xs text-zinc-500 dark:text-zinc-400">
-										Arrival Flight
-									</label>
-									<input
-										type="text"
-										value={flightNumbers[0] || ""}
-										onChange={(e) => {
-											const newFlights = [...flightNumbers];
-											newFlights[0] = e.target.value;
-											setFlightNumbers(newFlights);
-										}}
-										placeholder="e.g., THY 717"
-										className="w-full rounded-lg border border-zinc-300 bg-white px-4 py-2 text-zinc-900 focus:border-zinc-500 focus:outline-none focus:ring-2 focus:ring-zinc-500/20 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
-									/>
-								</div>
-								<div>
-									<label className="mb-1 block text-xs text-zinc-500 dark:text-zinc-400">
-										Departure Flight
-									</label>
-									<input
-										type="text"
-										value={flightNumbers[1] || ""}
-										onChange={(e) => {
-											const newFlights = [...flightNumbers];
-											newFlights[1] = e.target.value;
-											setFlightNumbers(newFlights);
-										}}
-										placeholder="e.g., THY 35"
-										className="w-full rounded-lg border border-zinc-300 bg-white px-4 py-2 text-zinc-900 focus:border-zinc-500 focus:outline-none focus:ring-2 focus:ring-zinc-500/20 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
-									/>
-								</div>
+								<TextInput
+									label="Arrival Flight"
+									value={flightNumbers[0] || ""}
+									onChange={(value) => {
+										const newFlights = [...flightNumbers];
+										newFlights[0] = value;
+										setFlightNumbers(newFlights);
+									}}
+									placeholder="e.g., THY 717"
+								/>
+								<TextInput
+									label="Departure Flight"
+									value={flightNumbers[1] || ""}
+									onChange={(value) => {
+										const newFlights = [...flightNumbers];
+										newFlights[1] = value;
+										setFlightNumbers(newFlights);
+									}}
+									placeholder="e.g., THY 35"
+								/>
 							</div>
 						) : (
-							<input
-								type="text"
+							<TextInput
 								value={flightNumbers[0] || ""}
-								onChange={(e) => setFlightNumbers([e.target.value])}
+								onChange={(value) => setFlightNumbers([value])}
 								placeholder="e.g., THY 36"
-								className="w-full rounded-lg border border-zinc-300 bg-white px-4 py-2 text-zinc-900 focus:border-zinc-500 focus:outline-none focus:ring-2 focus:ring-zinc-500/20 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
 							/>
 						)}
 					</div>
 
-					<div>
-						<label className="mb-2 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
-							Notes (optional)
-						</label>
-						<textarea
-							value={notes}
-							onChange={(e) => setNotes(e.target.value)}
-							rows={3}
-							placeholder="Add any notes about this visit..."
-							className="w-full rounded-lg border border-zinc-300 bg-white px-4 py-2 text-zinc-900 focus:border-zinc-500 focus:outline-none focus:ring-2 focus:ring-zinc-500/20 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
-						/>
-					</div>
+					<TextArea
+						label="Notes (optional)"
+						value={notes}
+						onChange={setNotes}
+						rows={3}
+						placeholder="Add any notes about this visit..."
+					/>
 
-					<div>
-						<label className="mb-2 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
-							Photos (optional)
-						</label>
-						<input
-							type="file"
-							accept="image/*"
-							multiple
-							onChange={(e) => handlePhotoUpload(e.target.files)}
-							disabled={!selectedAirport || uploading}
-							className="w-full rounded-lg border border-zinc-300 bg-white px-4 py-2 text-zinc-900 focus:border-zinc-500 focus:outline-none focus:ring-2 focus:ring-zinc-500/20 disabled:opacity-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
-						/>
-						{uploading && (
-							<p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
-								Uploading...
-							</p>
-						)}
-						{uploadedPhotos.length > 0 && (
-							<div className="mt-2 grid grid-cols-3 gap-2">
-								{uploadedPhotos.map((photo, idx) => (
-									<div key={idx} className="relative">
-										<img
-											src={photo}
-											alt={`Upload ${idx + 1}`}
-											className="h-24 w-full rounded object-cover"
-										/>
-										<button
-											type="button"
-											onClick={() =>
-												setUploadedPhotos(
-													uploadedPhotos.filter((_, i) => i !== idx),
-												)
-											}
-											className="absolute right-1 top-1 rounded-full bg-red-500 px-2 py-1 text-xs text-white hover:bg-red-600"
-										>
-											×
-										</button>
-									</div>
-								))}
-							</div>
-						)}
-					</div>
+					<PhotoUploader
+						label="Photos (optional)"
+						photos={uploadedPhotos}
+						onChange={setUploadedPhotos}
+						folder="airports"
+						identifier={selectedAirport?.ident ?? ""}
+						disabled={!selectedAirport}
+						onError={() => alert("Failed to upload photos")}
+					/>
 
-					<div className="flex gap-2">
-						<button
-							type="button"
-							onClick={saveVisit}
-							disabled={saving || !selectedAirport || !date}
-							className="rounded-lg bg-zinc-900 px-6 py-2 text-white transition-colors hover:bg-zinc-800 disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200"
-						>
-							{saving
-								? "Saving..."
-								: editingVisit
-									? "Update Visit"
-									: "Save Visit"}
-						</button>
-						{editingVisit && (
-							<button
-								type="button"
-								onClick={resetForm}
-								className="rounded-lg border border-zinc-300 px-6 py-2 transition-colors hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-800"
-							>
-								Cancel
-							</button>
-						)}
-					</div>
+					<FormActions
+						saving={saving}
+						isEditing={!!editingVisit}
+						onSave={saveVisit}
+						onCancel={resetForm}
+						disabled={!selectedAirport || !date}
+						saveLabel="Save Visit"
+						saveEditLabel="Update Visit"
+					/>
 				</div>
-			</motion.section>
+			</AdminSection>
 
-			<motion.section
-				variants={VARIANTS_SECTION}
-				transition={TRANSITION_SECTION}
-			>
-				{/* Visits List */}
+			<AdminSection>
 				<div className="space-y-4">
-					<h2 className="text-xl font-medium">
-						Existing Visits ({visits.length})
-					</h2>
-
-					<div className="space-y-2">
-						{visits
-							.sort(
-								(a, b) =>
-									new Date(b.date).getTime() - new Date(a.date).getTime(),
-							)
-							.map((visit) => {
-								const airport = (airports as Airport[]).find(
-									(a) => a.ident === visit.airportIdent,
-								);
-								return (
-									<div
-										key={visit.id}
-										className="rounded-lg border border-zinc-300 bg-white p-4 dark:border-zinc-700 dark:bg-zinc-900/50"
-									>
-										<div className="mb-2 flex items-start justify-between">
-											<div>
-												<div className="font-medium">
-													{airport?.name || visit.airportIdent}
-												</div>
-												<div className="text-sm text-zinc-600 dark:text-zinc-400">
-													{visit.airportIdent} — {visit.date}
-												</div>
-												{visit.notes && (
-													<div className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-														{visit.notes}
-													</div>
-												)}
-												{visit.photos && visit.photos.length > 0 && (
-													<div className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-														📷 {visit.photos.length} photo
-														{visit.photos.length > 1 ? "s" : ""}
-													</div>
-												)}
-											</div>
-											<div className="flex gap-2">
-												<button
-													type="button"
-													onClick={() => editVisit(visit)}
-													className="text-sm text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
-												>
-													Edit
-												</button>
-												<button
-													type="button"
-													onClick={() => deleteVisit(visit.id)}
-													className="text-sm text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
-												>
-													Delete
-												</button>
-											</div>
-										</div>
-									</div>
-								);
-							})}
-
-						{visits.length === 0 && (
-							<p className="text-center text-zinc-600 dark:text-zinc-400">
-								No visits yet. Add your first airport visit!
-							</p>
-						)}
+					<div className="flex items-center justify-between">
+						<SectionHeader title="Visits" />
+						<div className="flex gap-2">
+							{(["byDate", "byAirport"] as const).map((mode) => (
+								<button
+									key={mode}
+									type="button"
+									onClick={() => handleViewModeChange(mode)}
+									className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+										viewMode === mode
+											? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900"
+											: "bg-zinc-100 text-zinc-900 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-100 dark:hover:bg-zinc-700"
+									}`}
+								>
+									{mode === "byDate" ? "By Date" : "By Airport"}
+								</button>
+							))}
+						</div>
 					</div>
+
+					{loading && (
+						<p className="text-center text-zinc-600 dark:text-zinc-400 py-8">
+							Loading...
+						</p>
+					)}
+
+					{!loading && viewMode === "byDate" && (
+						<div className="space-y-6">
+							{sortedGroupKeys.length === 0 ? (
+								<EmptyState message="No visits yet. Add your first airport visit!" />
+							) : (
+								sortedGroupKeys.map((groupDate) => (
+									<div key={groupDate} className="space-y-3">
+										<h3 className="text-lg font-medium text-zinc-700 dark:text-zinc-300 sticky top-0 bg-white dark:bg-zinc-950 py-2">
+											{formatDate(groupDate)} (
+											{allVisitsGrouped[groupDate].length})
+										</h3>
+										<EntryCardList>
+											{allVisitsGrouped[groupDate].map((visit) => (
+												<div key={visit.id}>
+													{renderVisitCard(visit, false, true)}
+												</div>
+											))}
+										</EntryCardList>
+									</div>
+								))
+							)}
+						</div>
+					)}
+
+					{!loading && viewMode === "byAirport" && (
+						<div className="space-y-6">
+							{sortedGroupKeys.length === 0 ? (
+								<EmptyState message="No visits yet. Add your first airport visit!" />
+							) : (
+								sortedGroupKeys.map((airportIdent) => (
+									<div key={airportIdent} className="space-y-3">
+										<h3 className="text-lg font-medium text-zinc-700 dark:text-zinc-300 sticky top-0 bg-white dark:bg-zinc-950 py-2">
+											{getAirportName(airportIdent)} (
+											{allVisitsGrouped[airportIdent].length})
+										</h3>
+										<EntryCardList>
+											{allVisitsGrouped[airportIdent].map((visit) => (
+												<div key={visit.id}>
+													{renderVisitCard(visit, true, false)}
+												</div>
+											))}
+										</EntryCardList>
+									</div>
+								))
+							)}
+						</div>
+					)}
 				</div>
-			</motion.section>
-		</motion.main>
+			</AdminSection>
+		</AdminPageWrapper>
 	);
 }

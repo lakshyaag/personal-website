@@ -1,15 +1,24 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { motion } from "motion/react";
 import { toast } from "sonner";
 import type { BookEntry, Recommendation } from "@/lib/models";
 import BookCard from "@/components/BookCard";
+import { DateInput } from "@/components/admin/DateTimeInputs";
 import {
-	VARIANTS_CONTAINER,
-	VARIANTS_SECTION,
-	TRANSITION_SECTION,
-} from "@/lib/utils";
+	TextInput,
+	TextArea,
+	NumberInput,
+	SelectInput,
+	CheckboxInput,
+} from "@/components/admin/FormInputs";
+import { FormActions } from "@/components/admin/FormActions";
+import { PageHeader, SectionHeader } from "@/components/admin/PageHeader";
+import {
+	AdminPageWrapper,
+	AdminSection,
+} from "@/components/admin/AdminPageWrapper";
+import { useAdminCrud } from "@/hooks/useAdminCrud";
 
 interface GoogleBooksResult {
 	id: string;
@@ -59,6 +68,12 @@ const INITIAL_FORM_STATE: FormState = {
 	isCurrent: false,
 };
 
+const STATUS_OPTIONS = [
+	{ value: "reading", label: "Reading" },
+	{ value: "completed", label: "Completed" },
+	{ value: "want-to-read", label: "Want to read" },
+];
+
 function stripHtmlTags(html: string): string {
 	return html
 		.replace(/<br>/g, "\n")
@@ -69,26 +84,41 @@ function stripHtmlTags(html: string): string {
 		.replace(/&gt;/g, ">")
 		.replace(/&quot;/g, '"')
 		.replace(/&#39;/g, "'")
-		.replace(/&copy;/g, "©")
+		.replace(/&copy;/g, "©");
 }
 
 export default function AdminBooksPage() {
 	const [query, setQuery] = useState("");
 	const [searchResults, setSearchResults] = useState<GoogleBooksResult[]>([]);
 	const [searching, setSearching] = useState(false);
-	const [selectedBook, setSelectedBook] = useState<GoogleBooksResult | null>(null);
-	const [debounceTimer, setDebounceTimer] = useState<NodeJS.Timeout | null>(null);
+	const [selectedBook, setSelectedBook] = useState<GoogleBooksResult | null>(
+		null,
+	);
+	const [debounceTimer, setDebounceTimer] = useState<NodeJS.Timeout | null>(
+		null,
+	);
 
 	const [form, setForm] = useState<FormState>(INITIAL_FORM_STATE);
-	const [books, setBooks] = useState<BookEntry[]>([]);
 	const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
 	const [acceptedRecId, setAcceptedRecId] = useState<string | null>(null);
-	const [saving, setSaving] = useState(false);
 	const [loading, setLoading] = useState(true);
 
+	const {
+		items: books,
+		saving,
+		loadAll: loadBooks,
+		save: saveBook,
+		remove: deleteBook,
+	} = useAdminCrud<BookEntry>({
+		endpoint: "/api/books",
+		entityName: "book",
+	});
+
 	useEffect(() => {
-		Promise.all([loadBooks(), loadRecommendations()]).finally(() => setLoading(false));
-	}, []);
+		Promise.all([loadBooks(), loadRecommendations()]).finally(() =>
+			setLoading(false),
+		);
+	}, [loadBooks]);
 
 	useEffect(() => {
 		return () => {
@@ -97,16 +127,6 @@ export default function AdminBooksPage() {
 			}
 		};
 	}, [debounceTimer]);
-
-	async function loadBooks() {
-		try {
-			const res = await fetch("/api/books");
-			const data = await res.json();
-			setBooks(data);
-		} catch (err) {
-			console.error("Failed to load books:", err);
-		}
-	}
 
 	async function loadRecommendations() {
 		try {
@@ -182,15 +202,17 @@ export default function AdminBooksPage() {
 		if (rec.googleBooksId) {
 			try {
 				toast.loading("Fetching book details...");
-				const res = await fetch(`https://www.googleapis.com/books/v1/volumes/${rec.googleBooksId}`);
+				const res = await fetch(
+					`https://www.googleapis.com/books/v1/volumes/${rec.googleBooksId}`,
+				);
 				const data = await res.json();
 
 				if (data.volumeInfo) {
 					const info = data.volumeInfo;
 					const isbnId = info.industryIdentifiers?.find(
-						(id: { type: string; identifier: string }) => id.type === "ISBN_13" || id.type === "ISBN_10",
+						(id: { type: string; identifier: string }) =>
+							id.type === "ISBN_13" || id.type === "ISBN_10",
 					);
-
 
 					bookDetails = {
 						...bookDetails,
@@ -198,7 +220,9 @@ export default function AdminBooksPage() {
 						author: info.authors?.join(", ") || bookDetails.author,
 						isbn: isbnId?.identifier || "",
 						coverUrl: info.imageLinks?.thumbnail || bookDetails.coverUrl,
-						description: info.description ? stripHtmlTags(info.description) : "",
+						description: info.description
+							? stripHtmlTags(info.description)
+							: "",
 						categories: info.categories || [],
 					};
 					toast.success("Full book details loaded!");
@@ -212,14 +236,13 @@ export default function AdminBooksPage() {
 		}
 
 		updateForm(bookDetails);
-
-		// Scroll to top to see form
 		window.scrollTo({ top: 0, behavior: "smooth" });
 		toast.info("Recommendation loaded! Review before adding.");
 	}
 
 	async function deleteRecommendation(id: string) {
-		if (!confirm("Are you sure you want to delete this recommendation?")) return;
+		if (!confirm("Are you sure you want to delete this recommendation?"))
+			return;
 
 		try {
 			const res = await fetch(`/api/recommend?id=${id}`, {
@@ -236,97 +259,60 @@ export default function AdminBooksPage() {
 		}
 	}
 
-	async function saveBook() {
+	async function handleSaveBook() {
 		if (!form.title || !form.author || !form.dateStarted) {
 			toast.error("Please fill in title, author, and date started");
 			return;
 		}
 
-		setSaving(true);
-		try {
-			const bookData: BookEntry = {
-				id: form.id || `book-${Date.now()}`,
-				title: form.title,
-				author: form.author,
-				isbn: form.isbn || undefined,
-				coverUrl: form.coverUrl || undefined,
-				description: form.description || undefined,
-				categories: form.categories.length > 0 ? form.categories : undefined,
-				progress: form.status === "reading" && form.progress > 0 ? form.progress : undefined,
-				status: form.status,
-				dateStarted: form.dateStarted,
-				dateCompleted: form.dateCompleted || undefined,
-				notes: form.notes || undefined,
-				isCurrent: form.isCurrent ? true : undefined,
-			};
+		const bookData: BookEntry = {
+			id: form.id || `book-${Date.now()}`,
+			title: form.title,
+			author: form.author,
+			isbn: form.isbn || undefined,
+			coverUrl: form.coverUrl || undefined,
+			description: form.description || undefined,
+			categories: form.categories.length > 0 ? form.categories : undefined,
+			progress:
+				form.status === "reading" && form.progress > 0
+					? form.progress
+					: undefined,
+			status: form.status,
+			dateStarted: form.dateStarted,
+			dateCompleted: form.dateCompleted || undefined,
+			notes: form.notes || undefined,
+			isCurrent: form.isCurrent ? true : undefined,
+		};
 
-			const res = await fetch("/api/books", {
-				method: "POST",
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify(bookData),
-			});
-
-			if (!res.ok) throw new Error("Save failed");
-
-			// Book saved successfully - now clean up the recommendation if this was from one
-			let recommendationCleanupFailed = false;
+		const success = await saveBook(bookData);
+		if (success) {
+			// Clean up recommendation if this was from one
 			if (acceptedRecId) {
 				try {
-					const delRes = await fetch(`/api/recommend?id=${acceptedRecId}`, {
+					await fetch(`/api/recommend?id=${acceptedRecId}`, {
 						method: "DELETE",
 					});
-
-					if (!delRes.ok) {
-						throw new Error("Failed to delete recommendation");
-					}
-
 					setAcceptedRecId(null);
-				} catch (delErr) {
-					console.error("Failed to cleanup recommendation:", delErr);
-					recommendationCleanupFailed = true;
-					toast.error("Book saved, but failed to remove recommendation. Please delete it manually.");
+				} catch (err) {
+					console.error("Failed to cleanup recommendation:", err);
+					toast.error(
+						"Book saved, but failed to remove recommendation. Please delete it manually.",
+					);
 				}
 			}
 
-			// Wait for books to reload before resetting form
-			try {
-				await Promise.all([loadBooks(), loadRecommendations()]);
-			} catch (loadErr) {
-				console.error("Failed to reload data:", loadErr);
-				toast.warning("Book saved, but failed to refresh list. Please refresh the page.");
-			}
-
-			// Show success message only if everything went well
-			if (!recommendationCleanupFailed) {
-				toast.success(form.id ? "Book updated successfully!" : "Book added to library!");
-			}
+			await Promise.all([loadBooks(), loadRecommendations()]);
 			resetForm();
-		} catch (err) {
-			console.error("Save error:", err);
-			toast.error("Failed to save book");
-		} finally {
-			setSaving(false);
 		}
 	}
 
-	async function deleteBook(bookId: string) {
-		if (!confirm("Are you sure you want to delete this book?")) return;
-
-		try {
-			const res = await fetch(`/api/books?id=${bookId}`, {
-				method: "DELETE",
-			});
-
-			if (!res.ok) throw new Error("Delete failed");
-
-			toast.success("Book deleted successfully!");
+	async function handleDeleteBook(bookId: string) {
+		const success = await deleteBook(bookId);
+		if (success) {
 			await loadBooks();
 			if (form.id === bookId) {
 				resetForm();
 			}
-		} catch (err) {
-			console.error("Delete error:", err);
-			toast.error("Failed to delete book");
 		}
 	}
 
@@ -382,49 +368,32 @@ export default function AdminBooksPage() {
 
 	if (loading) {
 		return (
-			<motion.main
-				className="space-y-8 pb-16"
-				variants={VARIANTS_CONTAINER}
-				initial="hidden"
-				animate="visible"
-			>
+			<AdminPageWrapper>
 				<p className="text-zinc-600 dark:text-zinc-400">Loading...</p>
-			</motion.main>
+			</AdminPageWrapper>
 		);
 	}
 
 	return (
-		<motion.main
-			className="space-y-8 pb-16"
-			variants={VARIANTS_CONTAINER}
-			initial="hidden"
-			animate="visible"
-		>
-			<motion.section
-				variants={VARIANTS_SECTION}
-				transition={TRANSITION_SECTION}
-			>
-				<h1 className="mb-4 text-3xl font-medium">Manage Books</h1>
-				<p className="text-zinc-600 dark:text-zinc-400">
-					Track your reading journey. Current book appears on your landing page.
-				</p>
-			</motion.section>
+		<AdminPageWrapper>
+			<PageHeader
+				title="Manage Books"
+				description="Track your reading journey. Current book appears on your landing page."
+			/>
 
-			<motion.section
-				className="space-y-8"
-				variants={VARIANTS_SECTION}
-				transition={TRANSITION_SECTION}
-			>
+			<AdminSection className="space-y-8">
 				<div className="space-y-4">
-					<h2 className="text-xl font-medium">
-						{isEditing ? "Edit Book" : "Add New Book"}
-					</h2>
+					<SectionHeader title={isEditing ? "Edit Book" : "Add New Book"} />
 
 					<div>
-						<label className="mb-2 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
+						<label
+							htmlFor="book-search"
+							className="mb-2 block text-sm font-medium text-zinc-700 dark:text-zinc-300"
+						>
 							Search
 						</label>
 						<input
+							id="book-search"
 							className="w-full rounded-lg border border-zinc-300 bg-white px-4 py-2 text-zinc-900 focus:border-zinc-500 focus:outline-none focus:ring-2 focus:ring-zinc-500/20 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
 							placeholder="Search by title, author, or ISBN..."
 							value={query}
@@ -487,55 +456,33 @@ export default function AdminBooksPage() {
 					</div>
 
 					<div className="grid grid-cols-2 gap-4">
-						<div>
-							<label className="mb-2 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
-								Title
-							</label>
-							<input
-								className="w-full rounded-lg border border-zinc-300 bg-white px-4 py-2 text-zinc-900 focus:border-zinc-500 focus:outline-none focus:ring-2 focus:ring-zinc-500/20 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
-								value={form.title}
-								onChange={(e) => updateForm({ title: e.target.value })}
-								placeholder="Book title"
-							/>
-						</div>
-
-						<div>
-							<label className="mb-2 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
-								Author
-							</label>
-							<input
-								className="w-full rounded-lg border border-zinc-300 bg-white px-4 py-2 text-zinc-900 focus:border-zinc-500 focus:outline-none focus:ring-2 focus:ring-zinc-500/20 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
-								value={form.author}
-								onChange={(e) => updateForm({ author: e.target.value })}
-								placeholder="Author name"
-							/>
-						</div>
+						<TextInput
+							label="Title"
+							value={form.title}
+							onChange={(value) => updateForm({ title: value })}
+							placeholder="Book title"
+						/>
+						<TextInput
+							label="Author"
+							value={form.author}
+							onChange={(value) => updateForm({ author: value })}
+							placeholder="Author name"
+						/>
 					</div>
 
 					<div className="grid grid-cols-2 gap-4">
-						<div>
-							<label className="mb-2 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
-								ISBN (optional)
-							</label>
-							<input
-								className="w-full rounded-lg border border-zinc-300 bg-white px-4 py-2 text-zinc-900 focus:border-zinc-500 focus:outline-none focus:ring-2 focus:ring-zinc-500/20 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
-								value={form.isbn}
-								onChange={(e) => updateForm({ isbn: e.target.value })}
-								placeholder="ISBN"
-							/>
-						</div>
-
-						<div>
-							<label className="mb-2 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
-								Cover URL (optional)
-							</label>
-							<input
-								className="w-full rounded-lg border border-zinc-300 bg-white px-4 py-2 text-zinc-900 focus:border-zinc-500 focus:outline-none focus:ring-2 focus:ring-zinc-500/20 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
-								value={form.coverUrl}
-								onChange={(e) => updateForm({ coverUrl: e.target.value })}
-								placeholder="https://..."
-							/>
-						</div>
+						<TextInput
+							label="ISBN (optional)"
+							value={form.isbn}
+							onChange={(value) => updateForm({ isbn: value })}
+							placeholder="ISBN"
+						/>
+						<TextInput
+							label="Cover URL (optional)"
+							value={form.coverUrl}
+							onChange={(value) => updateForm({ coverUrl: value })}
+							placeholder="https://..."
+						/>
 					</div>
 
 					{form.coverUrl && (
@@ -549,29 +496,21 @@ export default function AdminBooksPage() {
 						</div>
 					)}
 
-					<div>
-						<label className="mb-2 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
-							Description (optional)
-						</label>
-						<textarea
-							value={form.description}
-							onChange={(e) => updateForm({ description: e.target.value })}
-							rows={3}
-							placeholder="Book description or summary..."
-							className="w-full rounded-lg border border-zinc-300 bg-white px-4 py-2 text-zinc-900 focus:border-zinc-500 focus:outline-none focus:ring-2 focus:ring-zinc-500/20 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
-						/>
-					</div>
+					<TextArea
+						label="Description (optional)"
+						value={form.description}
+						onChange={(value) => updateForm({ description: value })}
+						rows={3}
+						placeholder="Book description or summary..."
+					/>
 
 					<div>
-						<label className="mb-2 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
-							Categories (optional, comma-separated)
-						</label>
-						<input
-							className="w-full rounded-lg border border-zinc-300 bg-white px-4 py-2 text-zinc-900 focus:border-zinc-500 focus:outline-none focus:ring-2 focus:ring-zinc-500/20 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
+						<TextInput
+							label="Categories (optional, comma-separated)"
 							value={form.categories.join(", ")}
-							onChange={(e) =>
+							onChange={(value) =>
 								updateForm({
-									categories: e.target.value
+									categories: value
 										.split(",")
 										.map((c) => c.trim())
 										.filter(Boolean),
@@ -581,9 +520,9 @@ export default function AdminBooksPage() {
 						/>
 						{form.categories.length > 0 && (
 							<div className="mt-2 flex flex-wrap gap-2">
-								{form.categories.map((cat, idx) => (
+								{form.categories.map((cat) => (
 									<span
-										key={idx}
+										key={cat}
 										className="inline-block px-2 py-1 text-xs rounded bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-300"
 									>
 										{cat}
@@ -591,7 +530,7 @@ export default function AdminBooksPage() {
 											type="button"
 											onClick={() => {
 												updateForm({
-													categories: form.categories.filter((_, i) => i !== idx),
+													categories: form.categories.filter((c) => c !== cat),
 												});
 											}}
 											className="ml-1 font-bold"
@@ -605,136 +544,86 @@ export default function AdminBooksPage() {
 					</div>
 
 					<div className="grid grid-cols-2 gap-4">
-						<div>
-							<label className="mb-2 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
-								Date Started
-							</label>
-							<input
-								type="date"
-								value={form.dateStarted}
-								onChange={(e) => updateForm({ dateStarted: e.target.value })}
-								className="w-full rounded-lg border border-zinc-300 bg-white px-4 py-2 text-zinc-900 focus:border-zinc-500 focus:outline-none focus:ring-2 focus:ring-zinc-500/20 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
-							/>
-						</div>
-
-						<div>
-							<label className="mb-2 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
-								Date Completed (optional)
-							</label>
-							<input
-								type="date"
-								value={form.dateCompleted}
-								onChange={(e) => updateForm({ dateCompleted: e.target.value })}
-								className="w-full rounded-lg border border-zinc-300 bg-white px-4 py-2 text-zinc-900 focus:border-zinc-500 focus:outline-none focus:ring-2 focus:ring-zinc-500/20 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
-							/>
-						</div>
+						<DateInput
+							label="Date Started"
+							value={form.dateStarted}
+							onChange={(value) => updateForm({ dateStarted: value })}
+							required
+						/>
+						<DateInput
+							label="Date Completed (optional)"
+							value={form.dateCompleted}
+							onChange={(value) => updateForm({ dateCompleted: value })}
+						/>
 					</div>
 
 					<div className="grid grid-cols-2 gap-4">
 						<div className={form.status === "reading" ? "" : "col-span-2"}>
-							<label className="mb-2 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
-								Status
-							</label>
-							<select
+							<SelectInput
+								label="Status"
 								value={form.status}
-								onChange={(e) =>
+								onChange={(value) =>
 									updateForm({
-										status: e.target.value as "reading" | "completed" | "want-to-read",
+										status: value as "reading" | "completed" | "want-to-read",
 									})
 								}
-								className="w-full rounded-lg border border-zinc-300 bg-white px-4 py-2 text-zinc-900 focus:border-zinc-500 focus:outline-none focus:ring-2 focus:ring-zinc-500/20 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
-							>
-								<option value="reading">Reading</option>
-								<option value="completed">Completed</option>
-								<option value="want-to-read">Want to read</option>
-							</select>
+								options={STATUS_OPTIONS}
+							/>
 						</div>
 
 						{form.status === "reading" && (
-							<div>
-								<label className="mb-2 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
-									Progress (%) (optional)
-								</label>
-								<input
-									type="number"
-									min="0"
-									max="100"
-									value={form.progress}
-									onChange={(e) =>
-										updateForm({
-											progress: Math.min(100, Math.max(0, parseInt(e.target.value) || 0)),
-										})
-									}
-									className="w-full rounded-lg border border-zinc-300 bg-white px-4 py-2 text-zinc-900 focus:border-zinc-500 focus:outline-none focus:ring-2 focus:ring-zinc-500/20 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
-								/>
-							</div>
+							<NumberInput
+								label="Progress (%) (optional)"
+								value={form.progress}
+								onChange={(value) =>
+									updateForm({
+										progress: Math.min(
+											100,
+											Math.max(0, Number.parseInt(value) || 0),
+										),
+									})
+								}
+								min={0}
+								max={100}
+							/>
 						)}
 					</div>
 
-					<label className="flex items-center gap-3 rounded-lg border border-zinc-300 bg-white px-4 py-3 cursor-pointer transition-colors hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900/50 dark:hover:bg-zinc-900">
-						<input
-							type="checkbox"
-							checked={form.isCurrent}
-							onChange={(e) => updateForm({ isCurrent: e.target.checked })}
-							className="rounded border-zinc-300 text-zinc-900 focus:ring-2 focus:ring-zinc-500/20 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
-						/>
-						<span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
-							Mark as Currently Reading
-						</span>
-					</label>
+					<CheckboxInput
+						label="Mark as Currently Reading"
+						checked={form.isCurrent}
+						onChange={(checked) => updateForm({ isCurrent: checked })}
+					/>
 
-					<div>
-						<label className="mb-2 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
-							Notes (optional)
-						</label>
-						<textarea
-							value={form.notes}
-							onChange={(e) => updateForm({ notes: e.target.value })}
-							rows={3}
-							placeholder="Add any thoughts about this book..."
-							className="w-full rounded-lg border border-zinc-300 bg-white px-4 py-2 text-zinc-900 focus:border-zinc-500 focus:outline-none focus:ring-2 focus:ring-zinc-500/20 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
-						/>
-					</div>
+					<TextArea
+						label="Notes (optional)"
+						value={form.notes}
+						onChange={(value) => updateForm({ notes: value })}
+						rows={3}
+						placeholder="Add any thoughts about this book..."
+					/>
 
-					<div className="flex gap-2">
-						<button
-							type="button"
-							onClick={saveBook}
-							disabled={saving || !form.title || !form.author || !form.dateStarted}
-							className="flex-1 rounded-lg bg-zinc-900 px-4 py-2 text-white transition-colors hover:bg-zinc-800 disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200"
-						>
-							{saving ? "Saving..." : isEditing ? "Update" : "Add"}
-						</button>
-
-						{isEditing && (
-							<>
-								<button
-									type="button"
-									onClick={() => deleteBook(form.id!)}
-									className="rounded-lg border border-red-300 px-4 py-2 text-red-600 transition-colors hover:bg-red-50 dark:border-red-700 dark:text-red-400 dark:hover:bg-red-950"
-								>
-									Delete
-								</button>
-								<button
-									type="button"
-									onClick={resetForm}
-									className="rounded-lg border border-zinc-300 px-4 py-2 transition-colors hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-800"
-								>
-									Cancel
-								</button>
-							</>
-						)}
-					</div>
+					<FormActions
+						saving={saving}
+						isEditing={isEditing}
+						onSave={handleSaveBook}
+						onCancel={resetForm}
+						onDelete={
+							isEditing && form.id
+								? () => handleDeleteBook(form.id as string)
+								: undefined
+						}
+						disabled={!form.title || !form.author || !form.dateStarted}
+						saveLabel="Add"
+						saveEditLabel="Update"
+					/>
 				</div>
-			</motion.section>
+			</AdminSection>
 
 			{recommendations.length > 0 && (
-				<motion.section
-					variants={VARIANTS_SECTION}
-					transition={TRANSITION_SECTION}
-				>
+				<AdminSection>
 					<div className="space-y-4">
-						<h2 className="text-xl font-medium">Community Recommendations</h2>
+						<SectionHeader title="Community Recommendations" />
 						<div className="grid gap-4 md:grid-cols-2">
 							{recommendations.map((rec) => (
 								<div
@@ -771,12 +660,14 @@ export default function AdminBooksPage() {
 									</div>
 									<div className="mt-4 flex gap-2">
 										<button
+											type="button"
 											onClick={() => acceptRecommendation(rec)}
 											className="flex-1 rounded-md bg-zinc-900 px-3 py-1.5 text-sm text-white transition-colors hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200"
 										>
 											Add to library
 										</button>
 										<button
+											type="button"
 											onClick={() => deleteRecommendation(rec.id)}
 											className="rounded-md border border-red-200 px-3 py-1.5 text-sm text-red-600 transition-colors hover:bg-red-50 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-950/50"
 										>
@@ -787,29 +678,23 @@ export default function AdminBooksPage() {
 							))}
 						</div>
 					</div>
-				</motion.section>
+				</AdminSection>
 			)}
 
 			{books.length > 0 && (
-				<motion.section
-					variants={VARIANTS_SECTION}
-					transition={TRANSITION_SECTION}
-				>
+				<AdminSection>
 					<div className="space-y-4">
-						<h2 className="text-xl font-medium">All Books</h2>
+						<SectionHeader title="All Books" />
 						<div className="space-y-2">
 							{books
 								.sort((a, b) => {
-									// Sort by completed date first, then by start date
 									const dateA = a.dateCompleted || a.dateStarted;
 									const dateB = b.dateCompleted || b.dateStarted;
 
 									if (!dateA || !dateB) {
-										// If no dates, put items without dates at the end
 										return dateA ? -1 : dateB ? 1 : 0;
 									}
 
-									// Sort in descending order (most recent first)
 									return new Date(dateB).getTime() - new Date(dateA).getTime();
 								})
 								.map((book) => (
@@ -823,8 +708,8 @@ export default function AdminBooksPage() {
 								))}
 						</div>
 					</div>
-				</motion.section>
+				</AdminSection>
 			)}
-		</motion.main>
+		</AdminPageWrapper>
 	);
 }

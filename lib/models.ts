@@ -307,11 +307,14 @@ export function transformFoodEntryFromDb(row: FoodEntryDbRow): FoodEntry {
 // Transform application type to database row
 export function transformFoodEntryToDb(
     entry: FoodEntry
-): Omit<FoodEntryDbRow, "created_at" | "updated_at"> {
+): Partial<FoodEntryDbRow> {
     return {
         id: entry.id,
         description: entry.description ?? null,
         photos: entry.photos ?? null,
         entry_date: entry.date,
+        created_at: entry.createdAt,
+        // Always let the system time mark the update moment
+        updated_at: new Date().toISOString(),
     };
 }

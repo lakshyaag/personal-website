@@ -1,72 +1,84 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { motion } from "motion/react";
-import type { WorkoutLog } from "@/lib/models";
+import { useState, useEffect, useCallback } from "react";
+import PhotoUploader from "@/components/admin/PhotoUploader";
+import { DateInput } from "@/components/admin/DateTimeInputs";
+import { TextArea, NumberInput } from "@/components/admin/FormInputs";
+import { FormActions } from "@/components/admin/FormActions";
+import { EntryCard, EntryCardList } from "@/components/admin/EntryCard";
+import { PageHeader, SectionHeader } from "@/components/admin/PageHeader";
+import { EmptyState } from "@/components/admin/EmptyState";
 import {
-	VARIANTS_CONTAINER,
-	VARIANTS_SECTION,
-	TRANSITION_SECTION,
-} from "@/lib/utils";
+	AdminPageWrapper,
+	AdminSection,
+} from "@/components/admin/AdminPageWrapper";
+import {
+	ViewModeToggle,
+	type ViewMode,
+} from "@/components/admin/ViewModeToggle";
+import { GroupedEntriesList } from "@/components/admin/GroupedEntriesList";
+import { useAdminCrud } from "@/hooks/useAdminCrud";
+import { formatDate, getTodayDate } from "@/lib/date-utils";
+import type { WorkoutLog } from "@/lib/models";
 
 export default function AdminWorkoutsPage() {
 	const [date, setDate] = useState("");
 	const [weight, setWeight] = useState("");
 	const [content, setContent] = useState("");
 	const [uploadedPhotos, setUploadedPhotos] = useState<string[]>([]);
-	const [uploading, setUploading] = useState(false);
-	const [saving, setSaving] = useState(false);
-	const [logs, setLogs] = useState<WorkoutLog[]>([]);
 	const [editingLog, setEditingLog] = useState<WorkoutLog | null>(null);
+	const [todaysLogs, setTodaysLogs] = useState<WorkoutLog[]>([]);
+	const [allLogsGrouped, setAllLogsGrouped] = useState<
+		Record<string, WorkoutLog[]>
+	>({});
+	const [viewMode, setViewMode] = useState<ViewMode>("date");
+
+	const { saving, loading, save, remove, loadByDate, loadGrouped } =
+		useAdminCrud<WorkoutLog>({
+			endpoint: "/api/workouts",
+			entityName: "workout log",
+			useAlert: true,
+		});
+
+	const loadTodaysLogs = useCallback(
+		async (selectedDate: string) => {
+			if (!selectedDate) return;
+			const logs = await loadByDate(selectedDate);
+			setTodaysLogs(logs);
+		},
+		[loadByDate],
+	);
+
+	const loadAllLogs = useCallback(async () => {
+		const grouped = await loadGrouped();
+		setAllLogsGrouped(grouped);
+	}, [loadGrouped]);
 
 	useEffect(() => {
-		loadLogs();
-		// Set today's date as default
-		const today = new Date().toISOString().split("T")[0];
+		const today = getTodayDate();
 		setDate(today);
-	}, []);
+		loadTodaysLogs(today);
+	}, [loadTodaysLogs]);
 
-	async function loadLogs() {
-		try {
-			const res = await fetch("/api/workouts");
-			const data = await res.json();
-			setLogs(data);
-		} catch (err) {
-			console.error("Failed to load workout logs:", err);
-		}
-	}
+	const handleDateChange = useCallback(
+		(newDate: string) => {
+			setDate(newDate);
+			loadTodaysLogs(newDate);
+		},
+		[loadTodaysLogs],
+	);
 
-	async function handlePhotoUpload(files: FileList | null) {
-		if (!files || files.length === 0) return;
-
-		setUploading(true);
-		try {
-			const urls: string[] = [];
-			for (const file of Array.from(files)) {
-				const form = new FormData();
-				form.append("file", file);
-				form.append("folder", "workouts");
-				form.append("identifier", date.replace(/-/g, ""));
-
-				const res = await fetch("/api/upload", {
-					method: "POST",
-					body: form,
-				});
-
-				if (!res.ok) throw new Error("Upload failed");
-
-				const { url } = await res.json();
-				urls.push(url);
+	const handleViewModeChange = useCallback(
+		(mode: ViewMode) => {
+			setViewMode(mode);
+			if (mode === "all") {
+				loadAllLogs();
+			} else {
+				loadTodaysLogs(date);
 			}
-
-			setUploadedPhotos([...uploadedPhotos, ...urls]);
-		} catch (err) {
-			console.error("Upload error:", err);
-			alert("Failed to upload photos");
-		} finally {
-			setUploading(false);
-		}
-	}
+		},
+		[loadAllLogs, loadTodaysLogs, date],
+	);
 
 	async function saveLog() {
 		if (!date) {
@@ -74,57 +86,38 @@ export default function AdminWorkoutsPage() {
 			return;
 		}
 
-		setSaving(true);
-		try {
-			const logData = {
-				id: editingLog?.id,
-				date,
-				weight: weight ? Number.parseFloat(weight) : undefined,
-				content: content || undefined,
-				photos: uploadedPhotos.length > 0 ? uploadedPhotos : undefined,
-			};
+		const savedDate = date;
+		const logData: WorkoutLog = {
+			id: editingLog?.id || crypto.randomUUID(),
+			date,
+			weight: weight ? Number.parseFloat(weight) : undefined,
+			content: content || undefined,
+			photos: uploadedPhotos.length > 0 ? uploadedPhotos : undefined,
+		};
 
-			const res = await fetch("/api/workouts", {
-				method: "POST",
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify(logData),
-			});
-
-			if (!res.ok) throw new Error("Save failed");
-
-			alert(
-				editingLog
-					? "Workout log updated successfully!"
-					: "Workout log saved successfully!",
-			);
+		const success = await save(logData);
+		if (success) {
 			resetForm();
-			await loadLogs();
-		} catch (err) {
-			console.error("Save error:", err);
-			alert("Failed to save workout log");
-		} finally {
-			setSaving(false);
+			if (viewMode === "all") {
+				await loadAllLogs();
+			} else {
+				setDate(savedDate);
+				await loadTodaysLogs(savedDate);
+			}
 		}
 	}
 
 	async function deleteLog(logId: string) {
-		if (!confirm("Are you sure you want to delete this workout log?")) return;
-
-		try {
-			const res = await fetch(`/api/workouts?id=${logId}`, {
-				method: "DELETE",
-			});
-
-			if (!res.ok) throw new Error("Delete failed");
-
-			alert("Workout log deleted successfully!");
-			await loadLogs();
+		const success = await remove(logId);
+		if (success) {
 			if (editingLog?.id === logId) {
 				resetForm();
 			}
-		} catch (err) {
-			console.error("Delete error:", err);
-			alert("Failed to delete workout log");
+			if (viewMode === "all") {
+				await loadAllLogs();
+			} else {
+				await loadTodaysLogs(date);
+			}
 		}
 	}
 
@@ -134,10 +127,12 @@ export default function AdminWorkoutsPage() {
 		setContent(log.content || "");
 		setUploadedPhotos(log.photos || []);
 		setEditingLog(log);
+		setViewMode("date");
+		loadTodaysLogs(log.date);
 	}
 
 	function resetForm() {
-		const today = new Date().toISOString().split("T")[0];
+		const today = getTodayDate();
 		setDate(today);
 		setWeight("");
 		setContent("");
@@ -145,243 +140,137 @@ export default function AdminWorkoutsPage() {
 		setEditingLog(null);
 	}
 
-	function formatDate(dateStr: string): string {
-		// Parse date string as local date (YYYY-MM-DD format)
-		const [year, month, day] = dateStr.split("-").map(Number);
-		const date = new Date(year, month - 1, day);
-		return date.toLocaleDateString("en-US", {
-			weekday: "short",
-			year: "numeric",
-			month: "short",
-			day: "numeric",
-		});
+	function renderLogCard(log: WorkoutLog, showDate = true) {
+		const title = showDate
+			? formatDate(log.date)
+			: log.weight
+				? `${log.weight} kg`
+				: "Workout";
+
+		const meta =
+			showDate && log.weight
+				? `${log.weight} kg`
+				: showDate
+					? null
+					: log.weight
+						? null
+						: null;
+
+		return (
+			<EntryCard
+				onEdit={() => editLog(log)}
+				onDelete={() => deleteLog(log.id)}
+				title={title}
+				meta={meta}
+				body={
+					log.content ? (
+						<div className="whitespace-pre-wrap">{log.content}</div>
+					) : null
+				}
+				photos={log.photos}
+			/>
+		);
 	}
 
 	return (
-		<motion.main
-			className="space-y-8 pb-16"
-			variants={VARIANTS_CONTAINER}
-			initial="hidden"
-			animate="visible"
-		>
-			<motion.section
-				variants={VARIANTS_SECTION}
-				transition={TRANSITION_SECTION}
-			>
-				<h1 className="mb-4 text-3xl font-medium">Workout Tracker</h1>
-				<p className="text-zinc-600 dark:text-zinc-400">
-					Track your workouts with minimal friction.
-				</p>
-			</motion.section>
+		<AdminPageWrapper>
+			<PageHeader
+				title="Workout Tracker"
+				description="Track your workouts with minimal friction."
+			/>
 
-			<motion.section
-				className="space-y-8"
-				variants={VARIANTS_SECTION}
-				transition={TRANSITION_SECTION}
-			>
-				{/* Form */}
+			<AdminSection className="space-y-8">
 				<div className="space-y-4">
-					<h2 className="text-xl font-medium">
-						{editingLog ? "Edit Log" : "Quick Log"}
-					</h2>
+					<SectionHeader title={editingLog ? "Edit Log" : "Quick Log"} />
 
-					<div>
-						<label
-							htmlFor="workout-date"
-							className="mb-2 block text-sm font-medium text-zinc-700 dark:text-zinc-300"
-						>
-							Date
-						</label>
-						<input
-							id="workout-date"
-							type="date"
-							value={date}
-							onChange={(e) => setDate(e.target.value)}
-							className="w-full rounded-lg border border-zinc-300 bg-white px-4 py-2 text-zinc-900 focus:border-zinc-500 focus:outline-none focus:ring-2 focus:ring-zinc-500/20 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
+					<DateInput
+						id="workout-date"
+						label="Date"
+						value={date}
+						onChange={handleDateChange}
+					/>
+
+					<NumberInput
+						id="workout-weight"
+						label="Bodyweight (kg)"
+						value={weight}
+						onChange={setWeight}
+						step={0.1}
+						placeholder="e.g., 75.5"
+					/>
+
+					<TextArea
+						id="workout-content"
+						label="Notes (optional)"
+						value={content}
+						onChange={setContent}
+						rows={4}
+						placeholder="Log your workout... exercises, sets, reps, or whatever you want to track"
+					/>
+
+					<PhotoUploader
+						label="Photos (optional)"
+						photos={uploadedPhotos}
+						onChange={setUploadedPhotos}
+						folder="workouts"
+						identifier={date.replace(/-/g, "")}
+					/>
+
+					<FormActions
+						saving={saving}
+						isEditing={!!editingLog}
+						onSave={saveLog}
+						onCancel={resetForm}
+						disabled={!date}
+						saveLabel="Save Log"
+						saveEditLabel="Update Log"
+					/>
+				</div>
+			</AdminSection>
+
+			<AdminSection>
+				<div className="space-y-4">
+					<div className="flex items-center justify-between">
+						<SectionHeader title="Logs" />
+						<ViewModeToggle
+							viewMode={viewMode}
+							onViewModeChange={handleViewModeChange}
+							allLabel="All Logs"
 						/>
 					</div>
 
-					<div>
-						<label
-							htmlFor="workout-weight"
-							className="mb-2 block text-sm font-medium text-zinc-700 dark:text-zinc-300"
-						>
-							Bodyweight (kg)
-						</label>
-						<input
-							id="workout-weight"
-							type="number"
-							step="0.1"
-							value={weight}
-							onChange={(e) => setWeight(e.target.value)}
-							placeholder="e.g., 75.5"
-							className="w-full rounded-lg border border-zinc-300 bg-white px-4 py-2 text-zinc-900 focus:border-zinc-500 focus:outline-none focus:ring-2 focus:ring-zinc-500/20 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
-						/>
-					</div>
+					{loading && (
+						<p className="text-center text-zinc-600 dark:text-zinc-400 py-8">
+							Loading...
+						</p>
+					)}
 
-					<div>
-						<label
-							htmlFor="workout-content"
-							className="mb-2 block text-sm font-medium text-zinc-700 dark:text-zinc-300"
-						>
-							Notes (optional)
-						</label>
-						<textarea
-							id="workout-content"
-							value={content}
-							onChange={(e) => setContent(e.target.value)}
-							rows={4}
-							placeholder="Log your workout... exercises, sets, reps, or whatever you want to track"
-							className="w-full rounded-lg border border-zinc-300 bg-white px-4 py-2 text-zinc-900 focus:border-zinc-500 focus:outline-none focus:ring-2 focus:ring-zinc-500/20 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
-						/>
-					</div>
-
-					<div>
-						<label
-							htmlFor="workout-photos"
-							className="mb-2 block text-sm font-medium text-zinc-700 dark:text-zinc-300"
-						>
-							Photos (optional)
-						</label>
-						<input
-							id="workout-photos"
-							type="file"
-							accept="image/*"
-							multiple
-							onChange={(e) => handlePhotoUpload(e.target.files)}
-							disabled={uploading}
-							className="w-full rounded-lg border border-zinc-300 bg-white px-4 py-2 text-zinc-900 focus:border-zinc-500 focus:outline-none focus:ring-2 focus:ring-zinc-500/20 disabled:opacity-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
-						/>
-						{uploading && (
-							<p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
-								Uploading...
-							</p>
-						)}
-						{uploadedPhotos.length > 0 && (
-							<div className="mt-2 grid grid-cols-3 gap-2">
-								{uploadedPhotos.map((photo) => (
-									<div key={photo} className="relative">
-										<img
-											src={photo}
-											alt="Workout progress"
-											className="h-24 w-full rounded object-cover"
-										/>
-										<button
-											type="button"
-											onClick={() =>
-												setUploadedPhotos(
-													uploadedPhotos.filter((p) => p !== photo),
-												)
-											}
-											className="absolute right-1 top-1 rounded-full bg-red-500 px-2 py-1 text-xs text-white hover:bg-red-600"
-										>
-											×
-										</button>
-									</div>
+					{!loading && viewMode === "date" && (
+						<div className="space-y-3">
+							<h3 className="text-lg font-medium text-zinc-700 dark:text-zinc-300">
+								{formatDate(date)} ({todaysLogs.length})
+							</h3>
+							<EntryCardList>
+								{todaysLogs.map((log) => (
+									<div key={log.id}>{renderLogCard(log)}</div>
 								))}
-							</div>
-						)}
-					</div>
+								{todaysLogs.length === 0 && (
+									<EmptyState message="No logs for this day yet. Add your first entry!" />
+								)}
+							</EntryCardList>
+						</div>
+					)}
 
-					<div className="flex gap-2">
-						<button
-							type="button"
-							onClick={saveLog}
-							disabled={saving || !date}
-							className="rounded-lg bg-zinc-900 px-6 py-2 text-white transition-colors hover:bg-zinc-800 disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200"
-						>
-							{saving ? "Saving..." : editingLog ? "Update Log" : "Save Log"}
-						</button>
-						{editingLog && (
-							<button
-								type="button"
-								onClick={resetForm}
-								className="rounded-lg border border-zinc-300 px-6 py-2 transition-colors hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-800"
-							>
-								Cancel
-							</button>
-						)}
-					</div>
+					{!loading && viewMode === "all" && (
+						<GroupedEntriesList
+							groupedEntries={allLogsGrouped}
+							renderEntry={(log) => renderLogCard(log, false)}
+							getEntryKey={(log) => log.id}
+							emptyMessage="No workout logs yet. Add your first entry!"
+						/>
+					)}
 				</div>
-			</motion.section>
-
-			<motion.section
-				variants={VARIANTS_SECTION}
-				transition={TRANSITION_SECTION}
-			>
-				{/* Logs List */}
-				<div className="space-y-4">
-					<h2 className="text-xl font-medium">Recent Logs ({logs.length})</h2>
-
-					<div className="space-y-2">
-						{logs
-							.sort(
-								(a, b) =>
-									new Date(b.date).getTime() - new Date(a.date).getTime(),
-							)
-							.map((log) => (
-								<div
-									key={log.id}
-									className="rounded-lg border border-zinc-300 bg-white p-4 dark:border-zinc-700 dark:bg-zinc-900/50"
-								>
-									<div className="mb-2 flex items-start justify-between">
-										<div className="flex-1">
-											<div className="flex items-baseline gap-3">
-												<div className="font-medium">
-													{formatDate(log.date)}
-												</div>
-												{log.weight && (
-													<div className="text-sm text-zinc-600 dark:text-zinc-400">
-														{log.weight} kg
-													</div>
-												)}
-											</div>
-											{log.content && (
-												<div className="mt-2 text-sm text-zinc-600 dark:text-zinc-400 whitespace-pre-wrap">
-													{log.content}
-												</div>
-											)}
-											{log.photos && log.photos.length > 0 && (
-												<div className="mt-2 flex gap-2">
-													{log.photos.map((photo) => (
-														<img
-															key={photo}
-															src={photo}
-															alt="Workout progress"
-															className="h-16 w-16 rounded object-cover"
-														/>
-													))}
-												</div>
-											)}
-										</div>
-										<div className="flex gap-2">
-											<button
-												type="button"
-												onClick={() => editLog(log)}
-												className="text-sm text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
-											>
-												Edit
-											</button>
-											<button
-												type="button"
-												onClick={() => deleteLog(log.id)}
-												className="text-sm text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
-											>
-												Delete
-											</button>
-										</div>
-									</div>
-								</div>
-							))}
-
-						{logs.length === 0 && (
-							<p className="text-center text-zinc-600 dark:text-zinc-400">
-								No workout logs yet. Add your first entry!
-							</p>
-						)}
-					</div>
-				</div>
-			</motion.section>
-		</motion.main>
+			</AdminSection>
+		</AdminPageWrapper>
 	);
 }
