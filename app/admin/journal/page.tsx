@@ -187,29 +187,14 @@ function AdminJournalPageContent() {
 			<EntryCard
 				onEdit={() => editEntry(entry)}
 				onDelete={() => deleteEntry(entry.id)}
-			>
-				<div className="text-xs text-zinc-500 dark:text-zinc-500 mb-2">
-					{formatTime(entry.createdAt)}
-				</div>
-				{entry.content && (
-					<div className="text-sm text-zinc-600 dark:text-zinc-400 whitespace-pre-wrap">
-						{entry.content}
-					</div>
-				)}
-				{entry.photos && entry.photos.length > 0 && (
-					<div className="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-4">
-						{entry.photos.map((photo) => (
-							<img
-								key={photo}
-								src={photo}
-								alt="Journal"
-								className="h-20 w-full rounded object-cover cursor-pointer hover:opacity-80 transition-opacity"
-								onClick={() => window.open(photo, "_blank")}
-							/>
-						))}
-					</div>
-				)}
-			</EntryCard>
+				meta={<span className="text-xs">{formatTime(entry.createdAt)}</span>}
+				body={
+					entry.content ? (
+						<div className="whitespace-pre-wrap">{entry.content}</div>
+					) : null
+				}
+				photos={entry.photos}
+			/>
 		);
 	}
 

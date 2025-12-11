@@ -114,7 +114,12 @@ function AdminFoodPageContent() {
 		const savedDate = date;
 		const [hours, minutes] = time.split(":");
 		const dateTime = new Date(date);
-		dateTime.setHours(parseInt(hours, 10), parseInt(minutes, 10), 0, 0);
+		dateTime.setHours(
+			Number.parseInt(hours, 10),
+			Number.parseInt(minutes, 10),
+			0,
+			0,
+		);
 
 		const entryData: FoodEntry = {
 			id: editingEntry?.id || crypto.randomUUID(),
@@ -196,29 +201,14 @@ function AdminFoodPageContent() {
 				key={entry.id}
 				onEdit={() => editEntry(entry)}
 				onDelete={() => deleteEntry(entry.id)}
-			>
-				<div className="text-xs text-zinc-500 dark:text-zinc-500 mb-2">
-					{formatTime(entry.createdAt)}
-				</div>
-				{entry.description && (
-					<div className="text-sm text-zinc-600 dark:text-zinc-400 whitespace-pre-wrap">
-						{entry.description}
-					</div>
-				)}
-				{entry.photos && entry.photos.length > 0 && (
-					<div className="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-4">
-						{entry.photos.map((photo) => (
-							<img
-								key={photo}
-								src={photo}
-								alt="Food"
-								className="h-20 w-full rounded object-cover cursor-pointer hover:opacity-80 transition-opacity"
-								onClick={() => window.open(photo, "_blank")}
-							/>
-						))}
-					</div>
-				)}
-			</EntryCard>
+				meta={<span className="text-xs">{formatTime(entry.createdAt)}</span>}
+				body={
+					entry.description ? (
+						<div className="whitespace-pre-wrap">{entry.description}</div>
+					) : null
+				}
+				photos={entry.photos}
+			/>
 		);
 	}
 

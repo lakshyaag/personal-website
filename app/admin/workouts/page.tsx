@@ -141,38 +141,34 @@ export default function AdminWorkoutsPage() {
 	}
 
 	function renderLogCard(log: WorkoutLog, showDate = true) {
+		const title = showDate
+			? formatDate(log.date)
+			: log.weight
+				? `${log.weight} kg`
+				: "Workout";
+
+		const meta =
+			showDate && log.weight
+				? `${log.weight} kg`
+				: showDate
+					? null
+					: log.weight
+						? null
+						: null;
+
 		return (
-			<EntryCard onEdit={() => editLog(log)} onDelete={() => deleteLog(log.id)}>
-				<div className="flex items-baseline gap-3">
-					{showDate && (
-						<div className="font-medium">{formatDate(log.date)}</div>
-					)}
-					{log.weight && (
-						<div
-							className={`text-sm ${showDate ? "text-zinc-600 dark:text-zinc-400" : "font-medium text-zinc-900 dark:text-zinc-100"}`}
-						>
-							{log.weight} kg
-						</div>
-					)}
-				</div>
-				{log.content && (
-					<div className="mt-2 text-sm text-zinc-600 dark:text-zinc-400 whitespace-pre-wrap">
-						{log.content}
-					</div>
-				)}
-				{log.photos && log.photos.length > 0 && (
-					<div className="mt-2 flex gap-2">
-						{log.photos.map((photo) => (
-							<img
-								key={photo}
-								src={photo}
-								alt="Workout progress"
-								className="h-16 w-16 rounded object-cover"
-							/>
-						))}
-					</div>
-				)}
-			</EntryCard>
+			<EntryCard
+				onEdit={() => editLog(log)}
+				onDelete={() => deleteLog(log.id)}
+				title={title}
+				meta={meta}
+				body={
+					log.content ? (
+						<div className="whitespace-pre-wrap">{log.content}</div>
+					) : null
+				}
+				photos={log.photos}
+			/>
 		);
 	}
 

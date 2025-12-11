@@ -190,38 +190,35 @@ export default function AdminAirportsPage() {
 		const airport = (airportsData as Airport[]).find(
 			(a) => a.ident === visit.airportIdent,
 		);
-		return (
-			<EntryCard
-				onEdit={() => editVisit(visit)}
-				onDelete={() => deleteVisit(visit.id)}
-			>
-				{showAirport && (
-					<div className="font-medium">
-						{airport?.name || visit.airportIdent}
-					</div>
-				)}
-				<div className="text-sm text-zinc-600 dark:text-zinc-400">
-					{showAirport && `${visit.airportIdent} `}
-					{showDate && formatDate(visit.date)}
-				</div>
+
+		const title = showAirport ? airport?.name || visit.airportIdent : null;
+
+		const metaParts: string[] = [];
+		if (showAirport) metaParts.push(visit.airportIdent);
+		if (showDate) metaParts.push(formatDate(visit.date));
+		const meta = metaParts.length > 0 ? metaParts.join(" ") : null;
+
+		const body = (
+			<>
 				{visit.flightNumbers && visit.flightNumbers.length > 0 && (
-					<div className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+					<div className="mt-1">
 						{visit.isLayover ? "Flights: " : "Flight: "}
 						{visit.flightNumbers.join(" → ")}
 					</div>
 				)}
-				{visit.notes && (
-					<div className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-						{visit.notes}
-					</div>
-				)}
-				{visit.photos && visit.photos.length > 0 && (
-					<div className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-						{visit.photos.length} photo
-						{visit.photos.length > 1 ? "s" : ""}
-					</div>
-				)}
-			</EntryCard>
+				{visit.notes && <div className="mt-1">{visit.notes}</div>}
+			</>
+		);
+
+		return (
+			<EntryCard
+				onEdit={() => editVisit(visit)}
+				onDelete={() => deleteVisit(visit.id)}
+				title={title}
+				meta={meta}
+				body={body}
+				photos={visit.photos}
+			/>
 		);
 	}
 
