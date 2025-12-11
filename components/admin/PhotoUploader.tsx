@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId } from "react";
+import { useEffect, useId, useRef } from "react";
 import usePhotoUpload, {
 	type UsePhotoUploadOptions,
 } from "@/hooks/usePhotoUpload";
@@ -28,17 +28,29 @@ export default function PhotoUploader(props: PhotoUploaderProps) {
 
 	const resolvedId = inputId ?? useId();
 
-	const { photos: localPhotos, uploading, uploadPhotos, removePhoto, setPhotos } =
-		usePhotoUpload({
-			...uploadOptions,
-			onSuccess,
-		});
+	const syncingFromProps = useRef(false);
+
+	const {
+		photos: localPhotos,
+		uploading,
+		uploadPhotos,
+		removePhoto,
+		setPhotos,
+	} = usePhotoUpload({
+		...uploadOptions,
+		onSuccess,
+	});
 
 	useEffect(() => {
+		syncingFromProps.current = true;
 		setPhotos(photos);
 	}, [photos, setPhotos]);
 
 	useEffect(() => {
+		if (syncingFromProps.current) {
+			syncingFromProps.current = false;
+			return;
+		}
 		onChange?.(localPhotos);
 	}, [localPhotos, onChange]);
 
