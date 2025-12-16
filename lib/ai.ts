@@ -8,5 +8,7 @@ export const primeIntellect = createOpenAICompatible({
     name: "prime-intellect",
     apiKey: process.env.PRIME_API_KEY,
     baseURL: "https://api.pinference.ai/api/v1",
+    includeUsage: true,
+    supportsStructuredOutputs: true,
 });
 
