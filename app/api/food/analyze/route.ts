@@ -30,7 +30,7 @@ interface AnalyzeRequest {
     photos?: string[];
 }
 
-const MODEL_NAME = "openai/gpt-5-mini";
+const MODEL_NAME = "openai/gpt-5.2";
 const PROVIDER_NAME = "prime-intellect";
 
 export async function POST(req: Request) {
@@ -83,6 +83,11 @@ Provide your best estimate for the nutritional content. If you're uncertain, pro
             model: primeIntellect(MODEL_NAME),
             schema: foodAnalysisSchema,
             messages: inputMessages,
+            providerOptions: {
+                extra_body: {
+                    usage: { include: true },
+                },
+            },
         });
 
 
@@ -93,9 +98,6 @@ Provide your best estimate for the nutritional content. If you're uncertain, pro
             inputMessages: inputMessages,
             result: result,
         });
-
-        console.log("Result Reasoning:", result.reasoning);
-        console.log("Result Response:", result.response);
 
         const analysisData = result.object;
 
