@@ -140,7 +140,7 @@ export default function AdminWorkoutsPage() {
 		setEditingLog(null);
 	}
 
-	function renderLogCard(log: WorkoutLog, showDate = true) {
+	function renderLogCard(log: WorkoutLog, showDate = false) {
 		const title = showDate
 			? formatDate(log.date)
 			: log.weight
