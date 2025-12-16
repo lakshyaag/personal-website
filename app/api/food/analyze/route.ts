@@ -2,6 +2,7 @@ import { generateObject } from "ai";
 import { z } from "zod";
 import { primeIntellect } from "@/lib/ai";
 import { saveAIMetadata } from "@/lib/ai-metadata-db";
+import { getAIConfig } from "@/lib/ai-config-db";
 import { supabaseAdmin } from "@/lib/supabase-client";
 
 export const maxDuration = 60;
@@ -29,9 +30,6 @@ interface AnalyzeRequest {
     description?: string;
     photos?: string[];
 }
-
-const MODEL_NAME = "openai/gpt-5.2";
-const PROVIDER_NAME = "prime-intellect";
 
 export async function POST(req: Request) {
     const { entryId, description, photos }: AnalyzeRequest = await req.json();
@@ -79,8 +77,11 @@ Provide your best estimate for the nutritional content. If you're uncertain, pro
     ];
 
     try {
+        // Get AI configuration from database
+        const aiConfig = await getAIConfig();
+
         const result = await generateObject({
-            model: primeIntellect(MODEL_NAME),
+            model: primeIntellect(aiConfig.modelName),
             schema: foodAnalysisSchema,
             messages: inputMessages,
             providerOptions: {
@@ -93,8 +94,8 @@ Provide your best estimate for the nutritional content. If you're uncertain, pro
 
         // Save AI metadata to database
         const metadataId = await saveAIMetadata({
-            provider: PROVIDER_NAME,
-            model: MODEL_NAME,
+            provider: aiConfig.providerName,
+            model: aiConfig.modelName,
             inputMessages: inputMessages,
             result: result,
         });

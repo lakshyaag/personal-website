@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { motion } from "motion/react";
 import { createClient } from "@/lib/supabase-client";
 import { toast } from "sonner";
+import { Settings } from "lucide-react";
 import {
 	VARIANTS_CONTAINER,
 	VARIANTS_SECTION,
@@ -62,13 +63,22 @@ export default function AdminPage() {
 			>
 				<div className="flex items-center justify-between mb-4">
 					<h1 className="text-3xl font-medium">Admin</h1>
-					<button
-						type="button"
-						onClick={handleLogout}
-						className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700 transition-colors"
-					>
-						Logout
-					</button>
+					<div className="flex items-center gap-2">
+						<Link
+							href="/admin/ai-config"
+							className="flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-md border border-zinc-300 transition-colors hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-800"
+						>
+							<Settings className="w-4 h-4" />
+							Settings
+						</Link>
+						<button
+							type="button"
+							onClick={handleLogout}
+							className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700 transition-colors"
+						>
+							Logout
+						</button>
+					</div>
 				</div>
 				<p className="text-zinc-600 dark:text-zinc-400">
 					Manage your personal data.
