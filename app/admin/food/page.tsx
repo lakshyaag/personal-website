@@ -5,7 +5,11 @@ import PhotoUploader from "@/components/admin/PhotoUploader";
 import { DateTimeInput } from "@/components/admin/DateTimeInputs";
 import { TextArea } from "@/components/admin/FormInputs";
 import { FormActions } from "@/components/admin/FormActions";
-import { EntryCard, EntryCardList } from "@/components/admin/EntryCard";
+import {
+	EntryCard,
+	EntryCardList,
+	EntryCardActionButton,
+} from "@/components/admin/EntryCard";
 import { PageHeader, SectionHeader } from "@/components/admin/PageHeader";
 import { EmptyState } from "@/components/admin/EmptyState";
 import {
@@ -22,6 +26,7 @@ import {
 	getTodayDate,
 } from "@/lib/date-utils";
 import { useAdminCrud } from "@/hooks/useAdminCrud";
+import { Sparkles, X } from "lucide-react";
 
 function AdminFoodPageContent() {
 	const router = useRouter();
@@ -42,6 +47,11 @@ function AdminFoodPageContent() {
 	>({});
 	const [viewMode, setViewMode] = useState<"date" | "all">("date");
 	const [editingEntry, setEditingEntry] = useState<FoodEntry | null>(null);
+
+	// AI Analysis state
+	const [analyzingEntry, setAnalyzingEntry] = useState<FoodEntry | null>(null);
+	const [analysisResult, setAnalysisResult] = useState<string>("");
+	const [isAnalyzing, setIsAnalyzing] = useState(false);
 
 	const { saving, loading, save, remove, loadByDate, loadGrouped, loadById } =
 		useAdminCrud<FoodEntry>({
@@ -195,6 +205,61 @@ function AdminFoodPageContent() {
 		router.replace(url.pathname + url.search, { scroll: false });
 	}
 
+	async function analyzeEntry(entry: FoodEntry) {
+		if (!entry.description && (!entry.photos || entry.photos.length === 0)) {
+			toast.error("This entry has no content to analyze");
+			return;
+		}
+
+		setAnalyzingEntry(entry);
+		setAnalysisResult("");
+		setIsAnalyzing(true);
+
+		try {
+			const response = await fetch("/api/food/analyze", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({
+					description: entry.description,
+					photos: entry.photos,
+				}),
+			});
+
+			if (!response.ok) {
+				throw new Error("Failed to analyze entry");
+			}
+
+			const reader = response.body?.getReader();
+			if (!reader) {
+				throw new Error("No response body");
+			}
+
+			const decoder = new TextDecoder();
+			let result = "";
+
+			while (true) {
+				const { done, value } = await reader.read();
+				if (done) break;
+
+				const chunk = decoder.decode(value, { stream: true });
+				result += chunk;
+				setAnalysisResult(result);
+			}
+		} catch (error) {
+			console.error("Analysis error:", error);
+			toast.error("Failed to analyze food entry");
+			setAnalyzingEntry(null);
+		} finally {
+			setIsAnalyzing(false);
+		}
+	}
+
+	function closeAnalysisModal() {
+		setAnalyzingEntry(null);
+		setAnalysisResult("");
+		setIsAnalyzing(false);
+	}
+
 	function renderEntryCard(entry: FoodEntry) {
 		return (
 			<EntryCard
@@ -208,6 +273,31 @@ function AdminFoodPageContent() {
 					) : null
 				}
 				photos={entry.photos}
+				actions={
+					<div className="flex flex-col gap-2 ml-4 flex-shrink-0">
+						<EntryCardActionButton
+							onClick={() => analyzeEntry(entry)}
+							variant="success"
+						>
+							<span className="flex items-center gap-1">
+								<Sparkles className="w-3 h-3" />
+								Analyze
+							</span>
+						</EntryCardActionButton>
+						<EntryCardActionButton
+							onClick={() => editEntry(entry)}
+							variant="neutral"
+						>
+							Edit
+						</EntryCardActionButton>
+						<EntryCardActionButton
+							onClick={() => deleteEntry(entry.id)}
+							variant="danger"
+						>
+							Delete
+						</EntryCardActionButton>
+					</div>
+				}
 			/>
 		);
 	}
@@ -343,6 +433,72 @@ function AdminFoodPageContent() {
 					)}
 				</div>
 			</AdminSection>
+
+			{/* AI Analysis Modal */}
+			{analyzingEntry && (
+				<div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+					<div className="relative w-full max-w-2xl max-h-[80vh] overflow-hidden rounded-xl bg-white dark:bg-zinc-900 shadow-2xl">
+						<div className="flex items-center justify-between border-b border-zinc-200 dark:border-zinc-700 px-6 py-4">
+							<div className="flex items-center gap-2">
+								<Sparkles className="w-5 h-5 text-green-600 dark:text-green-400" />
+								<h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
+									AI Nutritional Analysis
+								</h2>
+							</div>
+							<button
+								type="button"
+								onClick={closeAnalysisModal}
+								className="p-1 rounded-md hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+							>
+								<X className="w-5 h-5 text-zinc-500" />
+							</button>
+						</div>
+
+						<div className="px-6 py-4 overflow-y-auto max-h-[calc(80vh-120px)]">
+							{/* Entry Summary */}
+							<div className="mb-4 p-3 rounded-lg bg-zinc-50 dark:bg-zinc-800/50">
+								<p className="text-sm text-zinc-600 dark:text-zinc-400">
+									<span className="font-medium">Analyzing:</span>{" "}
+									{analyzingEntry.description || "Photo(s) only"}
+								</p>
+								{analyzingEntry.photos && analyzingEntry.photos.length > 0 && (
+									<p className="text-xs text-zinc-500 dark:text-zinc-500 mt-1">
+										{analyzingEntry.photos.length} photo(s) included
+									</p>
+								)}
+							</div>
+
+							{/* Analysis Result */}
+							<div className="prose prose-sm dark:prose-invert max-w-none">
+								{isAnalyzing && !analysisResult && (
+									<div className="flex items-center gap-2 text-zinc-500">
+										<div className="w-4 h-4 border-2 border-zinc-300 border-t-zinc-600 rounded-full animate-spin" />
+										<span>Analyzing your food entry...</span>
+									</div>
+								)}
+								{analysisResult && (
+									<div className="whitespace-pre-wrap text-zinc-700 dark:text-zinc-300">
+										{analysisResult}
+									</div>
+								)}
+								{isAnalyzing && analysisResult && (
+									<span className="inline-block w-2 h-4 bg-zinc-400 animate-pulse ml-0.5" />
+								)}
+							</div>
+						</div>
+
+						<div className="border-t border-zinc-200 dark:border-zinc-700 px-6 py-3 flex justify-end">
+							<button
+								type="button"
+								onClick={closeAnalysisModal}
+								className="px-4 py-2 text-sm font-medium rounded-lg bg-zinc-100 text-zinc-900 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-100 dark:hover:bg-zinc-700 transition-colors"
+							>
+								Close
+							</button>
+						</div>
+					</div>
+				</div>
+			)}
 		</AdminPageWrapper>
 	);
 }
