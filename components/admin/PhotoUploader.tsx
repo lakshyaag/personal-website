@@ -4,6 +4,7 @@ import { useEffect, useId, useRef } from "react";
 import usePhotoUpload, {
 	type UsePhotoUploadOptions,
 } from "@/hooks/usePhotoUpload";
+import { PhotoThumbnail } from "@/components/admin/PhotoDisplay";
 
 interface PhotoUploaderProps extends UsePhotoUploadOptions {
 	label?: string;
@@ -92,24 +93,16 @@ export default function PhotoUploader(props: PhotoUploaderProps) {
 			{localPhotos.length > 0 && (
 				<div className="mt-2 grid grid-cols-3 gap-2 sm:grid-cols-4">
 					{localPhotos.map((photo) => (
-						<div key={photo} className="relative">
-							<img
-								src={photo}
+						<PhotoThumbnail
+							key={photo}
+							photoRef={photo}
 								alt={label}
-								className="h-24 w-full rounded object-cover"
-							/>
-							<button
-								type="button"
-								onClick={() => removePhoto(photo)}
-								className="absolute right-1 top-1 rounded-full bg-red-500 px-2 py-1 text-xs text-white hover:bg-red-600"
-							>
-								×
-							</button>
-						</div>
+							showRemove
+							onRemove={() => removePhoto(photo)}
+						/>
 					))}
 				</div>
 			)}
 		</div>
 	);
 }
-

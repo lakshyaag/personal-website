@@ -1,5 +1,7 @@
 "use client";
 
+import { PhotoGrid } from "@/components/admin/PhotoDisplay";
+
 interface EntryCardProps {
 	title?: React.ReactNode;
 	meta?: React.ReactNode;
@@ -101,23 +103,7 @@ export function EntryCard({
 						</div>
 					)}
 					{photos && photos.length > 0 && (
-						<div className="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-4">
-							{photos.map((photo) => (
-								<button
-									key={photo}
-									type="button"
-									aria-label="Open photo"
-									className="group relative aspect-square w-full overflow-hidden rounded focus:outline-none focus:ring-2 focus:ring-zinc-500/20"
-									onClick={() => resolvedOnPhotoClick(photo)}
-								>
-									<img
-										src={photo}
-										alt="Entry"
-										className="absolute inset-0 h-full w-full object-cover group-hover:opacity-80 transition-opacity"
-									/>
-								</button>
-							))}
-						</div>
+						<PhotoGrid photos={photos} onPhotoClick={resolvedOnPhotoClick} />
 					)}
 					{children}
 				</div>

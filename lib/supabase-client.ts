@@ -13,10 +13,16 @@ if (!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL
 const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
+// Singleton browser client instance
+let browserClient: ReturnType<typeof createBrowserClient> | null = null
+
 // Client-side browser client (uses anon key, respects RLS, handles auth cookies)
-// Use this in client components
+// Use this in client components - returns singleton instance
 export function createClient() {
-  return createBrowserClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+  if (!browserClient) {
+    browserClient = createBrowserClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+  }
+  return browserClient
 }
 
 // Legacy client export for backwards compatibility with data operations
