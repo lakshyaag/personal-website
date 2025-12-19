@@ -5,7 +5,7 @@ import { saveAIMetadata } from "@/lib/ai-metadata-db";
 import { getAIConfig } from "@/lib/ai-config-db";
 import { supabaseAdmin } from "@/lib/supabase-client";
 
-export const maxDuration = 60;
+export const maxDuration = 120;
 
 // Schema for structured AI response
 const foodAnalysisSchema = z.object({

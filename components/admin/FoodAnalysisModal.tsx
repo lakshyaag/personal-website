@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo, useRef } from "react";
 import { Sparkles, X, Check, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import type { FoodEntry } from "@/lib/models";
+import { resolvePhotoUrl } from "@/hooks/usePhotoUrl";
 
 interface FoodAnalysisResult {
 	foodName: string;
@@ -84,13 +85,22 @@ export function FoodAnalysisModal({
 		setJustAnalyzed(false);
 
 		try {
+			// Resolve sb:// URLs to signed URLs before sending to API
+			const resolvedPhotos = entryToAnalyze.photos
+				? await Promise.all(
+						entryToAnalyze.photos.map((photo) =>
+							resolvePhotoUrl(photo),
+						),
+					)
+				: [];
+
 			const response = await fetch("/api/food/analyze", {
 				method: "POST",
 				headers: { "Content-Type": "application/json" },
 				body: JSON.stringify({
 					entryId: entryToAnalyze.id,
 					description: entryToAnalyze.description,
-					photos: entryToAnalyze.photos,
+					photos: resolvedPhotos,
 				}),
 			});
 
