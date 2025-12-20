@@ -27,7 +27,10 @@ import {
 } from "@/lib/date-utils";
 import { useAdminCrud } from "@/hooks/useAdminCrud";
 import { Sparkles } from "lucide-react";
-import { FoodAnalysisModal } from "@/components/admin/FoodAnalysisModal";
+import {
+	FoodAnalysisModal,
+	type FoodAnalysisResult,
+} from "@/components/admin/FoodAnalysisModal";
 import { FoodDashboard } from "@/components/admin/FoodDashboard";
 
 function AdminFoodPageContent() {
@@ -52,6 +55,9 @@ function AdminFoodPageContent() {
 
 	// AI Analysis state
 	const [analyzingEntry, setAnalyzingEntry] = useState<FoodEntry | null>(null);
+	const [isAnalyzing, setIsAnalyzing] = useState(false);
+	const [analysisResult, setAnalysisResult] =
+		useState<FoodAnalysisResult | null>(null);
 
 	const { saving, loading, save, remove, loadByDate, loadGrouped, loadById } =
 		useAdminCrud<FoodEntry>({
@@ -205,20 +211,64 @@ function AdminFoodPageContent() {
 		router.replace(url.pathname + url.search, { scroll: false });
 	}
 
-	function handleAnalysisComplete() {
-		// Reload entries to show updated AI data
-		if (analyzingEntry) {
-			if (viewMode === "all") {
-				loadAllEntries();
-			} else {
-				loadTodaysEntries(analyzingEntry.date);
-			}
-		}
-	}
-
-	function closeAnalysisModal() {
+	const closeAnalysisModal = useCallback(() => {
 		setAnalyzingEntry(null);
-	}
+		setIsAnalyzing(false);
+		setAnalysisResult(null);
+	}, []);
+
+	const handleAnalyzeEntry = useCallback(
+		async (entry: FoodEntry) => {
+			if (!entry.description && (!entry.photos || entry.photos.length === 0)) {
+				toast.error("This entry has no content to analyze");
+				return;
+			}
+
+			setAnalyzingEntry(entry);
+
+			// If it already has analysis, just open the modal (which will show existing)
+			if (entry.aiFoodName) {
+				return;
+			}
+
+			// Otherwise start analysis
+			setIsAnalyzing(true);
+			setAnalysisResult(null);
+
+			try {
+				const response = await fetch("/api/food/analyze", {
+					method: "POST",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify({ entryId: entry.id }),
+				});
+
+				if (!response.ok) {
+					const error = await response.json();
+					throw new Error(error.error || "Failed to analyze entry");
+				}
+
+				const result: FoodAnalysisResult = await response.json();
+				setAnalysisResult(result);
+
+				// Reload entries to show updated AI data
+				if (viewMode === "all") {
+					loadAllEntries();
+				} else {
+					loadTodaysEntries(entry.date);
+				}
+			} catch (error) {
+				console.error("Analysis error:", error);
+				toast.error(
+					error instanceof Error
+						? error.message
+						: "Failed to analyze food entry",
+				);
+			} finally {
+				setIsAnalyzing(false);
+			}
+		},
+		[viewMode, loadAllEntries, loadTodaysEntries],
+	);
 
 	function renderNutritionBadge(entry: FoodEntry) {
 		if (!entry.aiFoodName) return null;
@@ -272,7 +322,7 @@ function AdminFoodPageContent() {
 				actions={
 					<div className="flex flex-col gap-2 ml-4 flex-shrink-0">
 						<EntryCardActionButton
-							onClick={() => setAnalyzingEntry(entry)}
+							onClick={() => handleAnalyzeEntry(entry)}
 							variant="success"
 						>
 							<span className="flex items-center gap-1">
@@ -441,9 +491,12 @@ function AdminFoodPageContent() {
 
 			{/* AI Analysis Modal */}
 			<FoodAnalysisModal
+				key={analyzingEntry?.id}
 				entry={analyzingEntry}
 				onClose={closeAnalysisModal}
-				onAnalysisComplete={handleAnalysisComplete}
+				isAnalyzing={isAnalyzing}
+				analysisResult={analysisResult}
+				onAnalyze={handleAnalyzeEntry}
 			/>
 		</AdminPageWrapper>
 	);

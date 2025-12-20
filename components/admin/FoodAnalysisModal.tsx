@@ -1,11 +1,10 @@
 "use client";
 
-import { useState, useEffect, useMemo, useRef } from "react";
+import { useMemo } from "react";
 import { Sparkles, X, Check, RefreshCw, Loader2 } from "lucide-react";
-import { toast } from "sonner";
 import type { FoodEntry } from "@/lib/models";
 
-interface FoodAnalysisResult {
+export interface FoodAnalysisResult {
 	foodName: string;
 	calories: number;
 	proteinG: number;
@@ -18,22 +17,20 @@ interface FoodAnalysisResult {
 interface FoodAnalysisModalProps {
 	entry: FoodEntry | null;
 	onClose: () => void;
-	onAnalysisComplete?: () => void;
+	isAnalyzing: boolean;
+	analysisResult: FoodAnalysisResult | null;
+	onAnalyze: (entry: FoodEntry) => void;
 }
 
 export function FoodAnalysisModal({
 	entry,
 	onClose,
-	onAnalysisComplete,
+	isAnalyzing,
+	analysisResult,
+	onAnalyze,
 }: FoodAnalysisModalProps) {
-	const [analysisResult, setAnalysisResult] =
-		useState<FoodAnalysisResult | null>(null);
-	const [isAnalyzing, setIsAnalyzing] = useState(false);
 	// Track if the current result came from a fresh analysis (not from existing data)
-	const [justAnalyzed, setJustAnalyzed] = useState(false);
-
-	// Track the entry id to detect when entry changes
-	const prevEntryIdRef = useRef<string | null>(null);
+	const justAnalyzed = !!analysisResult;
 
 	// Check if entry has existing analysis
 	const hasExistingAnalysis = useMemo(() => {
@@ -54,70 +51,9 @@ export function FoodAnalysisModal({
 		};
 	}, [hasExistingAnalysis, entry]);
 
-	// Reset state when entry changes
-	useEffect(() => {
-		if (entry && entry.id !== prevEntryIdRef.current) {
-			prevEntryIdRef.current = entry.id;
-			setAnalysisResult(null);
-			setIsAnalyzing(false);
-			setJustAnalyzed(false);
-		}
-	}, [entry]);
-
-	async function analyzeEntry(entryToAnalyze: FoodEntry) {
-		if (
-			!entryToAnalyze.description &&
-			(!entryToAnalyze.photos || entryToAnalyze.photos.length === 0)
-		) {
-			toast.error("This entry has no content to analyze");
-			onClose();
-			return;
-		}
-
-		setIsAnalyzing(true);
-		setAnalysisResult(null);
-		setJustAnalyzed(false);
-
-		try {
-			// The updated API resolves photos server-side, so we just pass the ID
-			const response = await fetch("/api/food/analyze", {
-				method: "POST",
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({
-					entryId: entryToAnalyze.id,
-				}),
-			});
-
-			if (!response.ok) {
-				const error = await response.json();
-				throw new Error(error.error || "Failed to analyze entry");
-			}
-
-			const result: FoodAnalysisResult = await response.json();
-			setAnalysisResult(result);
-			setJustAnalyzed(true);
-
-			// Trigger callback to reload entries
-			if (onAnalysisComplete) {
-				onAnalysisComplete();
-			}
-		} catch (error) {
-			console.error("Analysis error:", error);
-			toast.error(
-				error instanceof Error ? error.message : "Failed to analyze food entry",
-			);
-			// Don't close on error if we had existing analysis - let user see the error
-			if (!hasExistingAnalysis) {
-				onClose();
-			}
-		} finally {
-			setIsAnalyzing(false);
-		}
-	}
-
 	function handleReAnalyze() {
 		if (entry) {
-			analyzeEntry(entry);
+			onAnalyze(entry);
 		}
 	}
 
@@ -125,9 +61,6 @@ export function FoodAnalysisModal({
 
 	// Determine what to display
 	const displayResult = analysisResult || existingAnalysis;
-	// We're showing existing if: has existing analysis, not currently analyzing, and haven't just done a fresh analysis
-	const isShowingExisting =
-		hasExistingAnalysis && !isAnalyzing && !justAnalyzed;
 
 	return (
 		<div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
