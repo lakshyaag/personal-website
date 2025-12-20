@@ -28,6 +28,7 @@ import {
 import { useAdminCrud } from "@/hooks/useAdminCrud";
 import { Sparkles } from "lucide-react";
 import { FoodAnalysisModal } from "@/components/admin/FoodAnalysisModal";
+import { FoodDashboard } from "@/components/admin/FoodDashboard";
 
 function AdminFoodPageContent() {
 	const router = useRouter();
@@ -394,9 +395,12 @@ function AdminFoodPageContent() {
 
 					{!loading && viewMode === "date" && (
 						<div className="space-y-3">
-							<h3 className="text-lg font-medium text-zinc-700 dark:text-zinc-300">
-								{formatDate(date)} ({todaysEntries.length})
-							</h3>
+							<div className="flex flex-col gap-4">
+								<h3 className="text-lg font-medium text-zinc-700 dark:text-zinc-300">
+									{formatDate(date)} ({todaysEntries.length})
+								</h3>
+								<FoodDashboard entries={todaysEntries} />
+							</div>
 							<EntryCardList>
 								{todaysEntries.map(renderEntryCard)}
 								{todaysEntries.length === 0 && (
@@ -415,10 +419,16 @@ function AdminFoodPageContent() {
 								.sort((a, b) => b.localeCompare(a))
 								.map((entryDate) => (
 									<div key={entryDate} className="space-y-3">
-										<h3 className="text-lg font-medium text-zinc-700 dark:text-zinc-300 sticky top-0 bg-white dark:bg-zinc-950 py-2">
-											{formatDate(entryDate)} (
-											{allEntriesGrouped[entryDate].length})
-										</h3>
+										<div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sticky top-0 bg-white dark:bg-zinc-950 py-2 z-10">
+											<h3 className="text-lg font-medium text-zinc-700 dark:text-zinc-300">
+												{formatDate(entryDate)} (
+												{allEntriesGrouped[entryDate].length})
+											</h3>
+											<FoodDashboard
+												entries={allEntriesGrouped[entryDate]}
+												compact
+											/>
+										</div>
 										<EntryCardList>
 											{allEntriesGrouped[entryDate].map(renderEntryCard)}
 										</EntryCardList>
