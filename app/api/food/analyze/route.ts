@@ -1,38 +1,13 @@
-import { generateObject } from "ai";
-import { z } from "zod";
-import { primeIntellect } from "@/lib/ai";
-import { saveAIMetadata } from "@/lib/ai-metadata-db";
-import { getAIConfig } from "@/lib/ai-config-db";
-import { supabaseAdmin } from "@/lib/supabase-client";
+import { analyzeFoodEntry } from "@/lib/food-analysis-server";
 
-export const maxDuration = 120;
-
-// Schema for structured AI response
-const foodAnalysisSchema = z.object({
-    foodName: z
-        .string()
-        .describe("A concise name for the food item(s) identified"),
-    calories: z.number().int().describe("Estimated total calories (kcal)"),
-    proteinG: z.number().describe("Estimated protein content in grams"),
-    carbsG: z.number().describe("Estimated carbohydrate content in grams"),
-    fatG: z.number().describe("Estimated fat content in grams"),
-    notes: z
-        .string()
-        .describe(
-            "Brief nutritional notes, highlights, or health tips about this food",
-        ),
-});
-
-export type FoodAnalysisResult = z.infer<typeof foodAnalysisSchema>;
+export const maxDuration = 60;
 
 interface AnalyzeRequest {
     entryId: string;
-    description?: string;
-    photos?: string[];
 }
 
 export async function POST(req: Request) {
-    const { entryId, description, photos }: AnalyzeRequest = await req.json();
+    const { entryId }: AnalyzeRequest = await req.json();
 
     if (!entryId) {
         return new Response(JSON.stringify({ error: "Entry ID is required" }), {
@@ -41,92 +16,18 @@ export async function POST(req: Request) {
         });
     }
 
-    if (!description && (!photos || photos.length === 0)) {
-        return new Response(
-            JSON.stringify({ error: "No description or photos provided" }),
-            { status: 400, headers: { "Content-Type": "application/json" } },
-        );
-    }
-
-    // Build multimodal content parts
-    const contentParts: Array<
-        { type: "text"; text: string } | { type: "image"; image: string }
-    > = [];
-
-    // Add the analysis prompt
-    const prompt = `Analyze this food entry and provide nutritional information.
-
-Food description: ${description || "See the attached image(s)"}
-
-Provide your best estimate for the nutritional content. If you're uncertain, provide reasonable estimates based on typical serving sizes. The notes should include any health considerations or tips.`;
-
-    contentParts.push({ type: "text", text: prompt });
-
-    // Add images if provided
-    if (photos && photos.length > 0) {
-        for (const photoUrl of photos) {
-            contentParts.push({ type: "image", image: photoUrl });
-        }
-    }
-
-    const inputMessages = [
-        {
-            role: "user" as const,
-            content: contentParts,
-        },
-    ];
-
     try {
-        // Get AI configuration from database
-        const aiConfig = await getAIConfig();
+        const result = await analyzeFoodEntry(entryId);
 
-        const result = await generateObject({
-            model: primeIntellect(aiConfig.modelName),
-            schema: foodAnalysisSchema,
-            messages: inputMessages,
-            providerOptions: {
-                extra_body: {
-                    usage: { include: true },
-                },
-            },
-        });
-
-
-        // Save AI metadata to database
-        const metadataId = await saveAIMetadata({
-            provider: aiConfig.providerName,
-            model: aiConfig.modelName,
-            inputMessages: inputMessages,
-            result: result,
-        });
-
-        const analysisData = result.object;
-
-        // Update the food entry with AI analysis results
-        const { error: updateError } = await supabaseAdmin
-            .from("food_entries")
-            .update({
-                ai_food_name: analysisData.foodName,
-                ai_calories: analysisData.calories,
-                ai_protein_g: analysisData.proteinG,
-                ai_carbs_g: analysisData.carbsG,
-                ai_fat_g: analysisData.fatG,
-                ai_notes: analysisData.notes,
-                ai_metadata_id: metadataId,
-                updated_at: new Date().toISOString(),
-            })
-            .eq("id", entryId);
-
-        if (updateError) {
-            console.error("Error updating food entry with AI analysis:", updateError);
-            // Don't fail the request, just log the error - the analysis was successful
+        if (!result) {
+            return new Response(
+                JSON.stringify({ error: "Entry has no content to analyze or could not be found" }),
+                { status: 400, headers: { "Content-Type": "application/json" } },
+            );
         }
 
         // Return the structured result with metadata ID
-        return Response.json({
-            ...analysisData,
-            metadataId,
-        });
+        return Response.json(result);
     } catch (error) {
         console.error("AI analysis error:", error);
         return new Response(

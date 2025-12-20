@@ -1,10 +1,9 @@
 "use client";
 
 import { useState, useEffect, useMemo, useRef } from "react";
-import { Sparkles, X, Check, RefreshCw } from "lucide-react";
+import { Sparkles, X, Check, RefreshCw, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import type { FoodEntry } from "@/lib/models";
-import { resolvePhotoUrl } from "@/hooks/usePhotoUrl";
 
 interface FoodAnalysisResult {
 	foodName: string;
@@ -62,13 +61,8 @@ export function FoodAnalysisModal({
 			setAnalysisResult(null);
 			setIsAnalyzing(false);
 			setJustAnalyzed(false);
-
-			// Auto-analyze only if no existing analysis
-			if (!hasExistingAnalysis) {
-				analyzeEntry(entry);
-			}
 		}
-	}, [entry, hasExistingAnalysis]);
+	}, [entry]);
 
 	async function analyzeEntry(entryToAnalyze: FoodEntry) {
 		if (
@@ -85,22 +79,12 @@ export function FoodAnalysisModal({
 		setJustAnalyzed(false);
 
 		try {
-			// Resolve sb:// URLs to signed URLs before sending to API
-			const resolvedPhotos = entryToAnalyze.photos
-				? await Promise.all(
-						entryToAnalyze.photos.map((photo) =>
-							resolvePhotoUrl(photo),
-						),
-					)
-				: [];
-
+			// The updated API resolves photos server-side, so we just pass the ID
 			const response = await fetch("/api/food/analyze", {
 				method: "POST",
 				headers: { "Content-Type": "application/json" },
 				body: JSON.stringify({
 					entryId: entryToAnalyze.id,
-					description: entryToAnalyze.description,
-					photos: resolvedPhotos,
 				}),
 			});
 
@@ -180,9 +164,14 @@ export function FoodAnalysisModal({
 
 					{/* Loading State */}
 					{isAnalyzing && (
-						<div className="flex items-center justify-center gap-2 py-8 text-zinc-500">
-							<div className="w-5 h-5 border-2 border-zinc-300 border-t-zinc-600 rounded-full animate-spin" />
-							<span>Analyzing your food entry...</span>
+						<div className="flex flex-col items-center justify-center gap-4 py-12 text-zinc-500">
+							<Loader2 className="w-8 h-8 animate-spin text-green-600" />
+							<div className="text-center">
+								<p className="font-medium text-zinc-900 dark:text-zinc-100">
+									Analyzing your food entry...
+								</p>
+								<p className="text-sm">This usually takes 5-10 seconds</p>
+							</div>
 						</div>
 					)}
 
@@ -250,7 +239,7 @@ export function FoodAnalysisModal({
 						{displayResult && !isAnalyzing && (
 							<span className="text-sm text-green-600 dark:text-green-400 flex items-center gap-1">
 								<Check className="w-4 h-4" />
-								{justAnalyzed ? "Saved to entry" : "Saved"}
+								{justAnalyzed ? "Analysis complete" : "Saved from background"}
 							</span>
 						)}
 					</div>
