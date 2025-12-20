@@ -1,6 +1,6 @@
 import { analyzeFoodEntry } from "@/lib/food-analysis-server";
 
-export const maxDuration = 120;
+export const maxDuration = 60;
 
 interface AnalyzeRequest {
     entryId: string;

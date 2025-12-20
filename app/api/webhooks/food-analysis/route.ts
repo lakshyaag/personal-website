@@ -1,7 +1,7 @@
 import { analyzeFoodEntry } from "@/lib/food-analysis-server";
 import { after } from "next/server";
 
-export const maxDuration = 120;
+export const maxDuration = 60;
 
 /**
  * Supabase Database Webhook handler for food entry analysis.
