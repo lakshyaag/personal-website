@@ -281,6 +281,14 @@ export interface FoodEntry {
     photos?: string[];
     date: string; // YYYY-MM-DD
     createdAt: string; // ISO timestamp
+    // AI-generated fields
+    aiFoodName?: string;
+    aiCalories?: number;
+    aiProteinG?: number;
+    aiCarbsG?: number;
+    aiFatG?: number;
+    aiNotes?: string;
+    aiMetadataId?: string;
 }
 
 // Database row type for food_entries (snake_case columns)
@@ -291,6 +299,14 @@ export interface FoodEntryDbRow {
     entry_date: string;
     created_at: string;
     updated_at: string;
+    // AI-generated columns
+    ai_food_name: string | null;
+    ai_calories: number | null;
+    ai_protein_g: number | null;
+    ai_carbs_g: number | null;
+    ai_fat_g: number | null;
+    ai_notes: string | null;
+    ai_metadata_id: string | null;
 }
 
 // Transform database row to application type
@@ -301,12 +317,20 @@ export function transformFoodEntryFromDb(row: FoodEntryDbRow): FoodEntry {
         photos: row.photos ?? undefined,
         date: row.entry_date,
         createdAt: row.created_at,
+        // AI fields
+        aiFoodName: row.ai_food_name ?? undefined,
+        aiCalories: row.ai_calories ?? undefined,
+        aiProteinG: row.ai_protein_g ?? undefined,
+        aiCarbsG: row.ai_carbs_g ?? undefined,
+        aiFatG: row.ai_fat_g ?? undefined,
+        aiNotes: row.ai_notes ?? undefined,
+        aiMetadataId: row.ai_metadata_id ?? undefined,
     };
 }
 
 // Transform application type to database row
 export function transformFoodEntryToDb(
-    entry: FoodEntry
+    entry: FoodEntry,
 ): Partial<FoodEntryDbRow> {
     return {
         id: entry.id,
@@ -316,5 +340,54 @@ export function transformFoodEntryToDb(
         created_at: entry.createdAt,
         // Always let the system time mark the update moment
         updated_at: new Date().toISOString(),
+        // AI fields
+        ai_food_name: entry.aiFoodName ?? null,
+        ai_calories: entry.aiCalories ?? null,
+        ai_protein_g: entry.aiProteinG ?? null,
+        ai_carbs_g: entry.aiCarbsG ?? null,
+        ai_fat_g: entry.aiFatG ?? null,
+        ai_notes: entry.aiNotes ?? null,
+        ai_metadata_id: entry.aiMetadataId ?? null,
+    };
+}
+
+// AI Metadata types
+export interface AIMetadata {
+    id: string;
+    provider: string;
+    model: string;
+    inputMessages: unknown;
+    result: unknown;
+    createdAt: string;
+}
+
+export interface AIMetadataDbRow {
+    id: string;
+    provider: string;
+    model: string;
+    input_messages: unknown;
+    result: unknown;
+    created_at: string;
+}
+
+export function transformAIMetadataFromDb(row: AIMetadataDbRow): AIMetadata {
+    return {
+        id: row.id,
+        provider: row.provider,
+        model: row.model,
+        inputMessages: row.input_messages,
+        result: row.result,
+        createdAt: row.created_at,
+    };
+}
+
+export function transformAIMetadataToDb(
+    metadata: Omit<AIMetadata, "id" | "createdAt">,
+): Omit<AIMetadataDbRow, "id" | "created_at"> {
+    return {
+        provider: metadata.provider,
+        model: metadata.model,
+        input_messages: metadata.inputMessages,
+        result: metadata.result,
     };
 }

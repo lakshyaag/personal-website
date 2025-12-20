@@ -5,7 +5,11 @@ import PhotoUploader from "@/components/admin/PhotoUploader";
 import { DateTimeInput } from "@/components/admin/DateTimeInputs";
 import { TextArea } from "@/components/admin/FormInputs";
 import { FormActions } from "@/components/admin/FormActions";
-import { EntryCard, EntryCardList } from "@/components/admin/EntryCard";
+import {
+	EntryCard,
+	EntryCardList,
+	EntryCardActionButton,
+} from "@/components/admin/EntryCard";
 import { PageHeader, SectionHeader } from "@/components/admin/PageHeader";
 import { EmptyState } from "@/components/admin/EmptyState";
 import {
@@ -22,6 +26,9 @@ import {
 	getTodayDate,
 } from "@/lib/date-utils";
 import { useAdminCrud } from "@/hooks/useAdminCrud";
+import { Sparkles } from "lucide-react";
+import { FoodAnalysisModal } from "@/components/admin/FoodAnalysisModal";
+import { FoodDashboard } from "@/components/admin/FoodDashboard";
 
 function AdminFoodPageContent() {
 	const router = useRouter();
@@ -42,6 +49,9 @@ function AdminFoodPageContent() {
 	>({});
 	const [viewMode, setViewMode] = useState<"date" | "all">("date");
 	const [editingEntry, setEditingEntry] = useState<FoodEntry | null>(null);
+
+	// AI Analysis state
+	const [analyzingEntry, setAnalyzingEntry] = useState<FoodEntry | null>(null);
 
 	const { saving, loading, save, remove, loadByDate, loadGrouped, loadById } =
 		useAdminCrud<FoodEntry>({
@@ -195,19 +205,95 @@ function AdminFoodPageContent() {
 		router.replace(url.pathname + url.search, { scroll: false });
 	}
 
+	function handleAnalysisComplete() {
+		// Reload entries to show updated AI data
+		if (analyzingEntry) {
+			if (viewMode === "all") {
+				loadAllEntries();
+			} else {
+				loadTodaysEntries(analyzingEntry.date);
+			}
+		}
+	}
+
+	function closeAnalysisModal() {
+		setAnalyzingEntry(null);
+	}
+
+	function renderNutritionBadge(entry: FoodEntry) {
+		if (!entry.aiFoodName) return null;
+
+		return (
+			<div className="mt-2 flex flex-wrap gap-2 text-xs">
+				<span className="px-2 py-0.5 rounded-full bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
+					{entry.aiCalories} kcal
+				</span>
+				<span className="px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
+					P: {entry.aiProteinG}g
+				</span>
+				<span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
+					C: {entry.aiCarbsG}g
+				</span>
+				<span className="px-2 py-0.5 rounded-full bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400">
+					F: {entry.aiFatG}g
+				</span>
+			</div>
+		);
+	}
+
 	function renderEntryCard(entry: FoodEntry) {
+		const hasAnalysis = !!entry.aiFoodName;
+
 		return (
 			<EntryCard
 				key={entry.id}
 				onEdit={() => editEntry(entry)}
 				onDelete={() => deleteEntry(entry.id)}
-				meta={<span className="text-xs">{formatTime(entry.createdAt)}</span>}
+				meta={
+					<div className="flex items-center gap-2">
+						<span className="text-xs">{formatTime(entry.createdAt)}</span>
+						{hasAnalysis && (
+							<span className="text-xs text-green-600 dark:text-green-400 flex items-center gap-0.5">
+								<Sparkles className="w-3 h-3" />
+								{entry.aiFoodName}
+							</span>
+						)}
+					</div>
+				}
 				body={
-					entry.description ? (
-						<div className="whitespace-pre-wrap">{entry.description}</div>
-					) : null
+					<>
+						{entry.description && (
+							<div className="whitespace-pre-wrap">{entry.description}</div>
+						)}
+						{renderNutritionBadge(entry)}
+					</>
 				}
 				photos={entry.photos}
+				actions={
+					<div className="flex flex-col gap-2 ml-4 flex-shrink-0">
+						<EntryCardActionButton
+							onClick={() => setAnalyzingEntry(entry)}
+							variant="success"
+						>
+							<span className="flex items-center gap-1">
+								<Sparkles className="w-3 h-3" />
+								{hasAnalysis ? "View Analysis" : "Analyze"}
+							</span>
+						</EntryCardActionButton>
+						<EntryCardActionButton
+							onClick={() => editEntry(entry)}
+							variant="neutral"
+						>
+							Edit
+						</EntryCardActionButton>
+						<EntryCardActionButton
+							onClick={() => deleteEntry(entry.id)}
+							variant="danger"
+						>
+							Delete
+						</EntryCardActionButton>
+					</div>
+				}
 			/>
 		);
 	}
@@ -309,9 +395,12 @@ function AdminFoodPageContent() {
 
 					{!loading && viewMode === "date" && (
 						<div className="space-y-3">
-							<h3 className="text-lg font-medium text-zinc-700 dark:text-zinc-300">
-								{formatDate(date)} ({todaysEntries.length})
-							</h3>
+							<div className="flex flex-col gap-4">
+								<h3 className="text-lg font-medium text-zinc-700 dark:text-zinc-300">
+									{formatDate(date)} ({todaysEntries.length})
+								</h3>
+								<FoodDashboard entries={todaysEntries} />
+							</div>
 							<EntryCardList>
 								{todaysEntries.map(renderEntryCard)}
 								{todaysEntries.length === 0 && (
@@ -330,10 +419,16 @@ function AdminFoodPageContent() {
 								.sort((a, b) => b.localeCompare(a))
 								.map((entryDate) => (
 									<div key={entryDate} className="space-y-3">
-										<h3 className="text-lg font-medium text-zinc-700 dark:text-zinc-300 sticky top-0 bg-white dark:bg-zinc-950 py-2">
-											{formatDate(entryDate)} (
-											{allEntriesGrouped[entryDate].length})
-										</h3>
+										<div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sticky top-0 bg-white dark:bg-zinc-950 py-2 z-10">
+											<h3 className="text-lg font-medium text-zinc-700 dark:text-zinc-300">
+												{formatDate(entryDate)} (
+												{allEntriesGrouped[entryDate].length})
+											</h3>
+											<FoodDashboard
+												entries={allEntriesGrouped[entryDate]}
+												compact
+											/>
+										</div>
 										<EntryCardList>
 											{allEntriesGrouped[entryDate].map(renderEntryCard)}
 										</EntryCardList>
@@ -343,6 +438,13 @@ function AdminFoodPageContent() {
 					)}
 				</div>
 			</AdminSection>
+
+			{/* AI Analysis Modal */}
+			<FoodAnalysisModal
+				entry={analyzingEntry}
+				onClose={closeAnalysisModal}
+				onAnalysisComplete={handleAnalysisComplete}
+			/>
 		</AdminPageWrapper>
 	);
 }

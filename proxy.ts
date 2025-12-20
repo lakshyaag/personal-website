@@ -3,6 +3,7 @@ import type { NextRequest } from "next/server";
 import { createMiddlewareSupabaseClient } from "@/lib/supabase-server";
 
 // Routes that don't require authentication even for POST/PUT/DELETE
+const PUBLIC_API_PREFIXES = ["/api/webhooks/"];
 const PUBLIC_API_ROUTES = ["/api/recommend"];
 
 export async function proxy(req: NextRequest) {
@@ -22,7 +23,10 @@ export async function proxy(req: NextRequest) {
 	}
 
 	// Check if path needs authentication
-	const isPublicApiRoute = PUBLIC_API_ROUTES.includes(pathname);
+	const isPublicApiRoute =
+		PUBLIC_API_ROUTES.includes(pathname) ||
+		PUBLIC_API_PREFIXES.some((prefix) => pathname.startsWith(prefix));
+
 	const needsAuth =
 		pathname.startsWith("/admin") ||
 		(pathname.startsWith("/api") &&
