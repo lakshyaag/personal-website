@@ -9,7 +9,7 @@ import {
 import { createClient } from "@/lib/supabase-client";
 import { encodeSupabaseRef } from "@/lib/photo-refs";
 
-export type UploadFolder = "airports" | "journal" | "food" | "workouts";
+export type UploadFolder = "airports" | "journal" | "food" | "workouts" | "fits";
 
 export interface UsePhotoUploadOptions {
 	folder: UploadFolder;
@@ -109,7 +109,7 @@ function usePhotoUpload(
 						.upload(objectPath, file, {
 							contentType: file.type,
 							upsert: false,
-					});
+						});
 
 					if (error) {
 						console.error("Upload error:", error);

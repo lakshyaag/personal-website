@@ -391,3 +391,46 @@ export function transformAIMetadataToDb(
         result: metadata.result,
     };
 }
+
+export interface FitsEntry {
+    id: string;
+    description?: string;
+    photos?: string[];
+    date: string; // YYYY-MM-DD
+    createdAt: string; // ISO timestamp
+}
+
+// Database row type for fits_entries (snake_case columns)
+export interface FitsEntryDbRow {
+    id: string;
+    description: string | null;
+    photos: string[] | null;
+    entry_date: string;
+    created_at: string;
+    updated_at: string;
+}
+
+// Transform database row to application type
+export function transformFitsEntryFromDb(row: FitsEntryDbRow): FitsEntry {
+    return {
+        id: row.id,
+        description: row.description ?? undefined,
+        photos: row.photos ?? undefined,
+        date: row.entry_date,
+        createdAt: row.created_at,
+    };
+}
+
+// Transform application type to database row
+export function transformFitsEntryToDb(
+    entry: FitsEntry,
+): Partial<FitsEntryDbRow> {
+    return {
+        id: entry.id,
+        description: entry.description ?? null,
+        photos: entry.photos ?? null,
+        entry_date: entry.date,
+        created_at: entry.createdAt,
+        updated_at: new Date().toISOString(),
+    };
+}

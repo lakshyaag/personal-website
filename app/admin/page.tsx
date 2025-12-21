@@ -40,6 +40,11 @@ export default function AdminPage() {
 			description: "Track your daily food intake",
 			href: "/admin/food",
 		},
+		{
+			title: "Fits Tracker",
+			description: "Track your daily outfits",
+			href: "/admin/fits",
+		},
 	];
 
 	const handleLogout = async () => {
