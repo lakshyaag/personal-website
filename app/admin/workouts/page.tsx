@@ -1,25 +1,34 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
-import PhotoUploader from "@/components/admin/PhotoUploader";
-import { DateInput } from "@/components/admin/DateTimeInputs";
-import { TextArea, NumberInput } from "@/components/admin/FormInputs";
-import { FormActions } from "@/components/admin/FormActions";
-import { EntryCard, EntryCardList } from "@/components/admin/EntryCard";
-import { PageHeader, SectionHeader } from "@/components/admin/PageHeader";
-import { EmptyState } from "@/components/admin/EmptyState";
 import {
 	AdminPageWrapper,
 	AdminSection,
 } from "@/components/admin/AdminPageWrapper";
+import { DateInput } from "@/components/admin/DateTimeInputs";
+import { EmptyState } from "@/components/admin/EmptyState";
 import {
-	ViewModeToggle,
-	type ViewMode,
-} from "@/components/admin/ViewModeToggle";
+	EntryCard,
+	EntryCardActionButton,
+	EntryCardList,
+} from "@/components/admin/EntryCard";
+import { FormActions } from "@/components/admin/FormActions";
+import { NumberInput, TextArea } from "@/components/admin/FormInputs";
 import { GroupedEntriesList } from "@/components/admin/GroupedEntriesList";
+import { PageHeader, SectionHeader } from "@/components/admin/PageHeader";
+import PhotoUploader from "@/components/admin/PhotoUploader";
+import {
+	type ViewMode,
+	ViewModeToggle,
+} from "@/components/admin/ViewModeToggle";
+import {
+	WorkoutAnalysisModal,
+	type WorkoutAnalysisResult,
+} from "@/components/admin/WorkoutAnalysisModal";
 import { useAdminCrud } from "@/hooks/useAdminCrud";
 import { formatDate, getTodayDate } from "@/lib/date-utils";
 import type { WorkoutLog } from "@/lib/models";
+import { Sparkles } from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
 
 export default function AdminWorkoutsPage() {
 	const [date, setDate] = useState("");
@@ -32,6 +41,11 @@ export default function AdminWorkoutsPage() {
 		Record<string, WorkoutLog[]>
 	>({});
 	const [viewMode, setViewMode] = useState<ViewMode>("date");
+
+	const [analyzingLog, setAnalyzingLog] = useState<WorkoutLog | null>(null);
+	const [isAnalyzing, setIsAnalyzing] = useState(false);
+	const [analysisResult, setAnalysisResult] =
+		useState<WorkoutAnalysisResult | null>(null);
 
 	const { saving, loading, save, remove, loadByDate, loadGrouped } =
 		useAdminCrud<WorkoutLog>({
@@ -140,6 +154,53 @@ export default function AdminWorkoutsPage() {
 		setEditingLog(null);
 	}
 
+	async function handleAnalyze(log: WorkoutLog) {
+		setAnalyzingLog(log);
+		setAnalysisResult(null);
+		setIsAnalyzing(true);
+
+		try {
+			const response = await fetch("/api/workouts/analyze", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({ entryId: log.id }),
+			});
+
+			if (!response.ok) {
+				throw new Error("Analysis failed");
+			}
+
+			const result = await response.json();
+			setAnalysisResult(result);
+
+			if (viewMode === "all") {
+				await loadAllLogs();
+			} else {
+				await loadTodaysLogs(date);
+			}
+		} catch (error) {
+			console.error("Workout analysis error:", error);
+			alert("Failed to analyze workout");
+		} finally {
+			setIsAnalyzing(false);
+		}
+	}
+
+	function openAnalysisModal(log: WorkoutLog) {
+		setAnalyzingLog(log);
+		setAnalysisResult(null);
+
+		if (!log.aiSessionType) {
+			handleAnalyze(log);
+		}
+	}
+
+	function closeAnalysisModal() {
+		setAnalyzingLog(null);
+		setAnalysisResult(null);
+		setIsAnalyzing(false);
+	}
+
 	function renderLogCard(log: WorkoutLog, showDate = false) {
 		const title = showDate
 			? formatDate(log.date)
@@ -156,10 +217,10 @@ export default function AdminWorkoutsPage() {
 						? null
 						: null;
 
+		const hasAnalysis = !!log.aiSessionType;
+
 		return (
 			<EntryCard
-				onEdit={() => editLog(log)}
-				onDelete={() => deleteLog(log.id)}
 				title={title}
 				meta={meta}
 				body={
@@ -168,6 +229,31 @@ export default function AdminWorkoutsPage() {
 					) : null
 				}
 				photos={log.photos}
+				actions={
+					<div className="flex flex-col gap-2 ml-4 flex-shrink-0">
+						<EntryCardActionButton
+							onClick={() => openAnalysisModal(log)}
+							variant={hasAnalysis ? "neutral" : "success"}
+						>
+							<span className="flex items-center gap-1">
+								<Sparkles className="w-3 h-3" />
+								{hasAnalysis ? "View Analysis" : "Analyze"}
+							</span>
+						</EntryCardActionButton>
+						<EntryCardActionButton
+							onClick={() => editLog(log)}
+							variant="neutral"
+						>
+							Edit
+						</EntryCardActionButton>
+						<EntryCardActionButton
+							onClick={() => deleteLog(log.id)}
+							variant="danger"
+						>
+							Delete
+						</EntryCardActionButton>
+					</div>
+				}
 			/>
 		);
 	}
@@ -271,6 +357,14 @@ export default function AdminWorkoutsPage() {
 					)}
 				</div>
 			</AdminSection>
+
+			<WorkoutAnalysisModal
+				entry={analyzingLog}
+				onClose={closeAnalysisModal}
+				isAnalyzing={isAnalyzing}
+				analysisResult={analysisResult}
+				onAnalyze={handleAnalyze}
+			/>
 		</AdminPageWrapper>
 	);
 }
