@@ -106,17 +106,18 @@ export async function analyzeWorkoutEntry(entryId: string) {
     }
 
     const prompt = `Analyze this workout log entry and extract structured exercise data with notes about how the user should feel after the workout.
-
-Workout description:
-${entry.content}
-
+    
 Instructions:
 1. Parse each exercise mentioned, including the exercise name, weights used, sets, and reps.
 2. For entries like "25,35,35 - 8-10 reps", interpret as 3 sets with weights 25, 35, 35 lbs and 8-10 reps each.
-3. For rep ranges like "8-10 reps", use the average (9) as the rep count.
+3. For rep ranges like "8-10 reps", use the average (9) as the rep count. Keep reps as integer.
 4. For cardio like "Incline walk - 12 at 3 for 25 mins", extract incline=12, speed=3, duration=25.
 5. Identify the primary muscle groups for each exercise.
-6. Determine if this is a strength, cardio, or mixed session.`;
+6. Determine if this is a strength, cardio, or mixed session.
+    
+Workout description:
+${entry.content}
+    `;
 
     const inputMessages = [
         {

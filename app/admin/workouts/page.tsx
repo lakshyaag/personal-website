@@ -27,7 +27,8 @@ import {
 import { useAdminCrud } from "@/hooks/useAdminCrud";
 import { formatDate, getTodayDate } from "@/lib/date-utils";
 import type { WorkoutLog } from "@/lib/models";
-import { Sparkles } from "lucide-react";
+import { BarChart3, Sparkles } from "lucide-react";
+import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 
 export default function AdminWorkoutsPage() {
@@ -259,10 +260,19 @@ export default function AdminWorkoutsPage() {
 
 	return (
 		<AdminPageWrapper>
-			<PageHeader
-				title="Workout Tracker"
-				description="Track your workouts with minimal friction."
-			/>
+			<div className="flex items-start justify-between">
+				<PageHeader
+					title="Workout Tracker"
+					description="Track your workouts with minimal friction."
+				/>
+				<Link
+					href="/admin/workouts/dashboard"
+					className="flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg bg-purple-100 text-purple-700 hover:bg-purple-200 dark:bg-purple-900/30 dark:text-purple-300 dark:hover:bg-purple-900/50 transition-colors"
+				>
+					<BarChart3 className="w-4 h-4" />
+					Dashboard
+				</Link>
+			</div>
 
 			<AdminSection className="space-y-8">
 				<div className="space-y-4">
