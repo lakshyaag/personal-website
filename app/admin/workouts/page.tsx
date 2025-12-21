@@ -51,7 +51,6 @@ export default function AdminWorkoutsPage() {
 		useAdminCrud<WorkoutLog>({
 			endpoint: "/api/workouts",
 			entityName: "workout log",
-			useAlert: true,
 		});
 
 	const loadTodaysLogs = useCallback(
