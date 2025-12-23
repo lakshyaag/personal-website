@@ -50,7 +50,6 @@ export default function AdminAirportsPage() {
 		useAdminCrud<Visit>({
 			endpoint: "/api/visits",
 			entityName: "visit",
-			useAlert: true,
 		});
 
 	const loadAllVisitsByDate = useCallback(async () => {
