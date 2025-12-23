@@ -1,14 +1,14 @@
 "use client";
 
-import { motion } from "framer-motion";
-import Link from "next/link";
+import { AnimatedBackground } from "@/components/ui/animated-background";
 import { BLOG_POSTS } from "@/lib/data/blogs";
 import {
+	TRANSITION_SECTION,
 	VARIANTS_CONTAINER,
 	VARIANTS_SECTION,
-	TRANSITION_SECTION,
 } from "@/lib/utils";
-import { AnimatedBackground } from "@/components/ui/animated-background";
+import { motion } from "framer-motion";
+import Link from "next/link";
 
 export default function Blogs() {
 	return (

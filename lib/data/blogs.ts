@@ -1,12 +1,34 @@
 export const BLOG_POSTS: BlogPost[] = [
 	{
-		title: "Exploring GEPA and DSPy for AI system optimization",
+		title: "Pokemon Showdown AI Arena",
 		description:
-			"An overview of DSPy and GEPA for AI system optimization.",
+			"Building an LLM agent harness for Pokemon battles and exploring games as benchmarks for AI capabilities.",
+		link: "/blogs/building-a-pokemon-arena",
+		uid: "building-a-pokemon-arena",
+		date: "2025-12-23",
+		tags: [
+			"LLMs",
+			"Agents",
+			"Game Theory",
+			"Pokemon",
+			"LangGraph",
+			"Tool Calling",
+		],
+	},
+	{
+		title: "Exploring GEPA and DSPy for AI system optimization",
+		description: "An overview of DSPy and GEPA for AI system optimization.",
 		link: "/blogs/gepa",
 		uid: "gepa",
 		date: "2025-09-07",
-		tags: ["DSPy", "GEPA", "LLMs", "Evaluation", "Agents", "Context Engineering"],
+		tags: [
+			"DSPy",
+			"GEPA",
+			"LLMs",
+			"Evaluation",
+			"Agents",
+			"Context Engineering",
+		],
 	},
 	{
 		title: "Building RL environments for open-source AGI",
