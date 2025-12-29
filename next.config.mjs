@@ -3,6 +3,7 @@ import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
 import rehypeKatex from "rehype-katex";
 import rehypeHighlight from "rehype-highlight";
+import rehypeSlug from "rehype-slug";
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
@@ -22,7 +23,7 @@ const withMDX = createMDX({
 	extension: /\.mdx?$/,
 	options: {
 		remarkPlugins: [remarkGfm, remarkMath],
-		rehypePlugins: [rehypeKatex, rehypeHighlight],
+		rehypePlugins: [rehypeSlug, rehypeKatex, rehypeHighlight],
 	},
 });
 
