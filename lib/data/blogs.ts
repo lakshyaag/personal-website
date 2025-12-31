@@ -1,5 +1,20 @@
 export const BLOG_POSTS: BlogPost[] = [
 	{
+		title: "The Age of Personal Software",
+		description:
+			"How AI-assisted coding helped me build a comprehensive personal data platform.",
+		link: "/blogs/the-age-of-personal-software",
+		uid: "the-age-of-personal-software",
+		date: "2025-12-29",
+		tags: [
+			"Personal Software",
+			"Coding Agents",
+			"AI Assisted Coding",
+			"System Design",
+			"Iterative Development",
+		],
+	},
+	{
 		title: "Pokemon Showdown AI Arena",
 		description:
 			"Building an LLM agent harness for Pokemon battles and exploring games as benchmarks for AI capabilities.",

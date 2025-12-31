@@ -1,0 +1,164 @@
+export const metadata = {
+  title: "The Age of Personal Software",
+  description:
+    "How coding agents removed the friction between having an idea and building it.",
+  openGraph: {
+    title: "The Age of Personal Software",
+    description:
+      "How coding agents removed the friction between having an idea and building it.",
+    type: "article",
+    url: "https://lakshyaag.com/blogs/the-age-of-personal-software",
+    images: [
+      {
+        url: "https://lakshyaag.com/api/og/blogs/the-age-of-personal-software",
+        width: 1200,
+        height: 630,
+        alt: "The Age of Personal Software",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "The Age of Personal Software",
+    description:
+      "How coding agents removed the friction between having an idea and building it.",
+    images: [
+      {
+        url: "https://lakshyaag.com/api/og/blogs/the-age-of-personal-software",
+        width: 1200,
+        height: 630,
+        alt: "The Age of Personal Software",
+      },
+    ],
+    creator: "@lakshyaag",
+  },
+  alternates: { canonical: "/blogs/the-age-of-personal-software" },
+};
+
+_TL;DR: Code is cheap now. The friction between idea and demo has collapsed. What matters is taste._
+
+## How I Learned to Code
+
+I started coding when I was 13, after watching my sister write Visual Basic for her university projects. I don't remember what she was building, but I remember thinking: this is magical to write something and have it compile and run. The feeling was infectious, and I wanted to try it too.
+
+My first project was a [website](https://github.com/lakshyaag/pokemon-material). Then a [currency converter](https://github.com/lakshyaag/currency-converter). HTML and CSS first, then jQuery, then Python. I never boxed myself into a single language - I just kept fixing mistakes until things worked. This is definitely not how somebody who studied Computer Science would approach things. But then again, I didn't study Computer Science. 
+
+I studied Economics during my undergrad, which exposed me to the world of data science and visualizations. Python, which I'd picked up years earlier, turned out to be useful. Now, I was writing scrapers for [India's trade data](https://github.com/lakshyaag/India-Trade-Data) and [building dashboards](https://github.com/lakshyaag/IPLDashboard) for cricket statistics. 
+
+The cricket dashboard used to show ball-by-ball data for the Indian Premier League, visualized in [Shiny](https://shiny.rstudio.com/). It was slow, and it was real effort. The kind of work where you're constantly tweaking code and checking the output to ensure perfection.
+
+I remember one project I built vividly: a Counter Strike demo visualizer. I wrote a Python script to extract data from game replays (using the [awpy](https://github.com/pnxenopoulos/awpy) library), then built a Shiny dashboard to visualize player performance. The whole thing took weeks of effort.
+
+Last month, I [prompted the same idea](https://github.com/lakshyaag/CSGO-Visualization) to a coding agent. I had a [working version](https://github.com/lakshyaag/cs2_demo_agent) in under an hour.
+
+## The Inflection Point
+
+We are at an inflection point in the history of software engineering. By some measures, we've already crossed it. 
+
+The field is increasingly feeling like [Factorio](https://factorio.com), where the objective is to _build building blocks_ for the way forward. 
+<Tweet id="2005353145128583447" />
+
+Code is cheap now. It's not free, but it is relatively inexpensive. The translation from natural language to working code is near-instant. Coding agents have removed the blocker on execution. No longer does thinking about an idea have an associated friction of building a demo.
+
+Something else shifted too: _it's easier to discard working code_. When you spend weeks on something, the [sunk cost fallacy](https://en.wikipedia.org/wiki/Sunk_cost) kicks in. You keep it even when it's not quite right. When the same thing takes an hour, you throw it away and try again. The psychology of building changes completely.
+
+## Why I Built It
+
+I wanted to be more observant in my daily life and track my habits. I've tried many apps - MyFitnessPal, Cronometer, others. Nothing felt tailored. Everywhere I would have to follow a specific way of doing things, bending my habits to fit their design.
+
+I maintain this personal website for my blog and projects. I wondered if I could add more types of information on it. While building what eventually became the books feature and talking to a friend, things clicked for me and the idea of personal software became clearer. 
+
+By saving data related to my daily life, such as workouts, nutrition, journals, and more, I could have my own application - a tracking system that works for me - tailored to how I think.
+
+## What I Built
+
+Over a few days, I was able to add a multitude of features - each one faster than the last. The entire journey is visible in the [commit history](https://github.com/lakshyaag/personal-website/commits/main/).
+
+<ImageCarousel
+  images={[
+    { src: "/blogs/the-age-of-personal-software/public-airports-map.png", alt: "Airports map", caption: "An interactive map of the airports I've visited" },
+    { src: "/blogs/the-age-of-personal-software/public-bookshelf.png", alt: "Bookshelf", caption: "A public bookshelf with animated grid and filters" },
+    { src: "/blogs/the-age-of-personal-software/public-food-ai-analysis.png", alt: "Food AI analysis", caption: "An AI analysis of a meal into nutritional components" },
+    { src: "/blogs/the-age-of-personal-software/admin-workouts-dashboard.png", alt: "Workouts dashboard", caption: "A dashboard for workout tracking with AI analysis" },
+    { src: "/blogs/the-age-of-personal-software/admin-main.png", alt: "Main admin page", caption: "The admin panel for accessing all features" },
+  ]}
+/>
+
+### Airports
+
+It started with [airports](https://github.com/lakshyaag/personal-website/pull/7). I'd wanted a public, interactive [passport stamp map](https://lakshyaag.com/airports) ever since I went to Vietnam in 2023 and did the Ha Giang loop with a dear friend. The memory deserved more than a photo album.
+
+I built the feature using a coding agent (specifically, [ampcode](https://ampcode.com)). Storage was JSON files in Vercel blob storage, and authentication was basic bearer tokens. I wanted to start with minimal friction, and I trusted the coding agent to get it right.
+
+### Books
+
+After airports came [books](https://github.com/lakshyaag/personal-website/pull/9). The bookshelf came together in an afternoon: animated grid, filter tabs, a slide-in detail drawer. I also added a [recommendation form](https://github.com/lakshyaag/personal-website/pull/10) so visitors could suggest books. The admin panel got an accept/reject flow. More interactivity, minimal friction.
+
+
+### The Infrastructure Shift
+
+At this point, I realized JSON files wouldn't scale and there were quite a few bugs in the user experience - failed photo uploads, local timezone handling issues, that sort of thing. I [migrated everything to Supabase](https://github.com/lakshyaag/personal-website/pull/11): Postgres for data, proper auth, webhook support, the works. This unlocked faster iteration for everything that followed.
+
+### Workouts, Journal, Food
+
+Then came the tracking features in quick succession: [workouts](https://github.com/lakshyaag/personal-website/pull/13), [journal](https://github.com/lakshyaag/personal-website/pull/14), and [food](https://github.com/lakshyaag/personal-website/pull/16). I wanted to supplement them with AI - prompts and tools under my control, not someone else's app deciding what mattered.
+
+I used [Claude Code](https://claude.com/code) as a background worker and [Cursor](https://cursor.com) for in-focus coding. The pattern that emerged was simple: question, plan, execute. Over a few months, I expect models and products to blur the distinction between these steps. For now, starting new feature prompts with a simple description of requirements leads to answering follow-up questions, then a structured implementation plan, followed by the actual execution.
+
+By this point, I had accumulated duplicated code across admin pages. So I did what any reasonable person would do: I [consolidated the vibe-coded slop with more slop](https://github.com/lakshyaag/personal-website/pull/17). Reusable components, a generic CRUD hook, shared database utilities.
+
+This is an underappreciated upside of coding agents: they don't just generate technical debt, they also make it cheaper to pay it down. The refactor took a few hours and made everything easier to maintain as I squashed bugs along the way.
+
+### AI Analysis
+
+With the infrastructure solid, I added [AI-powered food analysis](https://github.com/lakshyaag/personal-website/pull/19). Photos become calorie estimates. Descriptions become nutritional breakdowns. Yes, the estimates aren't perfectly accurate, but relative estimates win. I don't need precision. I need awareness.
+
+Then [workout analysis](https://github.com/lakshyaag/personal-website/pull/21): structured exercise extraction, volume calculations, muscle group identification, and a dashboard with visualizations for tracking consistency over time.
+
+### Fits
+
+Finally, [fits](https://github.com/lakshyaag/personal-website/pull/20) - daily outfit photos. By this point, adding a new tracker took about 30 minutes. The patterns were established. I just needed to define what was specific to the domain.
+
+## The Pattern
+
+Throughout all of this, I kept getting amazed by how good coding agents have become.
+
+I didn't put too much emphasis on clean code and maintainability early on, so there is definitely room for improvement. But that's my key takeaway: getting from 0 to 80 is easy now. The last 20 is where the real work happens - and that's where knowledge and taste matter.
+
+In this context, "taste" isn't just knowing what to build. It's knowing when the agent is hallucinating a bad UI pattern, understanding the user experience flow end-to-end, and having the judgment to reject 90% of suggestions to get to the 10% that's worth keeping.
+
+Lee Robinson wrote about [building low-level software with only coding agents](https://leerob.com/pixo). The question-plan-execute[^1] pattern he describes is exactly what I experienced.
+
+Next up: an iOS shortcut for interactive logging at scheduled intervals, directly on my phone.
+
+## What This Means
+
+A few observations:
+
+1. **Becoming a generalist is more important than ever.** Your taste, or your product sense, is now the bottleneck. Execution is cheap. Knowing what to build next is not.
+
+2. **The bar for greatness will rise.** As more people start to realize the magnitude of this shift, with lowering barriers to entry, there will inevitably be more competition, which will drive innovation.
+
+3. **The invisible cost of cheap code.** While the friction of execution has collapsed for the individual, the aggregate cost of compute is rising. As millions of people start spinning up personal software, power demand for tensor operations will skyrocket. This "digital Factorio" requires real-world electricity. This is a topic for a future post, but I believe nuclear energy will play a pivotal role in sustaining this shift.
+
+## Closing
+
+Personal software used to require engineering teams, budgets, and long timelines. Now, anyone with taste and patience can build tools tailored to their own needs.
+
+My website didn't start as a "personal data platform." It started as an airport tracker. Then a bookshelf. Then a workout logger. Each feature taught me something. Each iteration was faster than the last.
+
+Execution keeps getting cheaper. Taste still doesn't.
+
+---
+
+Thanks for reading! If you want to chat about personal software, coding agents, or anything else, find me on [X/Twitter](https://x.com/lakshyaag) or [LinkedIn](https://linkedin.com/in/lakshyaag).
+
+[^1]: Implicitly assuming testing and validation is part of the execution here.
+
+## Similar reading
+
+I found these posts to be helpful in understanding the concept of personal software:
+
+1. [Personal Software - Lee Robinson](https://leerob.com/personal-software)
+2. [Perfect Software - Gaurav Ramesh](https://outofdesk.netlify.app/blog/perfect-software)
+3. [Vibe coding a bookshelf with Claude Code - Marius Balaj](https://balajmarius.com/writings/vibe-coding-a-bookshelf-with-claude-code/)

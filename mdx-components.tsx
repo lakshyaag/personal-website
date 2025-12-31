@@ -6,6 +6,7 @@ import rehypeKatex from "rehype-katex";
 import rehypeHighlight from "rehype-highlight";
 import type { MDXComponents } from "mdx/types";
 import type { Components } from "react-markdown";
+import { ImageCarousel } from "./components/ImageCarousel";
 
 // Shared styles and constants
 const styles = {
@@ -176,5 +177,6 @@ export function useMDXComponents(components: MDXComponents): MDXComponents {
 				</div>
 			</div>
 		),
+		ImageCarousel,
 	};
 }
