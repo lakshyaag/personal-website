@@ -20,13 +20,16 @@ import {
 	type ViewMode,
 	ViewModeToggle,
 } from "@/components/admin/ViewModeToggle";
+import { ExerciseHistoryCard } from "@/components/admin/ExerciseHistoryCard";
+import { ExerciseHistoryModal } from "@/components/admin/ExerciseHistoryModal";
+import { ExerciseSearch } from "@/components/admin/ExerciseSearch";
 import {
 	WorkoutAnalysisModal,
 	type WorkoutAnalysisResult,
 } from "@/components/admin/WorkoutAnalysisModal";
 import { useAdminCrud } from "@/hooks/useAdminCrud";
 import { formatDate, getTodayDate } from "@/lib/date-utils";
-import type { WorkoutLog } from "@/lib/models";
+import type { WorkoutExercise, WorkoutLog } from "@/lib/models";
 import { BarChart3, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
@@ -47,6 +50,14 @@ export default function AdminWorkoutsPage() {
 	const [isAnalyzing, setIsAnalyzing] = useState(false);
 	const [analysisResult, setAnalysisResult] =
 		useState<WorkoutAnalysisResult | null>(null);
+
+	const [selectedExercise, setSelectedExercise] = useState<{
+		name: string;
+		lastPerformed: string;
+		sets: NonNullable<WorkoutExercise["sets"]>;
+		notes?: string | null;
+	} | null>(null);
+	const [showHistoryModal, setShowHistoryModal] = useState(false);
 
 	const { saving, loading, save, remove, loadByDate, loadGrouped } =
 		useAdminCrud<WorkoutLog>({
@@ -152,6 +163,34 @@ export default function AdminWorkoutsPage() {
 		setContent("");
 		setUploadedPhotos([]);
 		setEditingLog(null);
+		setSelectedExercise(null);
+	}
+
+	async function handleExerciseSelect(exercise: { canonicalName: string }) {
+		try {
+			const res = await fetch(
+				`/api/workouts/exercises/${encodeURIComponent(exercise.canonicalName)}`,
+			);
+			const data = await res.json();
+			if (data.history && data.history.length > 0) {
+				const last = data.history[0];
+				setSelectedExercise({
+					name: exercise.canonicalName,
+					lastPerformed: last.date,
+					sets: last.sets,
+					notes: last.notes,
+				});
+			} else {
+				setSelectedExercise({
+					name: exercise.canonicalName,
+					lastPerformed: "Never",
+					sets: [],
+					notes: "No history found.",
+				});
+			}
+		} catch (error) {
+			console.error("Error fetching exercise history:", error);
+		}
 	}
 
 	async function handleAnalyze(log: WorkoutLog) {
@@ -311,6 +350,25 @@ export default function AdminWorkoutsPage() {
 						identifier={date.replace(/-/g, "")}
 					/>
 
+					<div className="space-y-4 pt-4 border-t border-zinc-100 dark:border-zinc-800">
+						<SectionHeader
+							title="Exercise Lookup"
+							description="Search to see your last performance for progressive overload."
+						/>
+						<ExerciseSearch onSelect={handleExerciseSelect} />
+
+						{selectedExercise && (
+							<ExerciseHistoryCard
+								exerciseName={selectedExercise.name}
+								lastPerformed={selectedExercise.lastPerformed}
+								sets={selectedExercise.sets}
+								notes={selectedExercise.notes}
+								onViewHistory={() => setShowHistoryModal(true)}
+								onClear={() => setSelectedExercise(null)}
+							/>
+						)}
+					</div>
+
 					<FormActions
 						saving={saving}
 						isEditing={!!editingLog}
@@ -374,6 +432,13 @@ export default function AdminWorkoutsPage() {
 				analysisResult={analysisResult}
 				onAnalyze={handleAnalyze}
 			/>
+
+			{showHistoryModal && selectedExercise && (
+				<ExerciseHistoryModal
+					exerciseName={selectedExercise.name}
+					onClose={() => setShowHistoryModal(false)}
+				/>
+			)}
 		</AdminPageWrapper>
 	);
 }

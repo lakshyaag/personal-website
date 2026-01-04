@@ -1,0 +1,530 @@
+[
+	{
+		"id": "bench_press_barbell",
+		"canonicalName": "Barbell Bench Press",
+		"aliases": [
+			"bench press",
+			"flat bench",
+			"bb bench",
+			"bench"
+		],
+		"category": "compound",
+		"primaryMuscles": [
+			"chest",
+			"triceps",
+			"shoulders"
+		]
+	},
+	{
+		"id": "bench_press_incline_barbell",
+		"canonicalName": "Incline Barbell Bench Press",
+		"aliases": [
+			"incline bench",
+			"incline bb bench",
+			"incline press"
+		],
+		"category": "compound",
+		"primaryMuscles": [
+			"chest",
+			"shoulders",
+			"triceps"
+		]
+	},
+	{
+		"id": "bench_press_dumbbell",
+		"canonicalName": "Dumbbell Bench Press",
+		"aliases": [
+			"db bench",
+			"db press",
+			"dumbbell press",
+			"flat db bench",
+			"db flat bench press",
+			"dumbbell flat press",
+			"db bench press"
+		],
+		"category": "compound",
+		"primaryMuscles": [
+			"chest",
+			"triceps",
+			"shoulders"
+		]
+	},
+	{
+		"id": "bench_press_incline_dumbbell",
+		"canonicalName": "Incline Dumbbell Bench Press",
+		"aliases": [
+			"incline db bench",
+			"incline db press"
+		],
+		"category": "compound",
+		"primaryMuscles": [
+			"chest",
+			"shoulders",
+			"triceps"
+		]
+	},
+	{
+		"id": "squat_barbell",
+		"canonicalName": "Barbell Squat",
+		"aliases": [
+			"squat",
+			"back squat",
+			"bb squat",
+			"high bar squat",
+			"low bar squat"
+		],
+		"category": "compound",
+		"primaryMuscles": [
+			"quads",
+			"glutes",
+			"hamstrings",
+			"lower back"
+		]
+	},
+	{
+		"id": "squat_goblet",
+		"canonicalName": "Goblet Squat",
+		"aliases": [
+			"goblet"
+		],
+		"category": "compound",
+		"primaryMuscles": [
+			"quads",
+			"glutes"
+		]
+	},
+	{
+		"id": "lunge",
+		"canonicalName": "Lunges",
+		"aliases": [
+			"lunge",
+			"walking lunge",
+			"reverse lunge"
+		],
+		"category": "compound",
+		"primaryMuscles": [
+			"quads",
+			"glutes",
+			"hamstrings"
+		]
+	},
+	{
+		"id": "deadlift_conventional",
+		"canonicalName": "Conventional Deadlift",
+		"aliases": [
+			"deadlift",
+			"bb deadlift",
+			"conventional dl"
+		],
+		"category": "compound",
+		"primaryMuscles": [
+			"lower back",
+			"hamstrings",
+			"glutes",
+			"traps"
+		]
+	},
+	{
+		"id": "deadlift_sumo",
+		"canonicalName": "Sumo Deadlift",
+		"aliases": [
+			"sumo dl",
+			"sumo"
+		],
+		"category": "compound",
+		"primaryMuscles": [
+			"glutes",
+			"quads",
+			"hamstrings",
+			"lower back"
+		]
+	},
+	{
+		"id": "deadlift_romanian_dumbbell",
+		"canonicalName": "Dumbbell Romanian Deadlift",
+		"aliases": [
+			"db rdl",
+			"romanian deadlift db",
+			"rdl dumbbell"
+		],
+		"category": "compound",
+		"primaryMuscles": [
+			"hamstrings",
+			"glutes",
+			"lower back"
+		]
+	},
+	{
+		"id": "overhead_press_barbell",
+		"canonicalName": "Barbell Overhead Press",
+		"aliases": [
+			"ohp",
+			"military press",
+			"shoulder press",
+			"bb press"
+		],
+		"category": "compound",
+		"primaryMuscles": [
+			"shoulders",
+			"triceps"
+		]
+	},
+	{
+		"id": "overhead_press_dumbbell",
+		"canonicalName": "Dumbbell Overhead Press",
+		"aliases": [
+			"db ohp",
+			"db shoulder press",
+			"dumbbell shoulder press"
+		],
+		"category": "compound",
+		"primaryMuscles": [
+			"shoulders",
+			"triceps"
+		]
+	},
+	{
+		"id": "lat_pulldown_cable",
+		"canonicalName": "Cable Lat Pulldown",
+		"aliases": [
+			"lat pulldown",
+			"pulldown",
+			"lat pull down"
+		],
+		"category": "isolation",
+		"primaryMuscles": [
+			"lats",
+			"biceps",
+			"middle back"
+		]
+	},
+	{
+		"id": "pull_up",
+		"canonicalName": "Pull Up",
+		"aliases": [
+			"pullups",
+			"pull up",
+			"pull-ups",
+			"weighted pull ups"
+		],
+		"category": "compound",
+		"primaryMuscles": [
+			"lats",
+			"biceps",
+			"middle back"
+		]
+	},
+	{
+		"id": "dip",
+		"canonicalName": "Dips",
+		"aliases": [
+			"dip",
+			"tricep dips",
+			"chest dips",
+			"weighted dips"
+		],
+		"category": "compound",
+		"primaryMuscles": [
+			"triceps",
+			"chest",
+			"shoulders"
+		]
+	},
+	{
+		"id": "dip_bench",
+		"canonicalName": "Bench Tricep Dips",
+		"aliases": [
+			"bench dips",
+			"chair dips"
+		],
+		"category": "isolation",
+		"primaryMuscles": [
+			"triceps",
+			"shoulders"
+		]
+	},
+	{
+		"id": "row_barbell",
+		"canonicalName": "Barbell Row",
+		"aliases": [
+			"bb row",
+			"bent over row",
+			"bent over bb row"
+		],
+		"category": "compound",
+		"primaryMuscles": [
+			"middle back",
+			"lats",
+			"biceps",
+			"rear delts"
+		]
+	},
+	{
+		"id": "row_seated_machine",
+		"canonicalName": "Seated Row Machine",
+		"aliases": [
+			"seated row",
+			"machine row",
+			"cable row"
+		],
+		"category": "compound",
+		"primaryMuscles": [
+			"lats",
+			"middle back",
+			"biceps"
+		]
+	},
+	{
+		"id": "row_dumbbell",
+		"canonicalName": "Dumbbell Row",
+		"aliases": [
+			"db row",
+			"one arm db row",
+			"single arm row",
+			"single arm db row",
+			"single arm dumbbell row"
+		],
+		"category": "compound",
+		"primaryMuscles": [
+			"middle back",
+			"lats",
+			"biceps",
+			"rear delts"
+		]
+	},
+	{
+		"id": "bicep_curl_dumbbell",
+		"canonicalName": "Dumbbell Bicep Curl",
+		"aliases": [
+			"bicep curl",
+			"db curl",
+			"curls",
+			"dumbbell curl"
+		],
+		"category": "isolation",
+		"primaryMuscles": [
+			"biceps"
+		]
+	},
+	{
+		"id": "bicep_curl_hammer",
+		"canonicalName": "Hammer Curl",
+		"aliases": [
+			"hammer curls",
+			"neutral grip curl"
+		],
+		"category": "isolation",
+		"primaryMuscles": [
+			"biceps",
+			"brachioradialis"
+		]
+	},
+	{
+		"id": "bicep_curl_barbell",
+		"canonicalName": "Barbell Bicep Curl",
+		"aliases": [
+			"bb curl",
+			"straight bar curl"
+		],
+		"category": "isolation",
+		"primaryMuscles": [
+			"biceps"
+		]
+	},
+	{
+		"id": "tricep_extension_cable",
+		"canonicalName": "Cable Tricep Pushdown",
+		"aliases": [
+			"tricep pushdown",
+			"tricep extension",
+			"cable extension",
+			"tricep pulldown"
+		],
+		"category": "isolation",
+		"primaryMuscles": [
+			"triceps"
+		]
+	},
+	{
+		"id": "lateral_raise_dumbbell",
+		"canonicalName": "Dumbbell Lateral Raise",
+		"aliases": [
+			"lateral raise",
+			"side raise",
+			"db lateral raise"
+		],
+		"category": "isolation",
+		"primaryMuscles": [
+			"shoulders"
+		]
+	},
+	{
+		"id": "leg_press",
+		"canonicalName": "Leg Press",
+		"aliases": [
+			"legpress",
+			"sled press"
+		],
+		"category": "compound",
+		"primaryMuscles": [
+			"quads",
+			"glutes"
+		]
+	},
+	{
+		"id": "glute_bridge",
+		"canonicalName": "Glute Bridge",
+		"aliases": [
+			"glute bridges",
+			"hip thrust",
+			"bridges"
+		],
+		"category": "compound",
+		"primaryMuscles": [
+			"glutes",
+			"hamstrings"
+		]
+	},
+	{
+		"id": "chest_press_machine",
+		"canonicalName": "Chest Press",
+		"aliases": [
+			"machine chest press",
+			"chest press machine"
+		],
+		"category": "compound",
+		"primaryMuscles": [
+			"chest",
+			"shoulders",
+			"triceps"
+		]
+	},
+	{
+		"id": "push_up",
+		"canonicalName": "Push Ups",
+		"aliases": [
+			"pushup",
+			"push-ups",
+			"push up"
+		],
+		"category": "compound",
+		"primaryMuscles": [
+			"chest",
+			"triceps",
+			"shoulders"
+		]
+	},
+	{
+		"id": "leg_extension",
+		"canonicalName": "Leg Extension",
+		"aliases": [
+			"quad extension"
+		],
+		"category": "isolation",
+		"primaryMuscles": [
+			"quads"
+		]
+	},
+	{
+		"id": "leg_curl",
+		"canonicalName": "Leg Curl",
+		"aliases": [
+			"hamstring curl",
+			"lying leg curl",
+			"seated leg curl"
+		],
+		"category": "isolation",
+		"primaryMuscles": [
+			"hamstrings"
+		]
+	},
+	{
+		"id": "face_pull_cable",
+		"canonicalName": "Cable Face Pull",
+		"aliases": [
+			"face pull",
+			"facepulls"
+		],
+		"category": "isolation",
+		"primaryMuscles": [
+			"rear delts",
+			"traps"
+		]
+	},
+	{
+		"id": "plank",
+		"canonicalName": "Plank",
+		"aliases": [
+			"planks",
+			"weighted plank"
+		],
+		"category": "core",
+		"primaryMuscles": [
+			"abs"
+		]
+	},
+	{
+		"id": "hanging_leg_raise",
+		"canonicalName": "Hanging Leg Raise",
+		"aliases": [
+			"leg raise",
+			"hanging knee raise"
+		],
+		"category": "core",
+		"primaryMuscles": [
+			"abs"
+		]
+	},
+	{
+		"id": "ab_crunch",
+		"canonicalName": "Ab Crunch",
+		"aliases": [
+			"ab crunches",
+			"crunches",
+			"standing abs crunch",
+			"standing ab crunch"
+		],
+		"category": "core",
+		"primaryMuscles": [
+			"abs"
+		]
+	},
+	{
+		"id": "dead_bug",
+		"canonicalName": "Dead Bug",
+		"aliases": [
+			"deadbugs"
+		],
+		"category": "core",
+		"primaryMuscles": [
+			"abs",
+			"obliques"
+		]
+	},
+	{
+		"id": "russian_twist",
+		"canonicalName": "Russian Twists",
+		"aliases": [
+			"russian twist",
+			"seated twist"
+		],
+		"category": "core",
+		"primaryMuscles": [
+			"obliques",
+			"abs"
+		]
+	},
+	{
+		"id": "treadmill_walk",
+		"canonicalName": "Treadmill Walk",
+		"aliases": [
+			"incline walk",
+			"walking",
+			"treadmill"
+		],
+		"category": "cardio",
+		"primaryMuscles": [
+			"legs"
+		]
+	}
+]
