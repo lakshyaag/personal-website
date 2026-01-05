@@ -266,7 +266,7 @@ export default function AdminBooksPage() {
 		}
 
 		const bookData: BookEntry = {
-			id: form.id || `book-${Date.now()}`,
+			id: form.id || crypto.randomUUID(),
 			title: form.title,
 			author: form.author,
 			isbn: form.isbn || undefined,
@@ -284,8 +284,8 @@ export default function AdminBooksPage() {
 			isCurrent: form.isCurrent ? true : undefined,
 		};
 
-		const success = await saveBook(bookData);
-		if (success) {
+		const id = await saveBook(bookData);
+		if (id) {
 			// Clean up recommendation if this was from one
 			if (acceptedRecId) {
 				try {
