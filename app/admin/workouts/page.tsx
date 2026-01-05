@@ -20,13 +20,16 @@ import {
 	type ViewMode,
 	ViewModeToggle,
 } from "@/components/admin/ViewModeToggle";
+import { ExerciseHistoryCard } from "@/components/admin/ExerciseHistoryCard";
+import { ExerciseHistoryModal } from "@/components/admin/ExerciseHistoryModal";
+import { ExerciseSearch } from "@/components/admin/ExerciseSearch";
 import {
 	WorkoutAnalysisModal,
 	type WorkoutAnalysisResult,
 } from "@/components/admin/WorkoutAnalysisModal";
 import { useAdminCrud } from "@/hooks/useAdminCrud";
 import { formatDate, getTodayDate } from "@/lib/date-utils";
-import type { WorkoutLog } from "@/lib/models";
+import type { WorkoutExercise, WorkoutLog } from "@/lib/models";
 import { BarChart3, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
@@ -42,11 +45,20 @@ export default function AdminWorkoutsPage() {
 		Record<string, WorkoutLog[]>
 	>({});
 	const [viewMode, setViewMode] = useState<ViewMode>("date");
+	const [activeTab, setActiveTab] = useState<"entry" | "lookup">("entry");
 
 	const [analyzingLog, setAnalyzingLog] = useState<WorkoutLog | null>(null);
 	const [isAnalyzing, setIsAnalyzing] = useState(false);
 	const [analysisResult, setAnalysisResult] =
 		useState<WorkoutAnalysisResult | null>(null);
+
+	const [selectedExercise, setSelectedExercise] = useState<{
+		name: string;
+		lastPerformed: string;
+		sets: NonNullable<WorkoutExercise["sets"]>;
+		notes?: string | null;
+	} | null>(null);
+	const [showHistoryModal, setShowHistoryModal] = useState(false);
 
 	const { saving, loading, save, remove, loadByDate, loadGrouped } =
 		useAdminCrud<WorkoutLog>({
@@ -152,6 +164,34 @@ export default function AdminWorkoutsPage() {
 		setContent("");
 		setUploadedPhotos([]);
 		setEditingLog(null);
+		setSelectedExercise(null);
+	}
+
+	async function handleExerciseSelect(exercise: { canonicalName: string }) {
+		try {
+			const res = await fetch(
+				`/api/workouts/exercises/${encodeURIComponent(exercise.canonicalName)}`,
+			);
+			const data = await res.json();
+			if (data.history && data.history.length > 0) {
+				const last = data.history[0];
+				setSelectedExercise({
+					name: exercise.canonicalName,
+					lastPerformed: last.date,
+					sets: last.sets,
+					notes: last.notes,
+				});
+			} else {
+				setSelectedExercise({
+					name: exercise.canonicalName,
+					lastPerformed: "Never",
+					sets: [],
+					notes: "No history found.",
+				});
+			}
+		} catch (error) {
+			console.error("Error fetching exercise history:", error);
+		}
 	}
 
 	async function handleAnalyze(log: WorkoutLog) {
@@ -265,63 +305,94 @@ export default function AdminWorkoutsPage() {
 					title="Workout Tracker"
 					description="Track your workouts with minimal friction."
 				/>
-				<Link
-					href="/admin/workouts/dashboard"
-					className="flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg bg-purple-100 text-purple-700 hover:bg-purple-200 dark:bg-purple-900/30 dark:text-purple-300 dark:hover:bg-purple-900/50 transition-colors"
-				>
-					<BarChart3 className="w-4 h-4" />
-					Dashboard
-				</Link>
 			</div>
 
-			<AdminSection className="space-y-8">
-				<div className="space-y-4">
-					<SectionHeader title={editingLog ? "Edit Log" : "Quick Log"} />
+			<div className="mb-6">
+				<ViewModeToggle
+					viewMode={activeTab === "entry" ? "date" : "all"}
+					onViewModeChange={(m) =>
+						setActiveTab(m === "date" ? "entry" : "lookup")
+					}
+					dateLabel="Log Entry"
+					allLabel="Exercise Lookup"
+				/>
+			</div>
 
-					<DateInput
-						id="workout-date"
-						label="Date"
-						value={date}
-						onChange={handleDateChange}
-					/>
+			{activeTab === "entry" ? (
+				<AdminSection className="space-y-8">
+					<div className="space-y-4">
+						<SectionHeader title={editingLog ? "Edit Log" : "Quick Log"} />
 
-					<NumberInput
-						id="workout-weight"
-						label="Bodyweight (kg)"
-						value={weight}
-						onChange={setWeight}
-						step={0.1}
-						placeholder="e.g., 75.5"
-					/>
+						<DateInput
+							id="workout-date"
+							label="Date"
+							value={date}
+							onChange={handleDateChange}
+						/>
 
-					<TextArea
-						id="workout-content"
-						label="Notes (optional)"
-						value={content}
-						onChange={setContent}
-						rows={4}
-						placeholder="Log your workout... exercises, sets, reps, or whatever you want to track"
-					/>
+						<NumberInput
+							id="workout-weight"
+							label="Bodyweight (kg)"
+							value={weight}
+							onChange={setWeight}
+							step={0.1}
+							placeholder="e.g., 75.5"
+						/>
 
-					<PhotoUploader
-						label="Photos (optional)"
-						photos={uploadedPhotos}
-						onChange={setUploadedPhotos}
-						folder="workouts"
-						identifier={date.replace(/-/g, "")}
-					/>
+						<TextArea
+							id="workout-content"
+							label="Notes (optional)"
+							value={content}
+							onChange={setContent}
+							rows={4}
+							placeholder="Log your workout... exercises, sets, reps, or whatever you want to track"
+						/>
 
-					<FormActions
-						saving={saving}
-						isEditing={!!editingLog}
-						onSave={saveLog}
-						onCancel={resetForm}
-						disabled={!date}
-						saveLabel="Save Log"
-						saveEditLabel="Update Log"
-					/>
-				</div>
-			</AdminSection>
+						<PhotoUploader
+							label="Photos (optional)"
+							photos={uploadedPhotos}
+							onChange={setUploadedPhotos}
+							folder="workouts"
+							identifier={date.replace(/-/g, "")}
+						/>
+
+						<FormActions
+							saving={saving}
+							isEditing={!!editingLog}
+							onSave={saveLog}
+							onCancel={resetForm}
+							disabled={!date}
+							saveLabel="Save Log"
+							saveEditLabel="Update Log"
+						/>
+					</div>
+				</AdminSection>
+			) : (
+				<AdminSection className="space-y-4">
+					<div className="flex items-center justify-between">
+						<SectionHeader title="Exercise Lookup" />
+						<Link
+							href="/admin/workouts/dashboard"
+							className="flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg bg-purple-100 text-purple-700 hover:bg-purple-200 dark:bg-purple-900/30 dark:text-purple-300 dark:hover:bg-purple-900/50 transition-colors"
+						>
+							<BarChart3 className="w-4 h-4" />
+							Stats Dashboard
+						</Link>
+					</div>
+					<ExerciseSearch onSelect={handleExerciseSelect} />
+
+					{selectedExercise && (
+						<ExerciseHistoryCard
+							exerciseName={selectedExercise.name}
+							lastPerformed={selectedExercise.lastPerformed}
+							sets={selectedExercise.sets}
+							notes={selectedExercise.notes}
+							onViewHistory={() => setShowHistoryModal(true)}
+							onClear={() => setSelectedExercise(null)}
+						/>
+					)}
+				</AdminSection>
+			)}
 
 			<AdminSection>
 				<div className="space-y-4">
@@ -374,6 +445,13 @@ export default function AdminWorkoutsPage() {
 				analysisResult={analysisResult}
 				onAnalyze={handleAnalyze}
 			/>
+
+			{showHistoryModal && selectedExercise && (
+				<ExerciseHistoryModal
+					exerciseName={selectedExercise.name}
+					onClose={() => setShowHistoryModal(false)}
+				/>
+			)}
 		</AdminPageWrapper>
 	);
 }
