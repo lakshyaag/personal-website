@@ -45,6 +45,7 @@ export default function AdminWorkoutsPage() {
 		Record<string, WorkoutLog[]>
 	>({});
 	const [viewMode, setViewMode] = useState<ViewMode>("date");
+	const [activeTab, setActiveTab] = useState<"entry" | "lookup">("entry");
 
 	const [analyzingLog, setAnalyzingLog] = useState<WorkoutLog | null>(null);
 	const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -304,82 +305,94 @@ export default function AdminWorkoutsPage() {
 					title="Workout Tracker"
 					description="Track your workouts with minimal friction."
 				/>
-				<Link
-					href="/admin/workouts/dashboard"
-					className="flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg bg-purple-100 text-purple-700 hover:bg-purple-200 dark:bg-purple-900/30 dark:text-purple-300 dark:hover:bg-purple-900/50 transition-colors"
-				>
-					<BarChart3 className="w-4 h-4" />
-					Dashboard
-				</Link>
 			</div>
 
-			<AdminSection className="space-y-8">
-				<div className="space-y-4">
-					<SectionHeader title={editingLog ? "Edit Log" : "Quick Log"} />
+			<div className="mb-6">
+				<ViewModeToggle
+					viewMode={activeTab === "entry" ? "date" : "all"}
+					onViewModeChange={(m) =>
+						setActiveTab(m === "date" ? "entry" : "lookup")
+					}
+					dateLabel="Log Entry"
+					allLabel="Exercise Lookup"
+				/>
+			</div>
 
-					<DateInput
-						id="workout-date"
-						label="Date"
-						value={date}
-						onChange={handleDateChange}
-					/>
+			{activeTab === "entry" ? (
+				<AdminSection className="space-y-8">
+					<div className="space-y-4">
+						<SectionHeader title={editingLog ? "Edit Log" : "Quick Log"} />
 
-					<NumberInput
-						id="workout-weight"
-						label="Bodyweight (kg)"
-						value={weight}
-						onChange={setWeight}
-						step={0.1}
-						placeholder="e.g., 75.5"
-					/>
-
-					<TextArea
-						id="workout-content"
-						label="Notes (optional)"
-						value={content}
-						onChange={setContent}
-						rows={4}
-						placeholder="Log your workout... exercises, sets, reps, or whatever you want to track"
-					/>
-
-					<PhotoUploader
-						label="Photos (optional)"
-						photos={uploadedPhotos}
-						onChange={setUploadedPhotos}
-						folder="workouts"
-						identifier={date.replace(/-/g, "")}
-					/>
-
-					<div className="space-y-4 pt-4 border-t border-zinc-100 dark:border-zinc-800">
-						<SectionHeader
-							title="Exercise Lookup"
-							description="Search to see your last performance for progressive overload."
+						<DateInput
+							id="workout-date"
+							label="Date"
+							value={date}
+							onChange={handleDateChange}
 						/>
-						<ExerciseSearch onSelect={handleExerciseSelect} />
 
-						{selectedExercise && (
-							<ExerciseHistoryCard
-								exerciseName={selectedExercise.name}
-								lastPerformed={selectedExercise.lastPerformed}
-								sets={selectedExercise.sets}
-								notes={selectedExercise.notes}
-								onViewHistory={() => setShowHistoryModal(true)}
-								onClear={() => setSelectedExercise(null)}
-							/>
-						)}
+						<NumberInput
+							id="workout-weight"
+							label="Bodyweight (kg)"
+							value={weight}
+							onChange={setWeight}
+							step={0.1}
+							placeholder="e.g., 75.5"
+						/>
+
+						<TextArea
+							id="workout-content"
+							label="Notes (optional)"
+							value={content}
+							onChange={setContent}
+							rows={4}
+							placeholder="Log your workout... exercises, sets, reps, or whatever you want to track"
+						/>
+
+						<PhotoUploader
+							label="Photos (optional)"
+							photos={uploadedPhotos}
+							onChange={setUploadedPhotos}
+							folder="workouts"
+							identifier={date.replace(/-/g, "")}
+						/>
+
+						<FormActions
+							saving={saving}
+							isEditing={!!editingLog}
+							onSave={saveLog}
+							onCancel={resetForm}
+							disabled={!date}
+							saveLabel="Save Log"
+							saveEditLabel="Update Log"
+						/>
 					</div>
+				</AdminSection>
+			) : (
+				<AdminSection className="space-y-4">
+					<div className="flex items-center justify-between">
+						<SectionHeader title="Exercise Lookup" />
+						<Link
+							href="/admin/workouts/dashboard"
+							className="flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg bg-purple-100 text-purple-700 hover:bg-purple-200 dark:bg-purple-900/30 dark:text-purple-300 dark:hover:bg-purple-900/50 transition-colors"
+						>
+							<BarChart3 className="w-4 h-4" />
+							Stats Dashboard
+						</Link>
+					</div>
+					<ExerciseSearch onSelect={handleExerciseSelect} />
 
-					<FormActions
-						saving={saving}
-						isEditing={!!editingLog}
-						onSave={saveLog}
-						onCancel={resetForm}
-						disabled={!date}
-						saveLabel="Save Log"
-						saveEditLabel="Update Log"
-					/>
-				</div>
-			</AdminSection>
+					{selectedExercise && (
+						<ExerciseHistoryCard
+							exerciseName={selectedExercise.name}
+							lastPerformed={selectedExercise.lastPerformed}
+							sets={selectedExercise.sets}
+							notes={selectedExercise.notes}
+							onViewHistory={() => setShowHistoryModal(true)}
+							onClear={() => setSelectedExercise(null)}
+						/>
+					)}
+				</AdminSection>
+			)}
 
 			<AdminSection>
 				<div className="space-y-4">
