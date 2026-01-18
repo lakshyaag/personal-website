@@ -6,14 +6,55 @@ import { supabaseAdmin } from "@/lib/supabase-client";
 import { generateObject } from "ai";
 import { z } from "zod";
 
+// Flexible number schema: accepts number or string, transforms to number | null
+// Handles cases where AI returns "10", "8-10", or numbers
+const flexibleNumberSchema = z
+	.union([z.number(), z.string(), z.null()])
+	.transform((val) => {
+		if (val === null || val === undefined) return null;
+		if (typeof val === "number") return val;
+		// For ranges like "8-10", use the average
+		if (val.includes("-")) {
+			const parts = val.split("-").map((p) => Number.parseFloat(p.trim()));
+			if (parts.length === 2 && !Number.isNaN(parts[0]) && !Number.isNaN(parts[1])) {
+				return Math.round((parts[0] + parts[1]) / 2);
+			}
+		}
+		// Try to parse numeric string (handles "10", "12.5", etc.)
+		const parsed = Number.parseFloat(val);
+		return Number.isNaN(parsed) ? null : parsed;
+	});
+
+// Flexible weight schema: extends flexibleNumberSchema with bodyweight handling
+const flexibleWeightSchema = z
+	.union([z.number(), z.string(), z.null()])
+	.transform((val) => {
+		if (val === null || val === undefined) return null;
+		if (typeof val === "number") return val;
+		// Handle "bodyweight", "bw", etc. -> null
+		const lower = val.toLowerCase();
+		if (lower.includes("bodyweight") || lower === "bw") {
+			return null;
+		}
+		// Try to parse numeric string
+		const parsed = Number.parseFloat(val);
+		return Number.isNaN(parsed) ? null : parsed;
+	})
+	.describe("Weight in lbs, null for bodyweight or cardio");
+
+// Flexible duration schema: accepts number or string, keeps as string
+const flexibleDurationSchema = z
+	.union([z.number(), z.string(), z.null()])
+	.transform((val) => {
+		if (val === null || val === undefined) return null;
+		if (typeof val === "number") return String(val);
+		return val;
+	})
+	.describe("Total duration for cardio or timed exercises");
+
 const exerciseSetSchema = z.object({
-	weight: z
-		.number()
-		.nullable()
-		.describe("Weight in lbs, null for bodyweight or cardio"),
-	reps: z
-		.number()
-		.nullable()
+	weight: flexibleWeightSchema,
+	reps: flexibleNumberSchema
 		.describe("Number of reps, null for cardio/timed exercises"),
 });
 
@@ -35,19 +76,11 @@ const exerciseSchema = z.object({
 		.array(exerciseSetSchema)
 		.optional()
 		.describe("Array of sets with weight/reps for strength exercises"),
-	duration: z
-		.number()
-		.nullable()
-		.optional()
-		.describe("Total duration in minutes for cardio exercises"),
-	incline: z
-		.number()
-		.nullable()
+	duration: flexibleDurationSchema.optional(),
+	incline: flexibleNumberSchema
 		.optional()
 		.describe("Incline setting for treadmill (e.g., 12 for '12 at 3')"),
-	speed: z
-		.number()
-		.nullable()
+	speed: flexibleNumberSchema
 		.optional()
 		.describe("Speed setting for treadmill (e.g., 3 for '12 at 3')"),
 	notes: z

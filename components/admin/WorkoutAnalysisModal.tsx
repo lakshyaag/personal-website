@@ -73,8 +73,13 @@ function ExerciseCard({ exercise }: { exercise: WorkoutExercise }) {
 				</div>
 			)}
 
-			{isCardio && (
+			{(isCardio || exercise.duration) && (
 				<div className="flex gap-4 text-sm">
+					{exercise.duration && (
+						<span className="text-zinc-600 dark:text-zinc-400">
+							Duration: {exercise.duration}
+						</span>
+					)}
 					{exercise.incline && (
 						<span className="text-zinc-600 dark:text-zinc-400">
 							Incline: {exercise.incline}

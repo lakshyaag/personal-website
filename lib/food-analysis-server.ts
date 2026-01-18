@@ -6,15 +6,30 @@ import { getAIConfig } from "@/lib/ai-config-db";
 import { supabaseAdmin } from "@/lib/supabase-client";
 import { parseSupabaseRef, isHttpUrl, isSupabaseRef } from "@/lib/photo-refs";
 
+// Flexible number schema for nutritional values
+// Handles cases where AI returns "500", "500 kcal", "25g", or numbers
+const flexibleNutritionNumber = z
+    .union([z.number(), z.string(), z.null()])
+    .transform((val) => {
+        if (val === null || val === undefined) return 0;
+        if (typeof val === "number") return val;
+        // Extract number from strings like "500 kcal", "25g", "100 calories"
+        const match = val.match(/(\d+\.?\d*)/);
+        if (match) {
+            return Number.parseFloat(match[1]);
+        }
+        return 0;
+    });
+
 // Schema for structured AI response (shared with the old route for now)
 export const foodAnalysisSchema = z.object({
     foodName: z
         .string()
         .describe("A concise name for the food item(s) identified"),
-    calories: z.number().int().describe("Estimated total calories (kcal)"),
-    proteinG: z.number().describe("Estimated protein content in grams"),
-    carbsG: z.number().describe("Estimated carbohydrate content in grams"),
-    fatG: z.number().describe("Estimated fat content in grams"),
+    calories: flexibleNutritionNumber.describe("Estimated total calories (kcal)"),
+    proteinG: flexibleNutritionNumber.describe("Estimated protein content in grams"),
+    carbsG: flexibleNutritionNumber.describe("Estimated carbohydrate content in grams"),
+    fatG: flexibleNutritionNumber.describe("Estimated fat content in grams"),
     notes: z
         .string()
         .describe(

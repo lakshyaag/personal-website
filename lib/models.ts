@@ -200,6 +200,7 @@ export interface WorkoutExercise {
 		weight: number | null;
 		reps: number | null;
 	}>;
+	duration?: string | null;
 	incline?: number | null;
 	speed?: number | null;
 	notes?: string | null;
