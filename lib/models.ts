@@ -480,3 +480,125 @@ export function transformFitsEntryToDb(
 		updated_at: new Date().toISOString(),
 	};
 }
+
+export interface Habit {
+	id: string;
+	name: string;
+	emoji?: string;
+	type: "auto" | "manual";
+	valueType: "boolean" | "count" | "duration";
+	target?: number;
+	frequency: "daily" | "weekly" | "specific_days";
+	daysOfWeek?: number[];
+	weeklyTarget?: number;
+	autoSource?: "workouts" | "food" | "journal" | "fits" | "visits";
+	displayOrder: number;
+	archived: boolean;
+	createdAt: string;
+}
+
+// Database row type for habits (snake_case columns)
+export interface HabitDbRow {
+	id: string;
+	name: string;
+	emoji: string | null;
+	type: "auto" | "manual";
+	value_type: "boolean" | "count" | "duration";
+	target: number | null;
+	frequency: "daily" | "weekly" | "specific_days";
+	days_of_week: number[] | null;
+	weekly_target: number | null;
+	auto_source: "workouts" | "food" | "journal" | "fits" | "visits" | null;
+	display_order: number;
+	archived: boolean;
+	created_at: string;
+}
+
+// Transform database row to application type
+export function transformHabitFromDb(row: HabitDbRow): Habit {
+	return {
+		id: row.id,
+		name: row.name,
+		emoji: row.emoji ?? undefined,
+		type: row.type,
+		valueType: row.value_type,
+		target: row.target ?? undefined,
+		frequency: row.frequency,
+		daysOfWeek: row.days_of_week ?? undefined,
+		weeklyTarget: row.weekly_target ?? undefined,
+		autoSource: row.auto_source ?? undefined,
+		displayOrder: row.display_order,
+		archived: row.archived,
+		createdAt: row.created_at,
+	};
+}
+
+// Transform application type to database row
+export function transformHabitToDb(
+	habit: Habit,
+): Omit<HabitDbRow, "created_at"> {
+	return {
+		id: habit.id,
+		name: habit.name,
+		emoji: habit.emoji ?? null,
+		type: habit.type,
+		value_type: habit.valueType,
+		target: habit.target ?? null,
+		frequency: habit.frequency,
+		days_of_week: habit.daysOfWeek ?? null,
+		weekly_target: habit.weeklyTarget ?? null,
+		auto_source: habit.autoSource ?? null,
+		display_order: habit.displayOrder,
+		archived: habit.archived,
+	};
+}
+
+export interface HabitCompletion {
+	id: string;
+	habitId: string;
+	date: string; // YYYY-MM-DD
+	completed: boolean;
+	value?: number;
+	notes?: string;
+	createdAt: string;
+}
+
+// Database row type for habit_completions (snake_case columns)
+export interface HabitCompletionDbRow {
+	id: string;
+	habit_id: string;
+	completion_date: string;
+	completed: boolean;
+	value: number | null;
+	notes: string | null;
+	created_at: string;
+}
+
+// Transform database row to application type
+export function transformHabitCompletionFromDb(
+	row: HabitCompletionDbRow,
+): HabitCompletion {
+	return {
+		id: row.id,
+		habitId: row.habit_id,
+		date: row.completion_date,
+		completed: row.completed,
+		value: row.value ?? undefined,
+		notes: row.notes ?? undefined,
+		createdAt: row.created_at,
+	};
+}
+
+// Transform application type to database row
+export function transformHabitCompletionToDb(
+	completion: HabitCompletion,
+): Omit<HabitCompletionDbRow, "created_at"> {
+	return {
+		id: completion.id,
+		habit_id: completion.habitId,
+		completion_date: completion.date,
+		completed: completion.completed,
+		value: completion.value ?? null,
+		notes: completion.notes ?? null,
+	};
+}

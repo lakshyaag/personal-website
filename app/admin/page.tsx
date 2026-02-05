@@ -16,6 +16,11 @@ export default function AdminPage() {
 	const router = useRouter();
 	const sections = [
 		{
+			title: "Habits",
+			description: "Track daily habits and streaks",
+			href: "/admin/habits",
+		},
+		{
 			title: "Books",
 			description: "Manage your reading library",
 			href: "/admin/books",
