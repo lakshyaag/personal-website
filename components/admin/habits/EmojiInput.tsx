@@ -2,6 +2,7 @@
 
 import { useId, useRef, useState, useCallback } from "react";
 import dynamic from "next/dynamic";
+import { Theme } from "emoji-picker-react";
 import { Smile } from "lucide-react";
 import useClickOutside from "@/hooks/useClickOutside";
 
@@ -85,7 +86,7 @@ export function EmojiInput({
 				<div className="absolute z-50 mt-2 [&_.epr-main]:!rounded-lg [&_.epr-main]:!border [&_.epr-main]:!border-zinc-200 [&_.epr-main]:!dark:border-zinc-700">
 					<EmojiPicker
 						onEmojiClick={handleEmojiClick}
-						theme={isDark ? "dark" : "light"}
+						theme={isDark ? Theme.DARK : Theme.LIGHT}
 						width={320}
 						height={360}
 					/>
