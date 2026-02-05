@@ -9,23 +9,32 @@ interface PageHeaderProps {
 	title: string;
 	description?: string;
 	actions?: React.ReactNode;
+	/** Override default "Back to Admin" link; e.g. { href: "/admin/habits", label: "Back to Habits" } */
+	backLink?: { href: string; label: string };
 }
 
-export function PageHeader({ title, description, actions }: PageHeaderProps) {
+export function PageHeader({
+	title,
+	description,
+	actions,
+	backLink,
+}: PageHeaderProps) {
 	const pathname = usePathname();
-	const showBackToAdmin =
+	const showBack =
 		!!pathname && pathname.startsWith("/admin/") && pathname !== "/admin/login";
+	const href = backLink?.href ?? "/admin";
+	const label = backLink?.label ?? "Back";
 
 	return (
 		<motion.section variants={VARIANTS_SECTION} transition={TRANSITION_SECTION}>
-			{showBackToAdmin && (
+			{showBack && (
 				<div className="mb-2">
 					<Link
-						href="/admin"
+						href={href}
 						className="inline-flex items-center gap-1 text-sm text-zinc-600 transition-colors hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
 					>
 						<span aria-hidden="true">←</span>
-						<span>Back</span>
+						<span>{label}</span>
 					</Link>
 				</div>
 			)}

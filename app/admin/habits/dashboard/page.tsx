@@ -1,8 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import Link from "next/link";
-import { ArrowLeft, Flame, TrendingUp, Calendar } from "lucide-react";
+import { Flame, TrendingUp, Calendar } from "lucide-react";
 import {
 	AdminPageWrapper,
 	AdminSection,
@@ -286,18 +285,11 @@ export default function HabitsDashboardPage() {
 
 	return (
 		<AdminPageWrapper>
-			<div className="flex items-center gap-4 mb-6">
-				<Link
-					href="/admin/habits"
-					className="p-2 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800"
-				>
-					<ArrowLeft size={20} />
-				</Link>
-				<PageHeader
-					title="Habits Dashboard"
-					description="Track your consistency and progress"
-				/>
-			</div>
+			<PageHeader
+				title="Habits Dashboard"
+				description="Track your consistency and progress"
+				backLink={{ href: "/admin/habits", label: "Back to Habits" }}
+			/>
 
 			{/* Quick Stats */}
 			<AdminSection>

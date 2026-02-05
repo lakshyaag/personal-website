@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { TextInput, SelectInput, NumberInput } from "@/components/admin/FormInputs";
+import { EmojiInput } from "./EmojiInput";
 import { FormActions } from "@/components/admin/FormActions";
 import type { Habit } from "@/lib/models";
 
@@ -12,23 +13,6 @@ interface HabitFormProps {
 	onCancel: () => void;
 	onDelete?: () => void;
 }
-
-const EMOJI_OPTIONS = [
-	{ value: "", label: "None" },
-	{ value: "🏋️", label: "🏋️ Workout" },
-	{ value: "🍽️", label: "🍽️ Food" },
-	{ value: "📓", label: "📓 Journal" },
-	{ value: "👕", label: "👕 Outfit" },
-	{ value: "✈️", label: "✈️ Travel" },
-	{ value: "🧘", label: "🧘 Meditate" },
-	{ value: "📖", label: "📖 Read" },
-	{ value: "💧", label: "💧 Water" },
-	{ value: "🏃", label: "🏃 Exercise" },
-	{ value: "😴", label: "😴 Sleep" },
-	{ value: "💊", label: "💊 Vitamins" },
-	{ value: "🚿", label: "🚿 Shower" },
-	{ value: "📵", label: "📵 No Phone" },
-];
 
 const TYPE_OPTIONS = [
 	{ value: "manual", label: "Manual (you check it off)" },
@@ -138,12 +122,11 @@ export function HabitForm({
 				placeholder="e.g., Meditate, Drink water, Read"
 			/>
 
-			<SelectInput
+			<EmojiInput
 				id="habit-emoji"
 				label="Emoji (optional)"
 				value={emoji}
 				onChange={setEmoji}
-				options={EMOJI_OPTIONS}
 			/>
 
 			<SelectInput
