@@ -1,0 +1,174 @@
+export const metadata = {
+  title: "Reading India's Trade Data",
+  description:
+    "I scraped 7 years of India's bilateral trade data. Russia went from 2% of energy imports to #1, China's grip tightened despite decoupling rhetoric, and phone exports grew tenfold.",
+  openGraph: {
+    title: "Reading India's Trade Data",
+    description:
+      "I scraped 7 years of India's bilateral trade data. Russia went from 2% of energy imports to #1, China's grip tightened despite decoupling rhetoric, and phone exports grew tenfold.",
+    type: "article",
+    url: "https://lakshyaag.com/blogs/reading-indias-trade-data",
+    images: [
+      {
+        url: "https://lakshyaag.com/api/og/blogs/reading-indias-trade-data",
+        width: 1200,
+        height: 630,
+        alt: "Reading India's Trade Data",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Reading India's Trade Data",
+    description:
+      "I scraped 7 years of India's bilateral trade data. Russia went from 2% of energy imports to #1, China's grip tightened despite decoupling rhetoric, and phone exports grew tenfold.",
+    images: [
+      {
+        url: "https://lakshyaag.com/api/og/blogs/reading-indias-trade-data",
+        width: 1200,
+        height: 630,
+        alt: "Reading India's Trade Data",
+      },
+    ],
+    creator: "@lakshyaag",
+  },
+  alternates: { canonical: "/blogs/reading-indias-trade-data" },
+};
+
+_TL;DR: I scraped 7 years of India's bilateral trade data from the Ministry of Commerce. The stories in it are wild — Russia went from supplying 2% of India's energy imports to being #1, China's manufacturing grip tightened despite every political effort to loosen it, and India's phone exports grew tenfold in seven years. Here's what the data actually says._
+
+## The Hook
+
+In 2019, Russia supplied less than 2% of India's mineral fuel imports. By 2025, it was the country's single largest energy supplier.
+
+That's the kind of story buried in trade data — not the headlines about diplomatic summits or sanctions, but the hard numbers showing what actually moved across borders. I scraped seven years of bilateral trade data from India's Ministry of Commerce, covering FY 2018-19 through FY 2024-25, and these are the stories that jumped out.
+
+
+
+## Why This Exists
+
+In 2017, I was an undergrad studying economics who wanted to learn Python. I found India's trade data portal, wrote a scraper, uploaded the dataset to Kaggle, and built an R Shiny dashboard. The point was learning to code, not trade analysis. I barely looked at what the data said.
+
+Nine years later, I rebuilt the whole pipeline. Playwright for browser automation, async Python for parallelism, Parquet for storage. What took weeks took hours. But this time I actually _looked_ at the data. And the stories in it are wild.
+
+The shift wasn't just in tooling. I went from "I can scrape a website" to "I can ask questions of the data." AI-assisted development made the engineering trivial — the hard part was knowing which questions to ask. That hasn't been automated yet.
+
+Here's what I found.
+
+
+
+## The Macro Picture
+
+<PlotlyChart src="/blogs/reading-indias-trade-data/chart1.json" />
+
+India's total trade grew about 37% over the seven-year window — exports up 33%, imports up 40%. But the shape of that growth matters more than the number. Imports consistently outpace exports, creating a persistent, structural trade deficit that widened sharply after FY21.
+
+Two things jump out immediately. First, the COVID trough in FY21 — trade contracted on both sides, but snapped back violently as commodity prices surged in FY22. Second, the deficit isn't shrinking. It's getting wider.
+
+One detail worth noting early: India's single largest export is refined petroleum — despite being a massive net oil importer. India imports crude, refines it, and re-exports the products. This creates the illusion of a petroleum powerhouse in export rankings, but the net picture is deeply negative. Keep that in mind as we dig into the deficit.
+
+So where does the deficit actually come from?
+
+## Where the Deficit Lives
+
+<PlotlyChart src="/blogs/reading-indias-trade-data/chart2.json" />
+
+The diverging bar chart tells the story more directly than any decomposition could. India's bilateral trade balance, country by country, for FY25.
+
+On the right, in green: the US (+$41B), Netherlands (+$18B), Bangladesh (+$10B). Countries where India exports more than it imports — finished goods, refined petroleum, pharmaceuticals, electronics.
+
+On the left, in red: China (-$99B), Russia (-$59B), UAE (-$27B), Iraq (-$26B), Saudi Arabia (-$18B). The structural dependencies: energy, manufacturing inputs, and gold.
+
+The pattern is stark. India earns from value-added exports to rich countries and spends on raw materials and intermediate goods from resource-rich ones. The deficit isn't diffuse — it's concentrated in a handful of relationships. China alone accounts for over a third of the total deficit. Add the oil exporters and you've explained nearly the whole thing.
+
+This sets up the two big stories in the data: Russia (energy dependency) and China (manufacturing dependency).
+
+## The Russia Pivot
+
+<PlotlyChart src="/blogs/reading-indias-trade-data/chart3.json" />
+
+Before February 2022, India's mineral fuel imports told a stable story. Iraq, Saudi Arabia, and the UAE were the big three. Russia was a rounding error — about 2% of India's mineral fuel imports (HS27, which covers crude oil, refined petroleum, coal, and natural gas).
+
+Then Russia invaded Ukraine. Western nations imposed sanctions. The EU embargoed Russian crude. The G7 introduced a price cap. And India saw an opportunity. (For Russia specifically, about 88% of HS27 is crude oil, with the rest being coal and refined products.)
+
+Within two years, Russia went from marginal to dominant. Russia's share of India's mineral fuel imports jumped from under 3% in FY22 to 15% in FY23 and 26% in FY25 — making it the single largest source. The data shows this shift with startling clarity — Russia's band in the stacked area chart goes from barely visible to dominating.
+
+This wasn't ideological alignment. It was pure economic pragmatism. Sanctioned Russian crude traded at steep discounts to Brent benchmarks. India's refineries — already configured to process a range of crude grades — could absorb the supply. The savings flowed through to domestic fuel prices and refinery margins.
+
+The speed of the pivot is what makes the chart striking. Russia's mineral fuel exports to India went from $5B in FY22 to $57B in FY25. Geopolitics reshuffled India's energy map in real time, and the data captures exactly when and how fast it happened.
+
+## The China Paradox
+
+<PlotlyChart src="/blogs/reading-indias-trade-data/chart4.json" height={750} />
+
+Now for the uncomfortable one.
+
+Despite "Atmanirbhar Bharat" (self-reliance), despite banning Chinese apps after the 2020 Galwan border clash, despite "China+1" becoming a corporate boardroom mantra — India's import dependence on China has _grown_, not shrunk.
+
+The bilateral deficit hit a record ~$99B in FY24-25. The core categories tell the story: electronics (HS85), machinery (HS84), and organic chemicals (HS29 — which are pharmaceutical intermediates). India's electronics manufacturing boom, its capital investment cycle, and its generic pharma industry all depend on Chinese inputs.
+
+The data flatly contradicts the political narrative. Every year since 2020, the rhetoric said "decouple." Every year since 2020, the trade numbers said "more dependent."
+
+This is what makes the next section — India's production-linked incentive scheme — more impressive, not less. India is _trying_ to break free. And in one specific category, it's actually working.
+
+## The PLI Miracle
+
+<PlotlyChart src="/blogs/reading-indias-trade-data/chart5.json" />
+
+The stacked area chart shows India's export composition over time, and one band is growing faster than everything else: electronics (HS85, in saffron at the bottom).
+
+The Production Linked Incentive (PLI) scheme, launched in 2020, pays companies to manufacture electronics domestically. The results show up clearly — HS85's share of total exports grew from about 6% in FY19 to over 10% in FY25. In absolute terms, electronics exports more than tripled: from $13B to $44B. Phone exports (HS8517) specifically went from $2.6B to $25.9B — a tenfold increase in seven years. Apple now assembles roughly 25% of its iPhones in India.
+
+India is still a net electronics _importer_ — HS85 imports hit $89B in FY25, dwarfing the $44B in exports. But the direction of travel is clear. A country that imported virtually all its phones a decade ago now exports $26B worth of them. That's industrial policy showing up in the trade data.
+
+The nuance: while China dependence grew in _inputs_ (components, chemicals, machinery), India built export capacity in _finished electronics_. The PLI story isn't about decoupling from China. It's about moving up the value chain — importing components and exporting finished products. Structural dependence on Chinese inputs coexists with genuine industrial upgrading in outputs.
+
+## Is India Diversifying?
+
+<PlotlyChart src="/blogs/reading-indias-trade-data/chart6.json" />
+
+This is the most analytical question in the dataset, and the one where my economics background actually matters.
+
+The chart shows the "effective number" of products and partners — a measure derived from the Herfindahl-Hirschman Index (HHI). The intuition: if India exported equally to N countries, the effective number would be N. A higher effective number means more diversification. Think of it as answering "how many equal-sized baskets are India's eggs spread across?"
+
+Two dimensions matter:
+
+**Product diversification.** India's effective number of export products has hovered around 17-18 HS2 chapters throughout the period — meaning India's export concentration is _as if_ it exported equally across about 17 broad product categories. This barely changed despite the PLI-driven electronics surge, because electronics simply replaced gems at the top of the basket rather than broadening it.
+
+**Partner diversification.** This is where the data gets uncomfortable. The effective number of export partners _fell_ from 21 in FY19 to 17 in FY25. India's exports got _more_ concentrated, not less — and almost all of that is the US. America's share of India's exports grew from 16% to 20%, and because HHI squares the shares, that single shift dominates the entire index.
+
+The tension: India is reshuffling _what_ it sells (electronics replacing gems), but concentrating _who_ it sells to. The US is becoming a single point of reliance. Both trends are visible in the data, and they pull in opposite directions.
+
+
+
+## India's Trade Atlas
+
+<PlotlyChart src="/blogs/reading-indias-trade-data/chart7.json" />
+
+The map tells the whole story at a glance.
+
+**Green (surplus):** The US, UK, Netherlands, Bangladesh, and much of Africa. India exports more than it imports — finished goods, refined petroleum, pharmaceuticals, IT-adjacent hardware.
+
+**Red (deficit):** China (massive), Russia (post-pivot), the Middle East (energy), and Switzerland (gold — India is the world's largest consumer). These are the structural dependencies: fuel, manufacturing inputs, and precious metals.
+
+**The pattern:** Surpluses with the developed West and South Asia. Deficits with commodity suppliers and China. India earns from value-added exports to rich countries and spends on raw materials and intermediate goods from resource-rich ones.
+
+Every story in this post — the Russia pivot, the China paradox, the PLI miracle, the diversification question — is visible on this single map.
+
+
+
+## What Surprised Me
+
+I didn't write this post to summarize India's trade. I wrote it because the data surprised me, and I wanted to understand why.
+
+The Russia pivot was the most visually dramatic — a chart that looks like a regime change, because it is one. The China paradox was the most intellectually uncomfortable — political narratives and economic data telling opposite stories. The PLI numbers were the most optimistic — industrial policy actually working, visible in the export data within three years.
+
+There are things the data can't tell you. Services trade is invisible in goods data — India's massive IT exports don't show up here. Informal trade across land borders is undercounted. Transfer pricing distorts bilateral numbers. The Netherlands shows up as a major trade partner partly because of Rotterdam's role as a re-export hub, not because Dutch consumers are buying Indian goods.
+
+The hard part was the same as in 2017 — knowing what questions to ask. The scraping is faster, the charts are prettier, the tooling is better. But the analytical judgment that says "this number is interesting, that one isn't" — that hasn't been automated yet.
+
+---
+
+The full dataset, scraper code, and chart generation scripts are available on [GitHub](https://github.com/lakshyaag/india-trade-analysis). If you want to explore the data yourself, start with the bilateral balance chart — it's the one that reframed everything else for me.
+
+Thanks for reading. Find me on [X/Twitter](https://x.com/lakshyaag) or [LinkedIn](https://linkedin.com/in/lakshyaag) if you want to discuss.
