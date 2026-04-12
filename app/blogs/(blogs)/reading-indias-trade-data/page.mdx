@@ -1,11 +1,11 @@
 export const metadata = {
   title: "Rebuilding My India Trade Scraper, Seven Years Later",
   description:
-    "I revisited a scraper I first built as an undergrad and realized how much solo technical leverage has changed: what once took weeks now takes hours.",
+    "Seven years ago I scraped India's trade data and never analyzed it. Now I rebuilt the whole thing in an afternoon and finally asked the questions I couldn't back then.",
   openGraph: {
     title: "Rebuilding My India Trade Scraper, Seven Years Later",
     description:
-      "I revisited a scraper I first built as an undergrad and realized how much solo technical leverage has changed: what once took weeks now takes hours.",
+      "Seven years ago I scraped India's trade data and never analyzed it. Now I rebuilt the whole thing in an afternoon and finally asked the questions I couldn't back then.",
     type: "article",
     url: "https://lakshyaag.com/blogs/reading-indias-trade-data",
     images: [
@@ -21,7 +21,7 @@ export const metadata = {
     card: "summary_large_image",
     title: "Rebuilding My India Trade Scraper, Seven Years Later",
     description:
-      "I revisited a scraper I first built as an undergrad and realized how much solo technical leverage has changed: what once took weeks now takes hours.",
+      "Seven years ago I scraped India's trade data and never analyzed it. Now I rebuilt the whole thing in an afternoon and finally asked the questions I couldn't back then.",
     images: [
       {
         url: "https://lakshyaag.com/api/og/blogs/reading-indias-trade-data",
@@ -35,11 +35,11 @@ export const metadata = {
   alternates: { canonical: "/blogs/reading-indias-trade-data" },
 };
 
-_TL;DR_: 7 years ago, in 2019, I hand-wrote a [scraper](https://github.com/lakshyaag/India-Trade-Data/commits/master/) for India's trade data. That alone took weeks and I never actually got around to analyzing it. Now, I rewrote the whole thing in a couple of hours, and was able to analyze it with natural language. The stories surrounding India's trade are interesting, but for me, the most interesting part was the tooling.
+_TL;DR_: 7 years ago, in 2019, I hand-wrote a [scraper](https://github.com/lakshyaag/India-Trade-Data/) for India's trade data. That alone took weeks and I never actually got around to analyzing it. Recently, I rebuilt the whole thing in an afternoon and finally asked the questions I couldn't back then. This post is both: what India's trade data actually says, and what it means that an economics grad with a coding agent can now do in a few hours what used to require a team and a Tableau license.
 
 ## Why This Exists
 
-In 2019, I was an undergrad studying economics, learning Python on the side. As part of an International Economics course, I stumbled upon India's [trade data portal](https://tradestat.commerce.gov.in/eidb/commodity_wise_export). True to my home country's fashion, the data was there but it was highly inaccesible with no download or export options. 
+In 2019, I was an undergrad studying economics, learning Python on the side. As part of an International Economics course, I stumbled upon India's [trade data portal](https://tradestat.commerce.gov.in/eidb/commodity_wise_export). True to my home country's fashion, the data was there but it was highly inaccessible with no download or export options. 
 
 Applying my ["jugaad"](https://en.wikipedia.org/wiki/Jugaad) skills, I reverse-engineered the HTML form and wrote a [Selenium-based scraper](https://github.com/lakshyaag/India-Trade-Data/) after a lot of trial and error. I uploaded the dataset to [Kaggle](https://www.kaggle.com/datasets/lakshyaag/india-trade-data) and it got quite popular. As of this writing, it has 150K views and 27.4K downloads.
 
@@ -55,7 +55,7 @@ Here's what I found.
 
 India's merchandise trade story starts with a simple but important fact: **imports are consistently above exports**. India's merchandise sector is operating with a persistent external imbalance: growth in domestic demand and production repeatedly pulls in more imports than the export base can finance. That is why the deficit survives across very different macro environments - pre-COVID, lockdown, reopening, and commodity shock. The gap narrows only when the economy compresses, not when it becomes more competitive.
 
-The post-FY21 widening is especially important. A superficial reading would say trade recovered after COVID. A better reading is that India's recovery was import-intensive. As growth resumed, the country needed large volumes of fuel, intermediate goods, machinery, and other tradables to sustain consumption, investment, and manufacturing. Exports also rose, but not enough to offset that higher import dependence. In macro terms, the elasticity of imports to growth appears much higher than the elasticity of exports.
+The post-FY21 widening is especially important. A superficial reading would say trade recovered after COVID. A better reading is that India's recovery was import-hungry: when GDP grows, India pulls in more fuel, intermediate goods, machinery, and other tradables than its export base can keep up with. Exports also rose after the pandemic, but not nearly fast enough to offset the surge in imports.
 
 That asymmetry also points to a hypothesis about India's place in the global economy: it is not a low-cost export platform generating broad-based trade surpluses. It is a large domestic economy whose expansion still relies heavily on foreign inputs and commodity imports. Even some of
 its export success is import-linked: refined petroleum exports depend on crude imports, and electronics exports depend on imported components and
@@ -76,7 +76,7 @@ On the right side, we have countries that India runs a positive trade balance wi
 
 On the left side, we have countries that India runs a negative trade balance with. For FY25, this included countries such as China (-\$99.2B), Russia (-\$58.9B), and the UAE (-\$26.8B). These are countries from which India buys **strategic inputs**: energy from Russia and the Middle East, and manufactured intermediates and machinery from China and South Korea. These relationships reveal where India remains structurally dependent on the rest of the world.
 
-Put another way, India's surpluses come largely from selling outward into consumer and industrial markets, while its deficits come from importing the fuel, intermediate goods, and raw materials that keep its own economy running. In other words, India earns foreign exchange from exporting value-added products, but spends it on the imported inputs that support domestic consumption, energy security, and industrial production. The deficit is therefore not diffuse; it is concentrated in a small number of strategically important relationships.
+Put another way, India's surpluses come largely from selling outward into consumer and industrial markets, while its deficits come from importing the fuel, intermediate goods, and raw materials that keep its own economy running. The country earns foreign exchange by exporting value-added products, but spends it on the imported inputs that support domestic consumption, energy security, and industrial production. The deficit is therefore not diffuse — it is concentrated in a small number of strategically important relationships.
 
 ## The Russia Pivot
 
@@ -104,9 +104,9 @@ Now, let's address the "dragon" of the world: China.
 
 Despite the ruling party's push for ["Atmanirbhar Bharat"](https://en.wikipedia.org/wiki/Atmanirbhar_Bharat) (self-reliance), [banning of Chinese apps](https://www.bbc.com/news/technology-53225720) like TikTok and WeChat on "security grounds", and ["China+1"](https://en.wikipedia.org/wiki/China_Plus_One) becoming a corporate boardroom mantra - India's import dependence on China has _grown_ (quite significantly), not shrunk.
 
-The bilateral deficit hit a record ~\$99B in FY24-25. The core categories in the heatmap tell the story. India is not mainly importing consumer fluff from China; it is importing the building blocks of its own economy. The largest categories are **electrical machinery (HS85)**, which rises from _\$20.6B in FY19 to \$38.0B in FY25_, and **machinery and boilers (HS84)**, which rise from _\$13.4B to \$25.9B_. These are the components, equipment, and capital goods that sit upstream of manufacturing and investment. Then there is **organic chemicals (HS29)** — about _\$11.5B in FY25_ — which are crucial for pharmaceutical production. Plastics, metals, and medical instruments add to the same pattern.
+The bilateral deficit hit a record ~\$99B in FY25. The core categories in the heatmap tell the story. India is not mainly importing consumer fluff from China; it is importing the building blocks of its own economy. The largest categories are **electrical machinery (HS85)**, which rises from _\$20.6B in FY19 to \$38.0B in FY25_, and **machinery and boilers (HS84)**, which rise from _\$13.4B to \$25.9B_. These are the components, equipment, and capital goods that sit upstream of manufacturing and investment. Then there is **organic chemicals (HS29)** — about _\$11.5B in FY25_ — which are crucial for pharmaceutical production. Plastics, metals, and medical instruments add to the same pattern.
 
-That is the real paradox. India's electronics manufacturing story has improved, and domestic assembly has expanded, but the chart suggests that a significant part of that expansion still depends on **Chinese inputs**. The same goes for industrial machinery and parts of pharma. In other words, India may be moving up the value chain in some sectors, but it is doing so while remaining deeply tied to Chinese supply chains underneath.
+That is the real paradox. India's electronics manufacturing story has improved, and domestic assembly has expanded, but the chart suggests that a significant part of that expansion still depends on **Chinese inputs**. The same goes for industrial machinery and parts of pharma. India may be moving up the value chain in some sectors, but it is doing so while remaining deeply tied to Chinese supply chains underneath.
 
 This is what makes the next section - India's production-linked incentive (PLI) scheme - more impressive, not less. India is _trying_ to break free. And in one specific category, it's actually working.
 
@@ -118,7 +118,7 @@ The stacked area chart shows India's export composition over time, and one band 
 
 The [Production Linked Incentive (PLI) scheme for large-scale electronics](https://www.meity.gov.in/offerings/schemes-and-services/details/production-linkedincentive-scheme-pli-for-large-scale-electronics-manufacturing-gNyMDOtQWa), launched in 2020, pays companies to manufacture electronics domestically. What makes the chart more persuasive is that this rise happens alongside a visible decline in some of India's older export pillars. **Gems and precious metals** fell from about **12% of exports to 7%**, while electronics steadily expanded from a marginal band at the bottom into one of the more important layers of the export basket. The PLI story shifted the **composition** of exports toward a more manufacturing-intensive category.
 
-After the previous chart showed that India still depends heavily on **Chinese electronics inputs**, this one shows that India has nevertheless started building capacity at the **output** end of the chain. The country may still import a large share of its components, but it is increasingly assembling, processing, and exporting higher-value finished goods. In other words, PLI has not eliminated dependence, but it does appear to have nudged India one step up the value chain.
+After the previous chart showed that India still depends heavily on **Chinese electronics inputs**, this one shows that India has nevertheless started building capacity at the **output** end of the chain. The country may still import a large share of its components, but it is increasingly assembling, processing, and exporting higher-value finished goods. PLI has not eliminated dependence — but it does appear to have nudged India one step up the value chain.
 
 ## Is India Diversifying?
 
@@ -139,18 +139,11 @@ The key takeaway here is simple: India's exports have **not** become clearly mor
 
 So if the earlier PLI chart was the optimistic one, this is the reality check. India has had some success shifting the composition of exports toward electronics and manufacturing, but that does not automatically translate into broad diversification. The country may be upgrading in some sectors, yet still remain concentrated in both the products that matter most and the markets that buy them.
 
-## India's Trade Atlas
-
-Before concluding, let's take a step back and look at the big picture. The map below is essentially a dashboard that lets you explore the trade relationship with any country in the world for any year.
-
-<TradeAtlas src="/blogs/reading-indias-trade-data/chart7_atlas.json" />
-
-
 ## How this was built
 
-I briefly touched upon my motivation for this post earlier: I wanted to rebuild my earlier project but with today's tools and knowledge. 
+In 2019, the scraper _was_ the project. I spent weeks reverse-engineering form fields, wrestling with Selenium, and debugging flaky selectors. By the time it worked, I was too exhausted to do any actual analysis. The engineering consumed all the time, and the economics questions I originally wanted to answer never got asked.
 
-Getting into a bit more detail, building and validating the scraper took me one agent session. You can see the entire trace [here](https://traces.com/s/jn71rjqckw8frv2jesa9amdn1n84qatw), but in brief, I gave the agent my previous project's code and asked it to revamp it with controls. After tinkering with the parallelism a bit, I let it run and in about 20 minutes, I had all the data scraped and saved as Parquet files, ready for analysis.
+Seven years later, the engineering was a footnote. Building and validating the new scraper took me a single agent session — you can see the entire trace [here](https://traces.com/s/jn71rjqckw8frv2jesa9amdn1n84qatw). I gave the agent my previous project's code, asked it to revamp it with proper controls and parallelism, and in about 20 minutes I had all the data scraped and saved as Parquet files, ready for analysis.
 
 <ImageWithCaption src="/blogs/reading-indias-trade-data/scraper_running.png"
  caption="The scraper running in my terminal"
@@ -158,7 +151,9 @@ Getting into a bit more detail, building and validating the scraper took me one 
  width={1000}
  height={1000}/>
 
-Post that, most of the work was in asking some questions I thought were interesting and then getting the agent to generate the charts for it. I ended up creating a theme file so that the charts looked consistent across the post.
+That meant the real work could finally begin: sitting with the data and asking questions. Which countries drive the deficit? What happened to energy imports after 2022? Is PLI actually showing up in the export numbers? These are the questions my economics brain wanted to ask seven years ago. The difference now is that the tooling got out of the way and let me focus on them.
+
+Most of the analytical workflow was conversational — I'd ask a question, the agent would write the code to answer it, and we'd iterate on the visualization. I created a theme file early on so the charts looked consistent across the post.
 
 <ImageWithCaption src="/blogs/reading-indias-trade-data/building_theme.png"
  caption="Building the theme file"
@@ -166,9 +161,19 @@ Post that, most of the work was in asking some questions I thought were interest
  width={1000}
  height={1000}/>
 
-With that out of the way, I had it write custom code to make the charts interactive and embeddable in this blog post. That was probably a big `mind = blown` moment for me, as I've done similar stuff before inside Tableau / Power BI, and now I was able to do it directly in my personal website. I've written before about the [age of personal software](https://lakshyaag.com/blogs/the-age-of-personal-software), and this is yet another example of how it's becoming easier to build tools tailored to your own needs.
+The part that genuinely surprised me was the interactive charts. Custom Plotly visualizations with tab controls, dropdown selectors, heatmaps, choropleth maps — all embedded directly in this blog as React components. I've built similar dashboards before inside Tableau and Power BI, and they always required dedicated tooling and a separate hosting story. Here, the agent wrote the chart code, the embedding components, and the data pipeline, and it all lives on my personal website. I've written before about the [age of personal software](https://lakshyaag.com/blogs/the-age-of-personal-software), and this is perhaps the clearest example yet: the entire analytical workflow — from scraping to interactive publication — done by one person over a few afternoons.
 
-Overall, this post really put into perspective for me how far the field has changed.
+## India's Trade Atlas
+
+With that context, here's the thing I'm most proud of building for this post. The map below is a dashboard that lets you explore India's trade relationship with any country in the world, for any year. I've shared my reading of the data above — now go find your own stories.
+
+<TradeAtlas src="/blogs/reading-indias-trade-data/chart7_atlas.json" />
+
+## Closing Thoughts
+
+India's trade story, as the data tells it, is one of a large economy that is upgrading selectively but not yet broadly. The deficit is structural and concentrated — driven by energy and Chinese intermediates. The Russia pivot reshaped the energy map in three years. PLI has delivered a real shift in electronics exports, but that success hasn't translated into wider diversification; the export basket and partner mix are actually more concentrated than they were in FY19. India is moving up the value chain in places, but still without full supply-chain autonomy.
+
+And for me personally, this project closed a loop that had been open since undergrad. The questions I wanted to ask in 2019 — about deficits, dependencies, and what India actually trades — were always the interesting part. I just didn't have the tools or the motivation to get to them quickly enough. Now I do, and the gap between "I wonder..." and "here's what the data says" has never been smaller.
 
 ---
 

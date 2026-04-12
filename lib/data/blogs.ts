@@ -2,7 +2,7 @@ export const BLOG_POSTS: BlogPost[] = [
 	{
 		title: "Rebuilding My India Trade Scraper, Seven Years Later",
 		description:
-			"I revisited a scraper I first built as an undergrad and realized how much solo technical leverage has changed: what once took weeks now takes hours.",
+			"Seven years ago I scraped India's trade data and never analyzed it. Now I rebuilt the whole thing in an afternoon and finally asked the questions I couldn't back then.",
 		link: "/blogs/reading-indias-trade-data",
 		uid: "reading-indias-trade-data",
 		date: "2026-04-12",
