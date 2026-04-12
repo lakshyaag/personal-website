@@ -1,5 +1,22 @@
 export const BLOG_POSTS: BlogPost[] = [
 	{
+		title: "Rebuilding My India Trade Scraper, Seven Years Later",
+		description:
+			"I revisited a scraper I first built as an undergrad and realized how much solo technical leverage has changed: what once took weeks now takes hours.",
+		link: "/blogs/reading-indias-trade-data",
+		uid: "reading-indias-trade-data",
+		date: "2026-04-12",
+		tags: [
+			"AI Assisted Coding",
+			"Tooling",
+			"Scraping",
+			"Data Analysis",
+			"Python",
+			"Visualization",
+			"Trade Data",
+		],
+	},
+	{
 		title: "The Age of Personal Software",
 		description:
 			"How AI-assisted coding helped me build a comprehensive personal data platform.",
