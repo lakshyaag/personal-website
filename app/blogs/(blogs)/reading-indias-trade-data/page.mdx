@@ -37,7 +37,7 @@ export const metadata = {
 
 _TL;DR_: 7 years ago, in 2019, I hand-wrote a [scraper](https://github.com/lakshyaag/India-Trade-Data/) for India's trade data. That alone took weeks and I never actually got around to analyzing it. Recently, I rebuilt the whole thing in an afternoon and finally asked the questions I couldn't back then. This post is both: what India's trade data actually says, and what it means that an economics grad with a coding agent can now do in a few hours what used to require a team and a Tableau license.
 
-## Why This Exists
+## Why this exists
 
 In 2019, I was an undergrad studying economics, learning Python on the side. As part of an International Economics course, I stumbled upon India's [trade data portal](https://tradestat.commerce.gov.in/eidb/commodity_wise_export). True to my home country's fashion, the data was there but it was highly inaccessible with no download or export options. 
 
@@ -49,7 +49,9 @@ Fast forward to today, seven years later, I was walking back home one day and su
 
 Here's what I found.
 
-## The Macro Picture
+## What the data says
+
+### The macro picture
 
 <PlotlyChart src="/blogs/reading-indias-trade-data/chart1.json" />
 
@@ -63,7 +65,7 @@ machinery. So the chart is really showing a familiar development pattern: indust
 
 So where does the deficit actually come from?
 
-## Where the Deficit Lives
+### Where the deficit lives
 
 <PlotlyChart
   src="/blogs/reading-indias-trade-data/chart2_interactive.json"
@@ -78,7 +80,7 @@ On the left side, we have countries that India runs a negative trade balance wit
 
 Put another way, India's surpluses come largely from selling outward into consumer and industrial markets, while its deficits come from importing the fuel, intermediate goods, and raw materials that keep its own economy running. The country earns foreign exchange by exporting value-added products, but spends it on the imported inputs that support domestic consumption, energy security, and industrial production. The deficit is therefore not diffuse — it is concentrated in a small number of strategically important relationships.
 
-## The Russia Pivot
+### The Russia pivot
 
 <PlotlyChart src="/blogs/reading-indias-trade-data/chart3.json" />
 
@@ -92,7 +94,7 @@ What makes this such a useful chart is that it shows the shift as a **reallocati
 
 Economically, this was less about geopolitics than arbitrage and energy security. India is a large net energy importer, so when sanctioned oil becomes available at a discount, the incentive to buy it is enormous. The shift improved access to cheaper crude, supported refinery margins, and helped cushion the domestic economy from the full force of the global energy shock. In that sense, the “Russia pivot” was not a diplomatic statement. It was simply a market response by a price-sensitive importer.
 
-## The China Paradox
+### The China paradox
 
 <PlotlyChart
   src="/blogs/reading-indias-trade-data/chart4_interactive.json"
@@ -110,7 +112,7 @@ That is the real paradox. India's electronics manufacturing story has improved, 
 
 This is what makes the next section - India's production-linked incentive (PLI) scheme - more impressive, not less. India is _trying_ to break free. And in one specific category, it's actually working.
 
-## The PLI Miracle
+### The PLI miracle
 
 <PlotlyChart src="/blogs/reading-indias-trade-data/chart5.json" />
 
@@ -120,7 +122,7 @@ The [Production Linked Incentive (PLI) scheme for large-scale electronics](https
 
 After the previous chart showed that India still depends heavily on **Chinese electronics inputs**, this one shows that India has nevertheless started building capacity at the **output** end of the chain. The country may still import a large share of its components, but it is increasingly assembling, processing, and exporting higher-value finished goods. PLI has not eliminated dependence — but it does appear to have nudged India one step up the value chain.
 
-## Is India Diversifying?
+### Is India diversifying?
 
 The logical next question to ask is: is India diversifying its exports? In economics, the [Herfindahl-Hirschman Index (HHI)](https://en.wikipedia.org/wiki/Herfindahl%E2%80%93Hirschman_index) measures how diversified or concentrated a country's export market is across different destination countries. I vibe-coded this explainer below to help you understand it.
 
@@ -143,7 +145,7 @@ So if the earlier PLI chart was the optimistic one, this is the reality check. I
 
 In 2019, the scraper _was_ the project. I spent weeks reverse-engineering form fields, wrestling with Selenium, and debugging flaky selectors. By the time it worked, I was too exhausted to do any actual analysis. The engineering consumed all the time, and the economics questions I originally wanted to answer never got asked.
 
-Seven years later, the engineering was a footnote. Building and validating the new scraper took me a single agent session — you can see the entire trace [here](https://traces.com/s/jn71rjqckw8frv2jesa9amdn1n84qatw). I gave the agent my previous project's code, asked it to revamp it with proper controls and parallelism, and in about 20 minutes I had all the data scraped and saved as Parquet files, ready for analysis.
+Seven years later, the engineering was a footnote. Building and validating the new scraper took me a single agent session (shoutout [pi](https://pi.dev)!) — you can see the entire trace [here](https://traces.com/s/jn71rjqckw8frv2jesa9amdn1n84qatw). I gave the agent my previous project's code, asked it to revamp it with proper controls and parallelism, and in about 20 minutes I had all the data scraped and saved as Parquet files, ready for analysis.
 
 <ImageWithCaption src="/blogs/reading-indias-trade-data/scraper_running.png"
  caption="The scraper running in my terminal"
@@ -163,13 +165,13 @@ Most of the analytical workflow was conversational — I'd ask a question, the a
 
 The part that genuinely surprised me was the interactive charts. Custom Plotly visualizations with tab controls, dropdown selectors, heatmaps, choropleth maps — all embedded directly in this blog as React components. I've built similar dashboards before inside Tableau and Power BI, and they always required dedicated tooling and a separate hosting story. Here, the agent wrote the chart code, the embedding components, and the data pipeline, and it all lives on my personal website. I've written before about the [age of personal software](https://lakshyaag.com/blogs/the-age-of-personal-software), and this is perhaps the clearest example yet: the entire analytical workflow — from scraping to interactive publication — done by one person over a few afternoons.
 
-## India's Trade Atlas
+## India's trade atlas
 
 With that context, here's the thing I'm most proud of building for this post. The map below is a dashboard that lets you explore India's trade relationship with any country in the world, for any year. I've shared my reading of the data above — now go find your own stories.
 
 <TradeAtlas src="/blogs/reading-indias-trade-data/chart7_atlas.json" />
 
-## Closing Thoughts
+## Closing thoughts
 
 India's trade story, as the data tells it, is one of a large economy that is upgrading selectively but not yet broadly. The deficit is structural and concentrated — driven by energy and Chinese intermediates. The Russia pivot reshaped the energy map in three years. PLI has delivered a real shift in electronics exports, but that success hasn't translated into wider diversification; the export basket and partner mix are actually more concentrated than they were in FY19. India is moving up the value chain in places, but still without full supply-chain autonomy.
 
