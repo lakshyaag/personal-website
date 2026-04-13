@@ -1,9 +1,18 @@
 export const WORK_EXPERIENCE: WorkExperience[] = [
 	{
+		company: "Tavily",
+		title: "Forward Deployed Engineer",
+		start: "Mar 2026",
+		end: "Present",
+		link: "https://tavily.com/",
+		id: "tavily",
+		isVisible: true,
+	},
+	{
 		company: "Bain & Company",
 		title: "Software Engineer, Private Equity Innovation",
 		start: "May 2025",
-		end: "Present",
+		end: "Mar 2026",
 		link: "https://www.bain.com/industry-expertise/private-equity/",
 		id: "bain-2",
 		isVisible: true,
