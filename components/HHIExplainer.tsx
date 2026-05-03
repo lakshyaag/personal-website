@@ -127,7 +127,6 @@ export function HHIExplainer({ src, className }: HHIExplainerProps) {
 		setLabels([]);
 		setShares([]);
 		setPresetTotal(100);
-
 		const resolvedSrc = assetUrl(src);
 		if (!resolvedSrc) {
 			setError("Explainer source is missing.");

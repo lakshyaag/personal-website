@@ -179,6 +179,39 @@ export function useMDXComponents(components: MDXComponents): MDXComponents {
 				className="h-full w-full object-contain"
 			/>
 		),
+		Video: ({
+			src,
+			poster,
+			caption,
+			preload,
+			controls,
+			className,
+			...props
+		}: React.VideoHTMLAttributes<HTMLVideoElement> & {
+			src: string;
+			caption?: string;
+		}) => (
+			<figure className="my-6">
+				<div className="overflow-hidden rounded-xl border border-zinc-200 bg-zinc-50 shadow-sm dark:border-zinc-800 dark:bg-zinc-900/50">
+					<video
+						{...props}
+						src={assetUrl(src) ?? undefined}
+						poster={assetUrl(poster) ?? undefined}
+						controls={controls ?? true}
+						preload={preload ?? "metadata"}
+						playsInline
+						className={`block w-full bg-black ${className ?? ""}`.trim()}
+					>
+						Your browser does not support the video tag.
+					</video>
+				</div>
+				{caption && (
+					<figcaption className="mt-2 text-center text-sm text-zinc-500 dark:text-zinc-400">
+						{caption}
+					</figcaption>
+				)}
+			</figure>
+		),
 		video: ({
 			src,
 			poster,

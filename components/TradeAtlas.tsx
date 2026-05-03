@@ -402,7 +402,6 @@ export function TradeAtlas({ src, className }: TradeAtlasProps) {
 		setActiveYear(null);
 		setSelectedIso(null);
 		setError(null);
-
 		const resolvedSrc = assetUrl(src);
 		if (!resolvedSrc) {
 			setError("Atlas source is missing.");

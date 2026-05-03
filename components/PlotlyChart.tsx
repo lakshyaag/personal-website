@@ -286,7 +286,6 @@ export function PlotlyChart({
 		setError(null);
 		setChartData(null);
 		setActiveVariant(null);
-
 		const resolvedSrc = assetUrl(src);
 		if (!resolvedSrc) {
 			setError("Chart source is missing.");
