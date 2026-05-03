@@ -38,11 +38,8 @@ export const metadata = {
 _TL;DR: I built a CLI agent in Go (never touched Go before) using `claude-4-sonnet` and `gemini-2.5-pro` in Cursor. Having messed around with agents since the ReAct papers dropped in early 2024, the core loop is simple - it's just an LLM with tools in a loop. The hype makes it sound way more complex than it actually is._
 
 Here's a quick demo of my CLI agent in action:
-<video controls width="100%">
-  <source src="/blogs/building-a-cli-agent/cli-agent-demo.mp4" type="video/mp4"  />
-  Your browser does not support the video tag.
-</video>
 
+<Video src="/blogs/building-a-cli-agent/cli-agent-demo.mp4" />
 
 Recently, I decided to build my own terminal-based AI agent as a weekend project, inspired by tools like [Claude Code](https://www.anthropic.com/claude-code) or [Gemini CLI](https://github.com/google-gemini/gemini-cli). I wanted to see how far I could get in building the main pieces, augmented with [Background Agents](https://docs.cursor.com/en/background-agent) in Cursor
 

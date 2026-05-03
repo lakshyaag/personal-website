@@ -10,6 +10,7 @@ import { HHIExplainer } from "./components/HHIExplainer";
 import { ImageCarousel } from "./components/ImageCarousel";
 import { PlotlyChart } from "./components/PlotlyChart";
 import { TradeAtlas } from "./components/TradeAtlas";
+import { assetUrl } from "./lib/assets";
 
 // Shared styles and constants
 const styles = {
@@ -124,7 +125,11 @@ export function useMDXComponents(components: MDXComponents): MDXComponents {
 			return (
 				<figure className="my-0">
 					<div className="aspect-[16/9] w-full overflow-hidden rounded-xl">
-						<img src={src} alt={alt} className="h-full w-full object-contain" />
+						<img
+							src={assetUrl(src) ?? undefined}
+							alt={alt}
+							className="h-full w-full object-contain"
+						/>
 					</div>
 					{caption && (
 						<figcaption className="mt-2 text-center text-sm text-zinc-500 dark:text-zinc-400">
@@ -147,7 +152,11 @@ export function useMDXComponents(components: MDXComponents): MDXComponents {
 		}: { src: string; alt: string; caption: string }) => {
 			return (
 				<figure className="my-0">
-					<img src={src} alt={alt} className="h-full w-full object-contain" />
+					<img
+						src={assetUrl(src) ?? undefined}
+						alt={alt}
+						className="h-full w-full object-contain"
+					/>
 					{caption && (
 						<figcaption
 							className="mt-2 text-center text-sm text-zinc-500 dark:text-zinc-400"
@@ -162,6 +171,68 @@ export function useMDXComponents(components: MDXComponents): MDXComponents {
 				</figure>
 			);
 		},
+		img: ({ src, alt, ...props }: React.ImgHTMLAttributes<HTMLImageElement>) => (
+			<img
+				{...props}
+				src={assetUrl(src) ?? undefined}
+				alt={alt}
+				className="h-full w-full object-contain"
+			/>
+		),
+		Video: ({
+			src,
+			poster,
+			caption,
+			preload,
+			controls,
+			className,
+			...props
+		}: React.VideoHTMLAttributes<HTMLVideoElement> & {
+			src: string;
+			caption?: string;
+		}) => (
+			<figure className="my-6">
+				<div className="overflow-hidden rounded-xl border border-zinc-200 bg-zinc-50 shadow-sm dark:border-zinc-800 dark:bg-zinc-900/50">
+					<video
+						{...props}
+						src={assetUrl(src) ?? undefined}
+						poster={assetUrl(poster) ?? undefined}
+						controls={controls ?? true}
+						preload={preload ?? "metadata"}
+						playsInline
+						className={`block w-full bg-black ${className ?? ""}`.trim()}
+					>
+						Your browser does not support the video tag.
+					</video>
+				</div>
+				{caption && (
+					<figcaption className="mt-2 text-center text-sm text-zinc-500 dark:text-zinc-400">
+						{caption}
+					</figcaption>
+				)}
+			</figure>
+		),
+		video: ({
+			src,
+			poster,
+			preload,
+			children,
+			...props
+		}: React.VideoHTMLAttributes<HTMLVideoElement>) => (
+			<video
+				{...props}
+				src={assetUrl(src) ?? undefined}
+				poster={assetUrl(poster) ?? undefined}
+				preload={preload ?? "metadata"}
+				children={children}
+			/>
+		),
+		source: ({
+			src,
+			...props
+		}: React.SourceHTMLAttributes<HTMLSourceElement>) => (
+			<source {...props} src={assetUrl(src) ?? undefined} />
+		),
 		SideBySideComparison: ({
 			left,
 			right,

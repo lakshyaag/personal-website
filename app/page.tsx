@@ -14,6 +14,7 @@ import { BLOG_POSTS } from "@/lib/data/blogs";
 import ProjectItem from "@/components/ProjectItem";
 import MagneticSocialLink from "@/components/MagneticSocialLink";
 import CollapsibleCurrentlyReading from "@/components/CollapsibleCurrentlyReading";
+import { PhotoTeaser } from "@/components/PhotoTeaser";
 import { LANDING_INTRO } from "@/lib/constants";
 import remarkGfm from "remark-gfm";
 import {
@@ -65,9 +66,14 @@ export default function Personal() {
 				variants={VARIANTS_SECTION}
 				transition={TRANSITION_SECTION}
 			>
-
 				<CollapsibleCurrentlyReading />
+			</motion.section>
 
+			<motion.section
+				variants={VARIANTS_SECTION}
+				transition={TRANSITION_SECTION}
+			>
+				<PhotoTeaser />
 			</motion.section>
 
 			<motion.section

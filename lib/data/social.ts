@@ -10,6 +10,11 @@ export const SOCIAL_LINKS: SocialLink[] = [
 		showHeader: true,
 	},
 	{
+		label: "Photos",
+		link: "/photos",
+		showHeader: true,
+	},
+	{
 		label: "Resume",
 		link: "/resume.pdf",
 		showHeader: false,
@@ -26,7 +31,7 @@ export const SOCIAL_LINKS: SocialLink[] = [
 	},
 	{
 		label: "Airports",
-		link: "https://lakshyaag.com/airports",
+		link: "/airports",
 		showHeader: false,
-	}
+	},
 ];

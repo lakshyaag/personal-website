@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { assetUrl } from "@/lib/assets";
 
 type ExplainerPreset = {
 	label?: string;
@@ -126,8 +127,15 @@ export function HHIExplainer({ src, className }: HHIExplainerProps) {
 		setLabels([]);
 		setShares([]);
 		setPresetTotal(100);
+		const resolvedSrc = assetUrl(src);
+		if (!resolvedSrc) {
+			setError("Explainer source is missing.");
+			return () => {
+				cancelled = true;
+			};
+		}
 
-		fetch(src)
+		fetch(resolvedSrc)
 			.then((response) => {
 				if (!response.ok) throw new Error(`HTTP ${response.status}`);
 				return response.json() as Promise<ExplainerJSON>;

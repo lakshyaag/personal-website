@@ -45,6 +45,11 @@ export default function AdminPage() {
 			description: "Track your daily outfits",
 			href: "/admin/fits",
 		},
+		{
+			title: "Photos",
+			description: "Upload and manage photo gallery visibility",
+			href: "/admin/photos",
+		},
 	];
 
 	const handleLogout = async () => {
