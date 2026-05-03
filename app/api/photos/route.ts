@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import {
 	deletePhotoAssetById,
 	listPhotoAssets,
-	updatePhotoAssetVisibility,
+	updatePhotoAsset,
 } from "@/lib/photo-assets-db";
 import type { PhotoVisibility } from "@/lib/photos";
 import { createServerSupabaseClient } from "@/lib/supabase-server";
@@ -53,16 +53,25 @@ export async function PATCH(req: Request) {
 			id?: string;
 			visibility?: string;
 			galleryFeatured?: boolean;
+			title?: string | null;
+			caption?: string | null;
+			locationLabel?: string | null;
 		};
 
-		if (!body.id || !body.visibility || !isVisibility(body.visibility)) {
-			return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
+		if (!body.id) {
+			return NextResponse.json({ error: "Missing id" }, { status: 400 });
+		}
+		if (body.visibility !== undefined && !isVisibility(body.visibility)) {
+			return NextResponse.json({ error: "Invalid visibility" }, { status: 400 });
 		}
 
-		await updatePhotoAssetVisibility({
+		await updatePhotoAsset({
 			id: body.id,
 			visibility: body.visibility,
-			galleryFeatured: Boolean(body.galleryFeatured),
+			galleryFeatured: body.galleryFeatured,
+			title: body.title,
+			caption: body.caption,
+			locationLabel: body.locationLabel,
 		});
 
 		return NextResponse.json({ ok: true });
