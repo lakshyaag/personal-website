@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import {
+	deletePhotoAssetById,
 	listPhotoAssets,
 	updatePhotoAssetVisibility,
 } from "@/lib/photo-assets-db";
@@ -69,6 +70,34 @@ export async function PATCH(req: Request) {
 		console.error("Error in PATCH /api/photos:", error);
 		return NextResponse.json(
 			{ error: "Failed to update photo" },
+			{ status: 500 },
+		);
+	}
+}
+
+export async function DELETE(req: Request) {
+	try {
+		const supabase = await createServerSupabaseClient();
+		const {
+			data: { session },
+			error,
+		} = await supabase.auth.getSession();
+		if (error || !session) {
+			return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+		}
+
+		const { searchParams } = new URL(req.url);
+		const id = searchParams.get("id");
+		if (!id) {
+			return NextResponse.json({ error: "Missing id" }, { status: 400 });
+		}
+
+		await deletePhotoAssetById(id);
+		return NextResponse.json({ ok: true });
+	} catch (error) {
+		console.error("Error in DELETE /api/photos:", error);
+		return NextResponse.json(
+			{ error: "Failed to delete photo" },
 			{ status: 500 },
 		);
 	}

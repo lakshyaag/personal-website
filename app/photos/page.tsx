@@ -43,10 +43,6 @@ export default function PhotosPage() {
 			<h1 className="text-3xl font-semibold text-zinc-900 dark:text-zinc-100">
 				Photos
 			</h1>
-			<p className="mt-2 text-zinc-600 dark:text-zinc-400">
-				Featured photos from the unified media pipeline.
-			</p>
-
 			{loading ? (
 				<p className="mt-8 text-zinc-600 dark:text-zinc-400">Loading photos...</p>
 			) : photos.length === 0 ? (
