@@ -4,6 +4,7 @@ import {
 	updatePhotoAssetVisibility,
 } from "@/lib/photo-assets-db";
 import type { PhotoVisibility } from "@/lib/photos";
+import { createServerSupabaseClient } from "@/lib/supabase-server";
 
 function isVisibility(value: string): value is PhotoVisibility {
 	return value === "private" || value === "unlisted" || value === "public";
@@ -13,6 +14,18 @@ export async function GET(req: Request) {
 	try {
 		const { searchParams } = new URL(req.url);
 		const admin = searchParams.get("admin") === "true";
+
+		if (admin) {
+			const supabase = await createServerSupabaseClient();
+			const {
+				data: { session },
+				error,
+			} = await supabase.auth.getSession();
+			if (error || !session) {
+				return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+			}
+		}
+
 		const photos = await listPhotoAssets({ admin });
 		return NextResponse.json(photos);
 	} catch (error) {
@@ -26,6 +39,15 @@ export async function GET(req: Request) {
 
 export async function PATCH(req: Request) {
 	try {
+		const supabase = await createServerSupabaseClient();
+		const {
+			data: { session },
+			error,
+		} = await supabase.auth.getSession();
+		if (error || !session) {
+			return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+		}
+
 		const body = (await req.json()) as {
 			id?: string;
 			visibility?: string;

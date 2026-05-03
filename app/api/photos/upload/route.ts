@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { uploadPhotoWithUnifiedPipeline } from "@/lib/photo-upload-pipeline";
 import type { UploadFolder } from "@/lib/photos";
+import { createServerSupabaseClient } from "@/lib/supabase-server";
 
 export const runtime = "nodejs";
 
@@ -17,6 +18,15 @@ function isUploadFolder(value: string): value is UploadFolder {
 
 export async function POST(req: Request) {
 	try {
+		const supabase = await createServerSupabaseClient();
+		const {
+			data: { session },
+			error: authError,
+		} = await supabase.auth.getSession();
+		if (authError || !session) {
+			return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+		}
+
 		const form = await req.formData();
 		const file = form.get("file");
 		const folderValue = form.get("folder");
