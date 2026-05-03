@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { PhotoThumbnail } from "@/components/admin/PhotoDisplay";
+import { PhotoLightboxGrid } from "@/components/photos/PhotoLightboxGrid";
 
 interface PublicPhoto {
 	id: string;
@@ -54,16 +54,15 @@ export default function PhotosPage() {
 					No featured photos yet.
 				</p>
 			) : (
-				<div className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
-					{photos.map((photo) => (
-						<PhotoThumbnail
-							key={photo.id}
-							photoRef={photo.displayRef}
-							alt="Featured photo"
-							className="aspect-square"
-						/>
-					))}
-				</div>
+				<PhotoLightboxGrid
+					photos={photos.map((photo, index) => ({
+						ref: photo.displayRef,
+						alt: `Featured photo ${index + 1}`,
+						caption: `Photo ${index + 1}`,
+					}))}
+					gridClassName="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4"
+					thumbnailClassName="aspect-square w-full rounded"
+				/>
 			)}
 		</main>
 	);

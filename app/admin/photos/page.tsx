@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import PhotoUploader from "@/components/admin/PhotoUploader";
-import { PhotoThumbnail } from "@/components/admin/PhotoDisplay";
+import { PhotoLightboxGrid } from "@/components/photos/PhotoLightboxGrid";
 import type { PhotoVisibility } from "@/lib/photos";
 
 interface AdminPhotoItem {
@@ -90,10 +90,16 @@ export default function AdminPhotosPage() {
 							key={photo.id}
 							className="rounded-lg border border-zinc-200 p-3 dark:border-zinc-800"
 						>
-							<PhotoThumbnail
-								photoRef={photo.displayRef}
-								alt="Uploaded photo"
-								className="mb-3"
+							<PhotoLightboxGrid
+								photos={[
+									{
+										ref: photo.displayRef,
+										alt: "Uploaded photo",
+										caption: `Photo ${photo.id.slice(0, 8)}`,
+									},
+								]}
+								gridClassName="mb-3 grid grid-cols-1"
+								thumbnailClassName="aspect-square w-full rounded"
 							/>
 							<div className="space-y-2">
 								<select

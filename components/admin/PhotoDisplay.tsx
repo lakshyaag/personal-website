@@ -1,6 +1,7 @@
 "use client";
 
-import { usePhotoUrl, usePhotoUrls } from "@/hooks/usePhotoUrl";
+import { usePhotoUrl } from "@/hooks/usePhotoUrl";
+import { PhotoLightboxGrid } from "@/components/photos/PhotoLightboxGrid";
 
 interface PhotoDisplayProps {
 	/** Photo reference (HTTP URL or sb:// ref) */
@@ -97,35 +98,15 @@ export function PhotoGrid({
 	gridCols = "grid-cols-3 sm:grid-cols-4",
 	className = "",
 }: PhotoGridProps) {
-	const photoUrlMap = usePhotoUrls(photos);
-
-	if (photos.length === 0) return null;
-
 	return (
-		<div className={`mt-3 grid ${gridCols} gap-2 ${className}`.trim()}>
-			{photos.map((photo) => {
-				const displayUrl = photoUrlMap.get(photo);
-				return (
-					<div key={photo} className="relative">
-						{displayUrl ? (
-							<button
-								type="button"
-								aria-label="Open photo"
-								className="group relative aspect-square w-full overflow-hidden rounded focus:outline-none focus:ring-2 focus:ring-zinc-500/20"
-								onClick={() => displayUrl && onPhotoClick?.(displayUrl)}
-							>
-								<img
-									src={displayUrl}
-									alt="Entry"
-									className="absolute inset-0 h-full w-full object-cover group-hover:opacity-80 transition-opacity"
-								/>
-							</button>
-						) : (
-							<div className="absolute inset-0 bg-zinc-200 dark:bg-zinc-700 animate-pulse aspect-square rounded" />
-						)}
-					</div>
-				);
-			})}
-		</div>
+		<PhotoLightboxGrid
+			photos={photos.map((photo, index) => ({
+				ref: photo,
+				alt: `Entry photo ${index + 1}`,
+			}))}
+			gridClassName={`mt-3 grid ${gridCols} gap-2 ${className}`.trim()}
+			thumbnailClassName="aspect-square w-full rounded"
+			onPhotoClick={onPhotoClick}
+		/>
 	);
 }
