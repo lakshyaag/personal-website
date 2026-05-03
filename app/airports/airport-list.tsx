@@ -4,6 +4,7 @@ import { useState, useMemo } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import type { Visit, Airport } from "@/lib/models";
 import { ChevronDown, Plane, Mountain, MapPin } from "lucide-react";
+import { usePhotoUrl } from "@/hooks/usePhotoUrl";
 
 interface AirportListProps {
 	visits: Visit[];
@@ -15,6 +16,22 @@ interface GroupedAirport {
 	airport: Airport;
 	visits: Visit[];
 	lastVisitDate: string;
+}
+
+function ResolvedPhoto({
+	photoRef,
+	alt,
+	className,
+}: {
+	photoRef: string;
+	alt: string;
+	className: string;
+}) {
+	const displayUrl = usePhotoUrl(photoRef);
+	if (!displayUrl) {
+		return <div className={`${className} animate-pulse bg-zinc-200 dark:bg-zinc-700`} />;
+	}
+	return <img src={displayUrl} alt={alt} className={className} />;
 }
 
 function formatElevation(elevation: number): string {
@@ -178,9 +195,9 @@ export default function AirportList({
 								{visit.photos && visit.photos.length > 0 && (
 									<div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
 										{visit.photos.map((photo, idx) => (
-											<img
+											<ResolvedPhoto
 												key={idx}
-												src={photo}
+												photoRef={photo}
 												alt={`${airport.name} photo ${idx + 1}`}
 												className="h-32 w-full rounded-lg object-cover"
 											/>
@@ -302,9 +319,9 @@ export default function AirportList({
 											{lastVisit.photos && lastVisit.photos.length > 0 && (
 												<div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
 													{lastVisit.photos.map((photo, idx) => (
-														<img
+														<ResolvedPhoto
 															key={idx}
-															src={photo}
+															photoRef={photo}
 															alt={`${airport.name} photo ${idx + 1}`}
 															className="h-32 w-full rounded-lg object-cover"
 														/>
@@ -391,9 +408,9 @@ export default function AirportList({
 														{visit.photos && visit.photos.length > 0 && (
 															<div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
 																{visit.photos.map((photo, photoIdx) => (
-																	<img
+																	<ResolvedPhoto
 																		key={photoIdx}
-																		src={photo}
+																		photoRef={photo}
 																		alt={`Visit photo ${photoIdx + 1}`}
 																		className="h-24 w-full rounded-lg object-cover"
 																	/>

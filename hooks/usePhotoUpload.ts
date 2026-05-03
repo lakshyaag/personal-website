@@ -8,8 +8,7 @@ import {
 } from "react";
 import { createClient } from "@/lib/supabase-client";
 import { encodeSupabaseRef } from "@/lib/photo-refs";
-
-export type UploadFolder = "airports" | "journal" | "food" | "workouts" | "fits";
+import type { UploadFolder } from "@/lib/photos";
 
 export interface UsePhotoUploadOptions {
 	folder: UploadFolder;
@@ -101,30 +100,54 @@ function usePhotoUpload(
 				const newRefs: string[] = [];
 
 				for (const file of Array.from(files)) {
-					const objectPath = generateObjectPath(folder, identifier, file);
+					try {
+						const formData = new FormData();
+						formData.append("file", file);
+						formData.append("folder", folder);
+						formData.append("identifier", identifier);
 
-					// Upload directly to Supabase Storage
-					const { error } = await supabase.storage
-						.from(bucket)
-						.upload(objectPath, file, {
-							contentType: file.type,
-							upsert: false,
+						const response = await fetch("/api/photos/upload", {
+							method: "POST",
+							body: formData,
 						});
 
-					if (error) {
-						console.error("Upload error:", error);
-						throw new Error(`Upload failed: ${error.message}`);
-					}
+						if (!response.ok) {
+							throw new Error("Unified upload route returned non-OK response");
+						}
 
-					// For public bucket (airports), store the public URL
-					// For private bucket, store the sb:// reference
-					if (isPublicBucket) {
-						const { data: urlData } = supabase.storage
+						const payload = (await response.json()) as { photoRef?: string };
+						if (!payload.photoRef) {
+							throw new Error("Unified upload route response missing photoRef");
+						}
+
+						newRefs.push(payload.photoRef);
+					} catch (unifiedUploadError) {
+						console.warn(
+							"Unified photo pipeline failed, falling back to legacy upload path",
+							unifiedUploadError,
+						);
+
+						const objectPath = generateObjectPath(folder, identifier, file);
+						const { error } = await supabase.storage
 							.from(bucket)
-							.getPublicUrl(objectPath);
-						newRefs.push(urlData.publicUrl);
-					} else {
-						newRefs.push(encodeSupabaseRef(bucket, objectPath));
+							.upload(objectPath, file, {
+								contentType: file.type,
+								upsert: false,
+							});
+
+						if (error) {
+							console.error("Upload error:", error);
+							throw new Error(`Upload failed: ${error.message}`);
+						}
+
+						if (isPublicBucket) {
+							const { data: urlData } = supabase.storage
+								.from(bucket)
+								.getPublicUrl(objectPath);
+							newRefs.push(urlData.publicUrl);
+						} else {
+							newRefs.push(encodeSupabaseRef(bucket, objectPath));
+						}
 					}
 				}
 
