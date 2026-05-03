@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTheme } from "next-themes";
+import { assetUrl } from "@/lib/assets";
 
 // ─────────────────────────────────────────────────────────────
 // Types
@@ -286,9 +287,17 @@ export function PlotlyChart({
 		setChartData(null);
 		setActiveVariant(null);
 
+		const resolvedSrc = assetUrl(src);
+		if (!resolvedSrc) {
+			setError("Chart source is missing.");
+			return () => {
+				cancelled = true;
+			};
+		}
+
 		Promise.all([
 			loadPlotly(),
-			fetch(src).then((response) => {
+			fetch(resolvedSrc).then((response) => {
 				if (!response.ok) throw new Error(`HTTP ${response.status}`);
 				return response.json() as Promise<ChartJSON>;
 			}),

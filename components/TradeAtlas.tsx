@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTheme } from "next-themes";
+import { assetUrl } from "@/lib/assets";
 
 type PlotlyTrace = Record<string, unknown>;
 type PlotlyLayout = Record<string, unknown>;
@@ -402,9 +403,17 @@ export function TradeAtlas({ src, className }: TradeAtlasProps) {
 		setSelectedIso(null);
 		setError(null);
 
+		const resolvedSrc = assetUrl(src);
+		if (!resolvedSrc) {
+			setError("Atlas source is missing.");
+			return () => {
+				cancelled = true;
+			};
+		}
+
 		Promise.all([
 			loadPlotly(),
-			fetch(src).then((response) => {
+			fetch(resolvedSrc).then((response) => {
 				if (!response.ok) throw new Error(`HTTP ${response.status}`);
 				return response.json() as Promise<AtlasJSON>;
 			}),
