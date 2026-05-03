@@ -8,6 +8,12 @@ interface PhotoAssetRow {
 	gallery_featured: boolean;
 	created_at: string;
 	taken_at: string | null;
+	width: number | null;
+	height: number | null;
+	safe_exif: Record<string, unknown> | null;
+	title: string | null;
+	caption: string | null;
+	location_label: string | null;
 }
 
 interface PhotoDerivativeRow {
@@ -33,6 +39,12 @@ export interface PhotoAssetListItem {
 	galleryFeatured: boolean;
 	createdAt: string;
 	takenAt: string | null;
+	width: number | null;
+	height: number | null;
+	safeExif: Record<string, unknown>;
+	title: string | null;
+	caption: string | null;
+	locationLabel: string | null;
 	displayRef: string;
 	thumbnailRef: string | null;
 	contextType: string | null;
@@ -48,7 +60,9 @@ export async function listPhotoAssets(options?: {
 
 	let query = supabaseAdmin
 		.from("photo_assets")
-		.select("id,visibility,gallery_featured,created_at,taken_at")
+		.select(
+			"id,visibility,gallery_featured,created_at,taken_at,width,height,safe_exif,title,caption,location_label",
+		)
 		.order("created_at", { ascending: false })
 		.limit(limit);
 
@@ -125,6 +139,12 @@ export async function listPhotoAssets(options?: {
 				galleryFeatured: asset.gallery_featured,
 				createdAt: asset.created_at,
 				takenAt: asset.taken_at,
+				width: asset.width,
+				height: asset.height,
+				safeExif: asset.safe_exif ?? {},
+				title: asset.title,
+				caption: asset.caption,
+				locationLabel: asset.location_label,
 				displayRef: encodeSupabaseRef(display.bucket, display.path),
 				thumbnailRef: thumb ? encodeSupabaseRef(thumb.bucket, thumb.path) : null,
 				contextType: primaryAttachment?.context_type ?? null,
@@ -134,18 +154,31 @@ export async function listPhotoAssets(options?: {
 		.filter((item): item is PhotoAssetListItem => item !== null);
 }
 
-export async function updatePhotoAssetVisibility(params: {
+export async function updatePhotoAsset(params: {
 	id: string;
-	visibility: PhotoVisibility;
-	galleryFeatured: boolean;
+	visibility?: PhotoVisibility;
+	galleryFeatured?: boolean;
+	title?: string | null;
+	caption?: string | null;
+	locationLabel?: string | null;
 }) {
+	const updates: Record<string, unknown> = {
+		updated_at: new Date().toISOString(),
+	};
+
+	if (params.visibility !== undefined) updates.visibility = params.visibility;
+	if (params.galleryFeatured !== undefined) {
+		updates.gallery_featured = params.galleryFeatured;
+	}
+	if (params.title !== undefined) updates.title = params.title;
+	if (params.caption !== undefined) updates.caption = params.caption;
+	if (params.locationLabel !== undefined) {
+		updates.location_label = params.locationLabel;
+	}
+
 	const { error } = await supabaseAdmin
 		.from("photo_assets")
-		.update({
-			visibility: params.visibility,
-			gallery_featured: params.galleryFeatured,
-			updated_at: new Date().toISOString(),
-		})
+		.update(updates)
 		.eq("id", params.id);
 
 	if (error) {

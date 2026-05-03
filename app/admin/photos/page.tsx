@@ -1,9 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { ChevronDown } from "lucide-react";
 import PhotoUploader from "@/components/admin/PhotoUploader";
 import { PhotoLightboxGrid } from "@/components/photos/PhotoLightboxGrid";
-import { ChevronDown } from "lucide-react";
 import type { PhotoVisibility } from "@/lib/photos";
 
 interface AdminPhotoItem {
@@ -11,8 +11,14 @@ interface AdminPhotoItem {
 	visibility: PhotoVisibility;
 	galleryFeatured: boolean;
 	displayRef: string;
+	thumbnailRef: string | null;
 	createdAt: string;
 	takenAt: string | null;
+	width: number | null;
+	height: number | null;
+	title: string | null;
+	caption: string | null;
+	locationLabel: string | null;
 	contextType: string | null;
 	contextId: string | null;
 }
@@ -23,6 +29,13 @@ type SortOption =
 	| "taken_desc"
 	| "taken_asc";
 type FeaturedFilter = "all" | "featured" | "not_featured";
+type PhotoPatch = Partial<{
+	visibility: PhotoVisibility;
+	galleryFeatured: boolean;
+	title: string | null;
+	caption: string | null;
+	locationLabel: string | null;
+}>;
 
 const CONTEXT_LABELS: Record<string, string> = {
 	airport_visit: "Airport Visits",
@@ -52,6 +65,11 @@ function formatTimestamp(value: string | null): string {
 		hour: "numeric",
 		minute: "2-digit",
 	});
+}
+
+function normalizeOptionalText(value: string): string | null {
+	const trimmed = value.trim();
+	return trimmed.length > 0 ? trimmed : null;
 }
 
 export default function AdminPhotosPage() {
@@ -87,11 +105,11 @@ export default function AdminPhotosPage() {
 	}, [loadPhotos]);
 
 	const updatePhoto = useCallback(
-		async (id: string, visibility: PhotoVisibility, galleryFeatured: boolean) => {
+		async (id: string, patch: PhotoPatch) => {
 			const response = await fetch("/api/photos", {
 				method: "PATCH",
 				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({ id, visibility, galleryFeatured }),
+				body: JSON.stringify({ id, ...patch }),
 			});
 			if (!response.ok) {
 				throw new Error("Failed to update photo");
@@ -99,6 +117,19 @@ export default function AdminPhotosPage() {
 			await loadPhotos();
 		},
 		[loadPhotos],
+	);
+
+	const updateTextField = useCallback(
+		(
+			photo: AdminPhotoItem,
+			field: "title" | "caption" | "locationLabel",
+			value: string,
+		) => {
+			const nextValue = normalizeOptionalText(value);
+			if ((photo[field] ?? null) === nextValue) return;
+			void updatePhoto(photo.id, { [field]: nextValue });
+		},
+		[updatePhoto],
 	);
 
 	const deletePhoto = useCallback(
@@ -196,9 +227,7 @@ export default function AdminPhotosPage() {
 				<PhotoUploader
 					label="Upload to unified gallery"
 					photos={uploadRefs}
-					onChange={(refs) => {
-						setUploadRefs(refs);
-					}}
+					onChange={setUploadRefs}
 					onSuccess={() => {
 						void loadPhotos();
 					}}
@@ -260,7 +289,9 @@ export default function AdminPhotosPage() {
 			</div>
 
 			{loading ? (
-				<p className="mt-8 text-zinc-600 dark:text-zinc-400">Loading photos...</p>
+				<p className="mt-8 text-zinc-600 dark:text-zinc-400">
+					Loading photos...
+				</p>
 			) : filteredAndSortedPhotos.length === 0 ? (
 				<p className="mt-8 text-zinc-600 dark:text-zinc-400">
 					No photos match the selected filters.
@@ -304,10 +335,21 @@ export default function AdminPhotosPage() {
 													photos={[
 														{
 															ref: photo.displayRef,
-															alt: "Uploaded photo",
-															caption: photo.contextId
-																? `${group.label} · ${photo.contextId}`
-																: group.label,
+															thumbnailRef: photo.thumbnailRef ?? photo.displayRef,
+															alt: photo.title ?? "Uploaded photo",
+															caption: (
+																<div className="space-y-1">
+																	<div className="font-medium text-zinc-100">
+																		{photo.title ?? group.label}
+																	</div>
+																	{photo.caption && <div>{photo.caption}</div>}
+																	<div className="text-xs text-zinc-400">
+																		{photo.locationLabel ??
+																			photo.contextId ??
+																			group.label} · Taken {formatTimestamp(photo.takenAt)}
+																	</div>
+																</div>
+															),
 														},
 													]}
 													gridClassName="mb-2 grid grid-cols-1"
@@ -316,17 +358,51 @@ export default function AdminPhotosPage() {
 												<div className="mb-2 space-y-0.5 text-[11px] text-zinc-500 dark:text-zinc-400">
 													<div>Uploaded: {formatTimestamp(photo.createdAt)}</div>
 													<div>Taken: {formatTimestamp(photo.takenAt)}</div>
+													{photo.width && photo.height && (
+														<div>
+															{photo.width} × {photo.height}
+														</div>
+													)}
 													{photo.contextId && <div>Context: {photo.contextId}</div>}
+												</div>
+												<div className="mb-2 space-y-1.5">
+													<input
+														defaultValue={photo.title ?? ""}
+														onBlur={(event) =>
+															updateTextField(photo, "title", event.target.value)
+														}
+														placeholder="Title"
+														className="w-full rounded border border-zinc-300 bg-white px-2 py-1 text-xs dark:border-zinc-700 dark:bg-zinc-900"
+													/>
+													<input
+														defaultValue={photo.locationLabel ?? ""}
+														onBlur={(event) =>
+															updateTextField(
+																photo,
+																"locationLabel",
+																event.target.value,
+															)
+														}
+														placeholder="Location label"
+														className="w-full rounded border border-zinc-300 bg-white px-2 py-1 text-xs dark:border-zinc-700 dark:bg-zinc-900"
+													/>
+													<textarea
+														defaultValue={photo.caption ?? ""}
+														onBlur={(event) =>
+															updateTextField(photo, "caption", event.target.value)
+														}
+														placeholder="Caption"
+														rows={2}
+														className="w-full resize-none rounded border border-zinc-300 bg-white px-2 py-1 text-xs dark:border-zinc-700 dark:bg-zinc-900"
+													/>
 												</div>
 												<div className="space-y-1.5">
 													<select
 														value={photo.visibility}
 														onChange={(event) => {
-															void updatePhoto(
-																photo.id,
-																event.target.value as PhotoVisibility,
-																photo.galleryFeatured,
-															);
+															void updatePhoto(photo.id, {
+																visibility: event.target.value as PhotoVisibility,
+															});
 														}}
 														className="w-full rounded border border-zinc-300 bg-white px-2 py-1 text-xs dark:border-zinc-700 dark:bg-zinc-900"
 													>
@@ -339,11 +415,9 @@ export default function AdminPhotosPage() {
 															type="checkbox"
 															checked={photo.galleryFeatured}
 															onChange={(event) => {
-																void updatePhoto(
-																	photo.id,
-																	photo.visibility,
-																	event.target.checked,
-																);
+																void updatePhoto(photo.id, {
+																	galleryFeatured: event.target.checked,
+																});
 															}}
 														/>
 														Feature in `/photos`
