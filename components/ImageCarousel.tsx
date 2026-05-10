@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { assetUrl } from "@/lib/assets";
 
 interface ImageCarouselProps {
 	images: { src: string; alt: string; caption?: string }[];
@@ -61,7 +62,7 @@ export function ImageCarousel({ images }: ImageCarouselProps) {
 							className="absolute inset-0 transition-opacity duration-300 ease-in-out"
 						>
 							<img
-								src={images[currentIndex].src}
+								src={assetUrl(images[currentIndex].src) ?? undefined}
 								alt={images[currentIndex].alt}
 								className="h-full w-full object-contain"
 								loading="lazy"

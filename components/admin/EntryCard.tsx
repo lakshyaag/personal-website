@@ -63,9 +63,6 @@ export function EntryCard({
 	onDelete,
 	className = "",
 }: EntryCardProps) {
-	const resolvedOnPhotoClick =
-		onPhotoClick ?? ((url: string) => window.open(url, "_blank"));
-
 	const resolvedActions =
 		actions ??
 		(onEdit || onDelete ? (
@@ -103,7 +100,7 @@ export function EntryCard({
 						</div>
 					)}
 					{photos && photos.length > 0 && (
-						<PhotoGrid photos={photos} onPhotoClick={resolvedOnPhotoClick} />
+						<PhotoGrid photos={photos} onPhotoClick={onPhotoClick} />
 					)}
 					{children}
 				</div>

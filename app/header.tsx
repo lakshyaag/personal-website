@@ -27,17 +27,21 @@ export function Header() {
 			</div>
 
 			<div className="hidden sm:flex flex-col items-end space-y-0.5">
-				{SOCIAL_LINKS.filter((link) => link.showHeader).map((link) => (
-					<Link
-						key={link.label}
-						href={link.link}
-						className="underline underline-offset-1 text-zinc-800 hover:text-zinc-600 dark:text-zinc-200 dark:hover:text-zinc-400 transition-colors"
-						target="_blank"
-						rel="noopener noreferrer"
-					>
-						{link.label}
-					</Link>
-				))}
+				{SOCIAL_LINKS.filter((link) => link.showHeader).map((link) => {
+					const isExternal = link.link.startsWith("http");
+
+					return (
+						<Link
+							key={link.label}
+							href={link.link}
+							className="underline underline-offset-1 text-zinc-800 hover:text-zinc-600 dark:text-zinc-200 dark:hover:text-zinc-400 transition-colors"
+							target={isExternal ? "_blank" : undefined}
+							rel={isExternal ? "noopener noreferrer" : undefined}
+						>
+							{link.label}
+						</Link>
+					);
+				})}
 			</div>
 		</header>
 	);

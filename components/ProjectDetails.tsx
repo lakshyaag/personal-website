@@ -9,6 +9,7 @@ import { ExternalLink, XIcon } from "lucide-react";
 import MagneticSocialLink from "./MagneticSocialLink";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { assetUrl } from "@/lib/assets";
 
 type ProjectImageProps = {
 	src?: string;
@@ -17,6 +18,10 @@ type ProjectImageProps = {
 
 export function ProjectImage({ src, project }: ProjectImageProps) {
 	if (!src) return null;
+	const resolvedSrc = assetUrl(src);
+	const resolvedPoster = project.image ? assetUrl(project.image) : undefined;
+	const shouldAutoplayPreview = Boolean(project.video && !resolvedPoster);
+
 	return (
 		<MorphingDialog
 			transition={{
@@ -29,15 +34,18 @@ export function ProjectImage({ src, project }: ProjectImageProps) {
 				<div className="aspect-[16/9] w-full overflow-hidden rounded-xl">
 					{project.video ? (
 						<video
-							src={src}
-							autoPlay
+							src={resolvedSrc ?? undefined}
+							autoPlay={shouldAutoplayPreview}
 							muted
 							loop
+							preload={resolvedPoster ? "none" : "metadata"}
+							playsInline
+							poster={resolvedPoster ?? undefined}
 							className="h-full w-full object-cover"
 						/>
 					) : (
 						<img
-							src={src}
+							src={resolvedSrc ?? undefined}
 							alt={project.name}
 							className="h-full w-full object-cover"
 						/>
@@ -50,16 +58,19 @@ export function ProjectImage({ src, project }: ProjectImageProps) {
 						<div className="aspect-[16/9] w-full overflow-hidden rounded-xl bg-zinc-100 dark:bg-zinc-900">
 							{project.video ? (
 								<video
-									src={src}
+									src={resolvedSrc ?? undefined}
 									autoPlay
 									muted
 									loop
 									controls
+									preload="metadata"
+									playsInline
+									poster={resolvedPoster ?? undefined}
 									className="h-full w-full object-cover"
 								/>
 							) : (
 								<img
-									src={src}
+									src={resolvedSrc ?? undefined}
 									alt={project.name}
 									className="h-full w-full object-cover"
 								/>

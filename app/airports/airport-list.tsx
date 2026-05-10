@@ -4,6 +4,7 @@ import { useState, useMemo } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import type { Visit, Airport } from "@/lib/models";
 import { ChevronDown, Plane, Mountain, MapPin } from "lucide-react";
+import { PhotoLightboxGrid } from "@/components/photos/PhotoLightboxGrid";
 
 interface AirportListProps {
 	visits: Visit[];
@@ -92,6 +93,20 @@ export default function AirportList({
 		setExpandedAirports(newExpanded);
 	};
 
+	const handleGroupHeaderClick = (
+		event: React.MouseEvent<HTMLDivElement>,
+		ident: string,
+		hasMultipleVisits: boolean,
+	) => {
+		if (!hasMultipleVisits) return;
+		const target = event.target as HTMLElement;
+		// Do not toggle if an explicit interactive control was clicked.
+		if (target.closest("button, a, input, select, textarea")) {
+			return;
+		}
+		toggleAirport(ident);
+	};
+
 	if (visits.length === 0) {
 		return (
 			<div className="rounded-xl border border-zinc-200 bg-zinc-50/40 p-8 text-center dark:border-zinc-800 dark:bg-zinc-900/40">
@@ -176,16 +191,15 @@ export default function AirportList({
 
 								{/* Photos */}
 								{visit.photos && visit.photos.length > 0 && (
-									<div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-										{visit.photos.map((photo, idx) => (
-											<img
-												key={idx}
-												src={photo}
-												alt={`${airport.name} photo ${idx + 1}`}
-												className="h-32 w-full rounded-lg object-cover"
-											/>
-										))}
-									</div>
+									<PhotoLightboxGrid
+										photos={visit.photos.map((photo, idx) => ({
+											ref: photo,
+											alt: `${airport.name} photo ${idx + 1}`,
+											caption: `${airport.name} · ${formatDate(visit.date)}`,
+										}))}
+										gridClassName="grid grid-cols-2 gap-2 sm:grid-cols-3"
+										thumbnailClassName="h-32 w-full rounded-lg"
+									/>
 								)}
 							</div>
 
@@ -227,10 +241,26 @@ export default function AirportList({
 						initial={{ opacity: 0, y: 10 }}
 						animate={{ opacity: 1, y: 0 }}
 					>
-						<button
-							type="button"
-							onClick={() => hasMultipleVisits && toggleAirport(airport.ident)}
-							className="w-full p-6 text-left transition-colors hover:bg-zinc-50 dark:hover:bg-zinc-900/80"
+						<div
+							className={`w-full p-6 text-left ${hasMultipleVisits ? "cursor-pointer transition-colors hover:bg-zinc-50 dark:hover:bg-zinc-900/80" : ""}`}
+							onClick={(event) =>
+								handleGroupHeaderClick(event, airport.ident, hasMultipleVisits)
+							}
+							onKeyDown={(event) => {
+								if (!hasMultipleVisits) return;
+								if (event.key === "Enter" || event.key === " ") {
+									event.preventDefault();
+									toggleAirport(airport.ident);
+								}
+							}}
+							role={hasMultipleVisits ? "button" : undefined}
+							tabIndex={hasMultipleVisits ? 0 : -1}
+							aria-expanded={hasMultipleVisits ? isExpanded : undefined}
+							aria-label={
+								hasMultipleVisits
+									? `${isExpanded ? "Collapse" : "Expand"} ${airport.name} visit history`
+									: undefined
+							}
 						>
 							<div className="flex items-start justify-between gap-6">
 								<div className="flex-1 space-y-3">
@@ -300,16 +330,15 @@ export default function AirportList({
 												</p>
 											)}
 											{lastVisit.photos && lastVisit.photos.length > 0 && (
-												<div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-													{lastVisit.photos.map((photo, idx) => (
-														<img
-															key={idx}
-															src={photo}
-															alt={`${airport.name} photo ${idx + 1}`}
-															className="h-32 w-full rounded-lg object-cover"
-														/>
-													))}
-												</div>
+												<PhotoLightboxGrid
+													photos={lastVisit.photos.map((photo, idx) => ({
+														ref: photo,
+														alt: `${airport.name} photo ${idx + 1}`,
+														caption: `${airport.name} · ${formatDate(lastVisit.date)}`,
+													}))}
+													gridClassName="grid grid-cols-2 gap-2 sm:grid-cols-3"
+													thumbnailClassName="h-32 w-full rounded-lg"
+												/>
 											)}
 										</>
 									)}
@@ -331,8 +360,14 @@ export default function AirportList({
 										</div>
 									</div>
 									{/* Always reserve space for chevron for consistent alignment */}
-									<div className="mt-2 flex items-center justify-center" style={{ width: 20, height: 20 }}>
-										{hasMultipleVisits ? (
+									{hasMultipleVisits ? (
+										<button
+											type="button"
+											onClick={() => toggleAirport(airport.ident)}
+											aria-label={isExpanded ? "Collapse visits" : "Expand visits"}
+											className="mt-2 flex items-center justify-center rounded-md transition-colors hover:bg-zinc-100 focus:outline-none focus:ring-2 focus:ring-zinc-500/20 dark:hover:bg-zinc-800"
+											style={{ width: 28, height: 28 }}
+										>
 											<motion.div
 												animate={{ rotate: isExpanded ? 180 : 0 }}
 												transition={{ duration: 0.2 }}
@@ -340,11 +375,13 @@ export default function AirportList({
 											>
 												<ChevronDown className="h-5 w-5 text-zinc-400" />
 											</motion.div>
-										) : null}
-									</div>
+										</button>
+									) : (
+										<div className="mt-2" style={{ width: 28, height: 28 }} />
+									)}
 								</div>
 							</div>
-						</button>
+						</div>
 
 						{/* Expanded visits */}
 						<AnimatePresence>
@@ -389,16 +426,15 @@ export default function AirportList({
 															</p>
 														)}
 														{visit.photos && visit.photos.length > 0 && (
-															<div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-																{visit.photos.map((photo, photoIdx) => (
-																	<img
-																		key={photoIdx}
-																		src={photo}
-																		alt={`Visit photo ${photoIdx + 1}`}
-																		className="h-24 w-full rounded-lg object-cover"
-																	/>
-																))}
-															</div>
+															<PhotoLightboxGrid
+																photos={visit.photos.map((photo, photoIdx) => ({
+																	ref: photo,
+																	alt: `Visit photo ${photoIdx + 1}`,
+																	caption: `${airport.name} · ${formatDate(visit.date)}`,
+																}))}
+																gridClassName="grid grid-cols-2 gap-2 sm:grid-cols-3"
+																thumbnailClassName="h-24 w-full rounded-lg"
+															/>
 														)}
 													</div>
 												</div>
