@@ -53,7 +53,7 @@ export function PhotoTeaser() {
 				<div>
 					<h3 className="text-lg font-medium">Photos</h3>
 					<p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
-						A small contact sheet of things I noticed.
+						Photos from everyday life and travel.
 					</p>
 				</div>
 				<Link

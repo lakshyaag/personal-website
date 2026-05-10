@@ -105,8 +105,7 @@ export default function PhotosPage() {
 					Things I noticed
 				</h1>
 				<p className="mt-4 text-zinc-600 dark:text-zinc-400">
-					A small contact sheet of photos I like. Mostly iPhone, lightly
-					catalogued, with the nerdy bits tucked into the viewer.
+					A collection of photos from everyday life and places I have been.
 				</p>
 			</div>
 
