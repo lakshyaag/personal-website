@@ -19,6 +19,10 @@ interface AdminPhotoItem {
 	title: string | null;
 	caption: string | null;
 	locationLabel: string | null;
+	gpsLatitude: number | null;
+	gpsLongitude: number | null;
+	gpsAltitude: number | null;
+	gpsPublic: boolean;
 	contextType: string | null;
 	contextId: string | null;
 }
@@ -35,6 +39,7 @@ type PhotoPatch = Partial<{
 	title: string | null;
 	caption: string | null;
 	locationLabel: string | null;
+	gpsPublic: boolean;
 }>;
 
 const CONTEXT_LABELS: Record<string, string> = {
@@ -70,6 +75,19 @@ function formatTimestamp(value: string | null): string {
 function normalizeOptionalText(value: string): string | null {
 	const trimmed = value.trim();
 	return trimmed.length > 0 ? trimmed : null;
+}
+
+function formatGps(photo: AdminPhotoItem): string | null {
+	if (photo.gpsLatitude === null || photo.gpsLongitude === null) return null;
+	const coordinates = `${photo.gpsLatitude.toFixed(6)}, ${photo.gpsLongitude.toFixed(6)}`;
+	return photo.gpsAltitude === null
+		? coordinates
+		: `${coordinates} · ${Math.round(photo.gpsAltitude)}m`;
+}
+
+function mapsUrl(photo: AdminPhotoItem): string | null {
+	if (photo.gpsLatitude === null || photo.gpsLongitude === null) return null;
+	return `https://maps.google.com/?q=${photo.gpsLatitude},${photo.gpsLongitude}`;
 }
 
 export default function AdminPhotosPage() {
@@ -363,6 +381,21 @@ export default function AdminPhotosPage() {
 															{photo.width} × {photo.height}
 														</div>
 													)}
+													{formatGps(photo) && (
+														<div>
+															GPS: {formatGps(photo)}{" "}
+															{mapsUrl(photo) && (
+																<a
+																	href={mapsUrl(photo) ?? undefined}
+																	target="_blank"
+																	rel="noopener noreferrer"
+																	className="underline"
+																>
+																	Map
+																</a>
+															)}
+														</div>
+													)}
 													{photo.contextId && <div>Context: {photo.contextId}</div>}
 												</div>
 												<div className="mb-2 space-y-1.5">
@@ -421,6 +454,21 @@ export default function AdminPhotosPage() {
 															}}
 														/>
 														Feature in `/photos`
+													</label>
+													<label className="flex items-center gap-2 text-xs text-zinc-700 dark:text-zinc-300">
+														<input
+															type="checkbox"
+															checked={photo.gpsPublic}
+															disabled={
+																photo.gpsLatitude === null || photo.gpsLongitude === null
+															}
+															onChange={(event) => {
+																void updatePhoto(photo.id, {
+																	gpsPublic: event.target.checked,
+																});
+															}}
+														/>
+														Allow GPS for public display later
 													</label>
 													<button
 														type="button"

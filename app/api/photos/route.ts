@@ -56,6 +56,7 @@ export async function PATCH(req: Request) {
 			title?: string | null;
 			caption?: string | null;
 			locationLabel?: string | null;
+			gpsPublic?: boolean;
 		};
 
 		if (!body.id) {
@@ -72,6 +73,7 @@ export async function PATCH(req: Request) {
 			title: body.title,
 			caption: body.caption,
 			locationLabel: body.locationLabel,
+			gpsPublic: body.gpsPublic,
 		});
 
 		return NextResponse.json({ ok: true });

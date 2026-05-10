@@ -43,19 +43,23 @@ function extensionFromFile(fileName: string): string {
 	return parts[parts.length - 1]?.toLowerCase() || "jpg";
 }
 
-function toSafeExif(
-	exif:
-		| {
-				Make?: string;
-				Model?: string;
-				LensModel?: string;
-				FNumber?: number;
-				ExposureTime?: number;
-				ISO?: number;
-		  }
-		| null
-		| undefined,
-) {
+interface ParsedPhotoExif {
+	DateTimeOriginal?: Date;
+	CreateDate?: Date;
+	Make?: string;
+	Model?: string;
+	LensModel?: string;
+	FNumber?: number;
+	ExposureTime?: number;
+	ISO?: number;
+	latitude?: number;
+	longitude?: number;
+	GPSLatitude?: number;
+	GPSLongitude?: number;
+	GPSAltitude?: number;
+}
+
+function toSafeExif(exif: ParsedPhotoExif | null | undefined) {
 	if (!exif) return {};
 	return {
 		make: exif.Make ?? null,
@@ -100,10 +104,25 @@ export async function uploadPhotoWithUnifiedPipeline(
 	const image = sharp(fileBuffer, { failOn: "none" }).rotate();
 	const metadata = await image.metadata();
 
-	const exif = await parseExif(fileBuffer, {
-		pick: ["DateTimeOriginal", "CreateDate", "Make", "Model", "LensModel", "FNumber", "ExposureTime", "ISO"],
+	const exif = (await parseExif(fileBuffer, {
+		gps: true,
+		pick: [
+			"DateTimeOriginal",
+			"CreateDate",
+			"Make",
+			"Model",
+			"LensModel",
+			"FNumber",
+			"ExposureTime",
+			"ISO",
+			"GPSLatitude",
+			"GPSLongitude",
+			"GPSAltitude",
+			"latitude",
+			"longitude",
+		],
 		reviveValues: true,
-	}).catch(() => null);
+	}).catch(() => null)) as ParsedPhotoExif | null;
 
 	const visibility = visibilityForFolder(folder);
 	const contextType = contextTypeForFolder(folder);
@@ -170,6 +189,9 @@ export async function uploadPhotoWithUnifiedPipeline(
 	const takenAtRaw = exif?.DateTimeOriginal ?? exif?.CreateDate ?? null;
 	const takenAt =
 		takenAtRaw instanceof Date ? takenAtRaw.toISOString() : null;
+	const gpsLatitude = exif?.latitude ?? exif?.GPSLatitude ?? null;
+	const gpsLongitude = exif?.longitude ?? exif?.GPSLongitude ?? null;
+	const gpsAltitude = exif?.GPSAltitude ?? null;
 
 	const { error: assetError } = await supabaseAdmin.from("photo_assets").insert({
 		id: photoId,
@@ -178,6 +200,10 @@ export async function uploadPhotoWithUnifiedPipeline(
 		height: metadata.height ?? null,
 		taken_at: takenAt,
 		safe_exif: safeExif,
+		gps_latitude: gpsLatitude,
+		gps_longitude: gpsLongitude,
+		gps_altitude: gpsAltitude,
+		gps_public: false,
 		visibility,
 		gallery_featured: contextType === "gallery",
 	});

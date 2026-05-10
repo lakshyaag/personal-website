@@ -14,6 +14,10 @@ interface PhotoAssetRow {
 	title: string | null;
 	caption: string | null;
 	location_label: string | null;
+	gps_latitude: number | null;
+	gps_longitude: number | null;
+	gps_altitude: number | null;
+	gps_public: boolean;
 }
 
 interface PhotoDerivativeRow {
@@ -45,6 +49,10 @@ export interface PhotoAssetListItem {
 	title: string | null;
 	caption: string | null;
 	locationLabel: string | null;
+	gpsLatitude: number | null;
+	gpsLongitude: number | null;
+	gpsAltitude: number | null;
+	gpsPublic: boolean;
 	displayRef: string;
 	thumbnailRef: string | null;
 	contextType: string | null;
@@ -61,7 +69,7 @@ export async function listPhotoAssets(options?: {
 	let query = supabaseAdmin
 		.from("photo_assets")
 		.select(
-			"id,visibility,gallery_featured,created_at,taken_at,width,height,safe_exif,title,caption,location_label",
+			"id,visibility,gallery_featured,created_at,taken_at,width,height,safe_exif,title,caption,location_label,gps_latitude,gps_longitude,gps_altitude,gps_public",
 		)
 		.order("created_at", { ascending: false })
 		.limit(limit);
@@ -145,6 +153,10 @@ export async function listPhotoAssets(options?: {
 				title: asset.title,
 				caption: asset.caption,
 				locationLabel: asset.location_label,
+				gpsLatitude: admin ? asset.gps_latitude : null,
+				gpsLongitude: admin ? asset.gps_longitude : null,
+				gpsAltitude: admin ? asset.gps_altitude : null,
+				gpsPublic: admin ? asset.gps_public : false,
 				displayRef: encodeSupabaseRef(display.bucket, display.path),
 				thumbnailRef: thumb ? encodeSupabaseRef(thumb.bucket, thumb.path) : null,
 				contextType: primaryAttachment?.context_type ?? null,
@@ -161,6 +173,7 @@ export async function updatePhotoAsset(params: {
 	title?: string | null;
 	caption?: string | null;
 	locationLabel?: string | null;
+	gpsPublic?: boolean;
 }) {
 	const updates: Record<string, unknown> = {
 		updated_at: new Date().toISOString(),
@@ -175,6 +188,7 @@ export async function updatePhotoAsset(params: {
 	if (params.locationLabel !== undefined) {
 		updates.location_label = params.locationLabel;
 	}
+	if (params.gpsPublic !== undefined) updates.gps_public = params.gpsPublic;
 
 	const { error } = await supabaseAdmin
 		.from("photo_assets")
