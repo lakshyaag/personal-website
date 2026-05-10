@@ -56,6 +56,8 @@ interface ParsedPhotoExif {
 	longitude?: number;
 	GPSLatitude?: number;
 	GPSLongitude?: number;
+	GPSLatitudeRef?: string;
+	GPSLongitudeRef?: string;
 	GPSAltitude?: number;
 }
 
@@ -69,6 +71,11 @@ function toSafeExif(exif: ParsedPhotoExif | null | undefined) {
 		exposureTime: exif.ExposureTime ?? null,
 		iso: exif.ISO ?? null,
 	};
+}
+
+function gpsCoordinate(value: number | undefined, ref: string | undefined) {
+	if (value === undefined) return null;
+	return ref === "S" || ref === "W" ? -value : value;
 }
 
 async function uploadObject(
@@ -117,6 +124,8 @@ export async function uploadPhotoWithUnifiedPipeline(
 			"ISO",
 			"GPSLatitude",
 			"GPSLongitude",
+			"GPSLatitudeRef",
+			"GPSLongitudeRef",
 			"GPSAltitude",
 			"latitude",
 			"longitude",
@@ -189,8 +198,10 @@ export async function uploadPhotoWithUnifiedPipeline(
 	const takenAtRaw = exif?.DateTimeOriginal ?? exif?.CreateDate ?? null;
 	const takenAt =
 		takenAtRaw instanceof Date ? takenAtRaw.toISOString() : null;
-	const gpsLatitude = exif?.latitude ?? exif?.GPSLatitude ?? null;
-	const gpsLongitude = exif?.longitude ?? exif?.GPSLongitude ?? null;
+	const gpsLatitude =
+		exif?.latitude ?? gpsCoordinate(exif?.GPSLatitude, exif?.GPSLatitudeRef);
+	const gpsLongitude =
+		exif?.longitude ?? gpsCoordinate(exif?.GPSLongitude, exif?.GPSLongitudeRef);
 	const gpsAltitude = exif?.GPSAltitude ?? null;
 
 	const { error: assetError } = await supabaseAdmin.from("photo_assets").insert({
@@ -205,7 +216,7 @@ export async function uploadPhotoWithUnifiedPipeline(
 		gps_altitude: gpsAltitude,
 		gps_public: false,
 		visibility,
-		gallery_featured: contextType === "gallery",
+		gallery_featured: false,
 	});
 	if (assetError) {
 		throw new Error(`Failed to save photo asset: ${assetError.message}`);

@@ -18,7 +18,7 @@ export type UploadFolder =
 	| "gallery";
 
 export function visibilityForFolder(folder: UploadFolder): PhotoVisibility {
-	if (folder === "airports" || folder === "gallery") {
+	if (folder === "airports") {
 		return "public";
 	}
 	return "private";

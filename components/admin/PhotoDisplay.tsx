@@ -38,27 +38,27 @@ export function PhotoThumbnail({
 	};
 
 	return (
-		<div className={`relative ${className}`.trim()}>
+		<div className={`relative aspect-square overflow-hidden rounded ${className}`.trim()}>
 			{displayUrl ? (
 				<>
 					{onClick ? (
 						<button
 							type="button"
 							aria-label="Open photo"
-							className="group relative aspect-square w-full overflow-hidden rounded focus:outline-none focus:ring-2 focus:ring-zinc-500/20"
+							className="group h-full w-full focus:outline-none focus:ring-2 focus:ring-zinc-500/20"
 							onClick={handleClick}
 						>
 							<img
 								src={displayUrl}
 								alt={alt}
-								className="absolute inset-0 h-full w-full object-cover group-hover:opacity-80 transition-opacity"
+								className="h-full w-full object-cover transition-opacity group-hover:opacity-80"
 							/>
 						</button>
 					) : (
 						<img
 							src={displayUrl}
 							alt={alt}
-							className="h-24 w-full rounded object-cover"
+							className="h-full w-full object-cover"
 						/>
 					)}
 					{showRemove && onRemove && (
@@ -72,7 +72,7 @@ export function PhotoThumbnail({
 					)}
 				</>
 			) : (
-				<div className="h-24 w-full rounded bg-zinc-200 dark:bg-zinc-700 animate-pulse" />
+				<div className="h-full w-full animate-pulse bg-zinc-200 dark:bg-zinc-700" />
 			)}
 		</div>
 	);

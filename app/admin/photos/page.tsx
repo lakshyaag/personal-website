@@ -251,6 +251,7 @@ export default function AdminPhotosPage() {
 					}}
 					folder="gallery"
 					identifier="gallery"
+					autoUpload={false}
 					onError={() => alert("Upload failed")}
 				/>
 			</div>
@@ -396,7 +397,7 @@ export default function AdminPhotosPage() {
 															)}
 														</div>
 													)}
-													{photo.contextId && <div>Context: {photo.contextId}</div>}
+													<div>Source: {group.label}</div>
 												</div>
 												<div className="mb-2 space-y-1.5">
 													<input
@@ -468,7 +469,7 @@ export default function AdminPhotosPage() {
 																});
 															}}
 														/>
-														Allow GPS for public display later
+														Show GPS for public
 													</label>
 													<button
 														type="button"
