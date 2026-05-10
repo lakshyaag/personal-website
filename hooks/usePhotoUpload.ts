@@ -17,7 +17,7 @@ export interface UsePhotoUploadOptions {
 export interface UsePhotoUploadReturn {
 	photos: string[];
 	uploading: boolean;
-	uploadPhotos: (files: FileList | null) => Promise<void>;
+	uploadPhotos: (files: FileList | File[] | null) => Promise<void>;
 	removePhoto: (url: string) => void;
 	setPhotos: Dispatch<SetStateAction<string[]>>;
 	clearPhotos: () => void;
@@ -31,7 +31,7 @@ function usePhotoUpload(
 	const [uploading, setUploading] = useState(false);
 
 	const uploadPhotos = useCallback(
-		async (files: FileList | null) => {
+		async (files: FileList | File[] | null) => {
 			if (!files || files.length === 0) return;
 			if (!identifier) {
 				throw new Error("Missing upload identifier");
