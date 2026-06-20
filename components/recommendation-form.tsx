@@ -26,6 +26,7 @@ export function RecommendationForm() {
     const [query, setQuery] = useState("");
     const [searchResults, setSearchResults] = useState<GoogleBooksResult[]>([]);
     const [isSearching, setIsSearching] = useState(false);
+    const [searchError, setSearchError] = useState<string | null>(null);
     const [selectedBook, setSelectedBook] = useState<GoogleBooksResult | null>(null);
 
     // Refs for cleanup and race condition handling
@@ -47,6 +48,7 @@ export function RecommendationForm() {
             const timer = setTimeout(() => {
                 setQuery("");
                 setSearchResults([]);
+                setSearchError(null);
                 setSelectedBook(null);
                 setIsSuccess(false);
                 setError(null);
@@ -56,39 +58,49 @@ export function RecommendationForm() {
         }
     }, [isOpen]);
 
-    function searchBooks(searchQuery: string) {
+    async function searchBooks(searchQuery: string) {
         if (!searchQuery.trim()) {
             setSearchResults([]);
+            setSearchError(null);
             setIsSearching(false);
             return;
         }
 
-        // Cancel previous request
         if (abortControllerRef.current) {
             abortControllerRef.current.abort();
         }
         abortControllerRef.current = new AbortController();
 
         setIsSearching(true);
+        setSearchError(null);
 
-        fetch(
-            `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(
-                searchQuery
-            )}&maxResults=5`,
-            { signal: abortControllerRef.current.signal }
-        )
-            .then((res) => res.json())
-            .then((data) => {
-                setSearchResults(data.items || []);
-                setIsSearching(false);
-            })
-            .catch((error) => {
-                if (error.name !== 'AbortError') {
-                    console.error("Search failed:", error);
-                    setSearchResults([]);
-                    setIsSearching(false);
-                }
-            });
+        try {
+            const res = await fetch(
+                `/api/books/search?q=${encodeURIComponent(searchQuery)}&maxResults=5`,
+                { signal: abortControllerRef.current.signal },
+            );
+            const data = await res.json();
+
+            if (!res.ok) {
+                throw new Error(data.error || "Search failed");
+            }
+
+            setSearchResults(data.items || []);
+        } catch (err) {
+            if (err instanceof Error && err.name === "AbortError") {
+                return;
+            }
+
+            console.error("Search failed:", err);
+            setSearchResults([]);
+            setSearchError(
+                err instanceof Error
+                    ? err.message
+                    : "Book search failed. Please try again.",
+            );
+        } finally {
+            setIsSearching(false);
+        }
     }
 
     function handleSearchChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -100,9 +112,10 @@ export function RecommendationForm() {
         if (newQuery.trim()) {
             debounceTimerRef.current = setTimeout(() => {
                 searchBooks(newQuery);
-            }, 300);
+            }, 500);
         } else {
             setSearchResults([]);
+            setSearchError(null);
             setIsSearching(false);
         }
     }
@@ -237,6 +250,12 @@ export function RecommendationForm() {
                                                                 </div>
                                                             )}
 
+                                                            {searchError && (
+                                                                <p className="mt-2 text-xs text-red-500">
+                                                                    {searchError}
+                                                                </p>
+                                                            )}
+
                                                             {searchResults.length > 0 && (
                                                                 <div className="absolute z-10 w-full mt-1 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-md shadow-lg max-h-60 overflow-auto">
                                                                     {searchResults.map((book) => (
@@ -269,7 +288,7 @@ export function RecommendationForm() {
                                                             )}
 
                                                             {/* Fallback manual input if search doesn't find it */}
-                                                            {query && searchResults.length === 0 && !isSearching && (
+                                                            {query && searchResults.length === 0 && !isSearching && !searchError && (
                                                                 <div className="mt-2 text-xs text-neutral-500">
                                                                     Can't find it? <button type="button" onClick={() => setSelectedBook({ id: 'manual', volumeInfo: { title: query } })} className="text-neutral-900 dark:text-neutral-100 underline">Use "{query}"</button>
                                                                 </div>
