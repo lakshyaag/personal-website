@@ -91,6 +91,7 @@ export default function AdminBooksPage() {
 	const [query, setQuery] = useState("");
 	const [searchResults, setSearchResults] = useState<GoogleBooksResult[]>([]);
 	const [searching, setSearching] = useState(false);
+	const [searchError, setSearchError] = useState<string | null>(null);
 	const [selectedBook, setSelectedBook] = useState<GoogleBooksResult | null>(
 		null,
 	);
@@ -142,28 +143,39 @@ export default function AdminBooksPage() {
 		setForm((prev) => ({ ...prev, ...updates }));
 	}
 
-	function searchBooks(searchQuery: string) {
+	async function searchBooks(searchQuery: string) {
 		if (!searchQuery.trim()) {
 			setSearchResults([]);
+			setSearchError(null);
 			return;
 		}
 
 		setSearching(true);
-		fetch(
-			`https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(
-				searchQuery,
-			)}&maxResults=10`,
-		)
-			.then((res) => res.json())
-			.then((data) => {
-				setSearchResults(data.items || []);
-				setSearching(false);
-			})
-			.catch((error) => {
-				console.error("Search failed:", error);
-				setSearchResults([]);
-				setSearching(false);
-			});
+		setSearchError(null);
+
+		try {
+			const res = await fetch(
+				`/api/books/search?q=${encodeURIComponent(searchQuery)}&maxResults=10`,
+			);
+			const data = await res.json();
+
+			if (!res.ok) {
+				throw new Error(data.error || "Search failed");
+			}
+
+			setSearchResults(data.items || []);
+		} catch (error) {
+			console.error("Search failed:", error);
+			setSearchResults([]);
+			const message =
+				error instanceof Error
+					? error.message
+					: "Book search failed. Please try again.";
+			setSearchError(message);
+			toast.error(message);
+		} finally {
+			setSearching(false);
+		}
 	}
 
 	function selectBook(book: GoogleBooksResult) {
@@ -202,10 +214,12 @@ export default function AdminBooksPage() {
 		if (rec.googleBooksId) {
 			try {
 				toast.loading("Fetching book details...");
-				const res = await fetch(
-					`https://www.googleapis.com/books/v1/volumes/${rec.googleBooksId}`,
-				);
+				const res = await fetch(`/api/books/volumes/${rec.googleBooksId}`);
 				const data = await res.json();
+
+				if (!res.ok) {
+					throw new Error(data.error || "Failed to fetch book details");
+				}
 
 				if (data.volumeInfo) {
 					const info = data.volumeInfo;
@@ -408,10 +422,11 @@ export default function AdminBooksPage() {
 								if (newQuery.trim()) {
 									const timer = setTimeout(() => {
 										searchBooks(newQuery);
-									}, 300);
+									}, 500);
 									setDebounceTimer(timer);
 								} else {
 									setSearchResults([]);
+									setSearchError(null);
 								}
 							}}
 						/>
@@ -420,6 +435,10 @@ export default function AdminBooksPage() {
 							<p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
 								Searching...
 							</p>
+						)}
+
+						{searchError && !searching && (
+							<p className="mt-2 text-sm text-red-500">{searchError}</p>
 						)}
 
 						{searchResults.length > 0 && (
