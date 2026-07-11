@@ -1,15 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import PhotoUploader from "@/components/admin/PhotoUploader";
 import { PhotoEditSheet } from "@/components/admin/photos/PhotoEditSheet";
 import { PhotosDataTable } from "@/components/admin/photos/PhotosDataTable";
-import {
-	type AdminPhotoItem,
-	type FeaturedFilter,
-} from "@/components/admin/photos/types";
-import type { PhotoVisibility } from "@/lib/photos";
+import type { AdminPhotoItem } from "@/components/admin/photos/types";
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -25,10 +21,6 @@ export default function AdminPhotosPage() {
 	const [photos, setPhotos] = useState<AdminPhotoItem[]>([]);
 	const [uploadRefs, setUploadRefs] = useState<string[]>([]);
 	const [loading, setLoading] = useState(true);
-	const [visibilityFilter, setVisibilityFilter] = useState<
-		PhotoVisibility | "all"
-	>("all");
-	const [featuredFilter, setFeaturedFilter] = useState<FeaturedFilter>("all");
 	const [selectedPhoto, setSelectedPhoto] = useState<AdminPhotoItem | null>(
 		null,
 	);
@@ -56,21 +48,6 @@ export default function AdminPhotosPage() {
 	useEffect(() => {
 		void loadPhotos();
 	}, [loadPhotos]);
-
-	const filteredPhotos = useMemo(() => {
-		return photos.filter((photo) => {
-			if (visibilityFilter !== "all" && photo.visibility !== visibilityFilter) {
-				return false;
-			}
-			if (featuredFilter === "featured" && !photo.galleryFeatured) {
-				return false;
-			}
-			if (featuredFilter === "not_featured" && photo.galleryFeatured) {
-				return false;
-			}
-			return true;
-		});
-	}, [photos, visibilityFilter, featuredFilter]);
 
 	const openEditor = useCallback((photo: AdminPhotoItem) => {
 		setSelectedPhoto(photo);
@@ -124,44 +101,9 @@ export default function AdminPhotosPage() {
 					folder="gallery"
 					identifier="gallery"
 					autoUpload={false}
+					allowLibrary={false}
 					onError={() => toast.error("Upload failed")}
 				/>
-			</div>
-
-			<div className="mt-5 grid gap-3 sm:grid-cols-2">
-				<label className="space-y-1">
-					<span className="text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
-						Visibility
-					</span>
-					<select
-						value={visibilityFilter}
-						onChange={(event) =>
-							setVisibilityFilter(event.target.value as PhotoVisibility | "all")
-						}
-						className="w-full rounded border border-zinc-300 bg-white px-2 py-1.5 text-sm dark:border-zinc-700 dark:bg-zinc-900"
-					>
-						<option value="all">All</option>
-						<option value="private">Private</option>
-						<option value="unlisted">Unlisted</option>
-						<option value="public">Public</option>
-					</select>
-				</label>
-				<label className="space-y-1">
-					<span className="text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
-						Featured
-					</span>
-					<select
-						value={featuredFilter}
-						onChange={(event) =>
-							setFeaturedFilter(event.target.value as FeaturedFilter)
-						}
-						className="w-full rounded border border-zinc-300 bg-white px-2 py-1.5 text-sm dark:border-zinc-700 dark:bg-zinc-900"
-					>
-						<option value="all">All</option>
-						<option value="featured">Featured only</option>
-						<option value="not_featured">Not featured</option>
-					</select>
-				</label>
 			</div>
 
 			<div className="mt-6">
@@ -169,7 +111,7 @@ export default function AdminPhotosPage() {
 					<p className="text-zinc-600 dark:text-zinc-400">Loading photos...</p>
 				) : (
 					<PhotosDataTable
-						photos={filteredPhotos}
+						photos={photos}
 						onRowClick={openEditor}
 						onDelete={setDeleteTarget}
 					/>

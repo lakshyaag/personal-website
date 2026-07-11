@@ -21,8 +21,6 @@ export interface AdminPhotoItem {
 	contextId: string | null;
 }
 
-export type FeaturedFilter = "all" | "featured" | "not_featured";
-
 export const CONTEXT_LABELS: Record<string, string> = {
 	airport_visit: "Airport Visits",
 	food: "Food",

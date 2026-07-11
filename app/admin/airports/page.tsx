@@ -21,7 +21,7 @@ type AirportViewMode = "byDate" | "byAirport";
 
 export default function AdminAirportsPage() {
 	const [query, setQuery] = useState("");
-	const [date, setDate] = useState("");
+	const [date, setDate] = useState(() => getTodayDate());
 	const [flightNumbers, setFlightNumbers] = useState<string[]>([""]);
 	const [isLayover, setIsLayover] = useState(false);
 	const [notes, setNotes] = useState("");
@@ -33,6 +33,7 @@ export default function AdminAirportsPage() {
 	>({});
 	const [viewMode, setViewMode] = useState<AirportViewMode>("byDate");
 	const formRef = useRef<HTMLDivElement>(null);
+	const didLoadVisits = useRef(false);
 
 	const showDropdown = query && !selectedAirport;
 	const results: Airport[] = showDropdown
@@ -47,7 +48,7 @@ export default function AdminAirportsPage() {
 				.slice(0, 20)
 		: [];
 
-	const { saving, loading, save, remove, loadByDate, loadGrouped, loadAll } =
+	const { saving, loading, save, remove, loadGrouped, loadAll } =
 		useAdminCrud<Visit>({
 			endpoint: "/api/visits",
 			entityName: "visit",
@@ -78,9 +79,9 @@ export default function AdminAirportsPage() {
 	}, [loadAll]);
 
 	useEffect(() => {
-		const today = getTodayDate();
-		setDate(today);
-		loadAllVisitsByDate();
+		if (didLoadVisits.current) return;
+		didLoadVisits.current = true;
+		void loadAllVisitsByDate();
 	}, [loadAllVisitsByDate]);
 
 	const handleDateChange = useCallback((newDate: string) => {

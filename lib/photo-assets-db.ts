@@ -1,6 +1,6 @@
 import { supabaseAdmin } from "./supabase-client";
 import { encodeSupabaseRef, parseSupabaseRef } from "./photo-refs";
-import type { PhotoVisibility } from "./photos";
+import type { PhotoContextType, PhotoVisibility } from "./photos";
 
 interface PhotoAssetRow {
 	id: string;
@@ -164,6 +164,118 @@ export async function listPhotoAssets(options?: {
 			};
 		})
 		.filter((item): item is PhotoAssetListItem => item !== null);
+}
+
+/**
+ * Resolve the preferred display ref for an existing photo asset.
+ */
+export async function getPhotoAssetDisplayRef(
+	photoId: string,
+): Promise<string | null> {
+	const { data: assetRow, error: assetError } = await supabaseAdmin
+		.from("photo_assets")
+		.select("id,visibility")
+		.eq("id", photoId)
+		.maybeSingle();
+	if (assetError) {
+		throw new Error(`Failed to load photo asset: ${assetError.message}`);
+	}
+	if (!assetRow) return null;
+
+	const { data: derivativeRows, error: derivativeError } = await supabaseAdmin
+		.from("photo_derivatives")
+		.select("kind,bucket,path")
+		.eq("photo_id", photoId);
+	if (derivativeError) {
+		throw new Error(
+			`Failed to load photo derivatives: ${derivativeError.message}`,
+		);
+	}
+
+	const derivatives = (derivativeRows ?? []) as Array<{
+		kind: "thumb" | "card" | "full" | "private_full";
+		bucket: string;
+		path: string;
+	}>;
+	const fullPublic = derivatives.find((item) => item.kind === "full");
+	const fullPrivate = derivatives.find((item) => item.kind === "private_full");
+	const display =
+		(assetRow.visibility === "public" ? fullPublic : undefined) ??
+		fullPrivate ??
+		fullPublic;
+	if (!display) return null;
+
+	return encodeSupabaseRef(display.bucket, display.path);
+}
+
+/**
+ * Record that a photo is used in a given context, and return its display ref
+ * for appending to content-table `photos[]` arrays.
+ */
+export async function attachPhotoAsset(params: {
+	photoId: string;
+	contextType: PhotoContextType;
+	contextId: string;
+}): Promise<{ displayRef: string }> {
+	const contextId = params.contextId.trim();
+	if (!contextId) {
+		throw new Error("Missing context id");
+	}
+
+	const displayRef = await getPhotoAssetDisplayRef(params.photoId);
+	if (!displayRef) {
+		throw new Error("Photo asset not found or has no display derivative");
+	}
+
+	const { data: existing, error: existingError } = await supabaseAdmin
+		.from("photo_attachments")
+		.select("id")
+		.eq("photo_id", params.photoId)
+		.eq("context_type", params.contextType)
+		.eq("context_id", contextId)
+		.maybeSingle();
+	if (existingError) {
+		throw new Error(
+			`Failed to check existing photo attachment: ${existingError.message}`,
+		);
+	}
+
+	if (!existing) {
+		const { data: maxSortRow, error: sortError } = await supabaseAdmin
+			.from("photo_attachments")
+			.select("sort_order")
+			.eq("context_type", params.contextType)
+			.eq("context_id", contextId)
+			.order("sort_order", { ascending: false })
+			.limit(1)
+			.maybeSingle();
+		if (sortError) {
+			throw new Error(
+				`Failed to resolve photo attachment sort order: ${sortError.message}`,
+			);
+		}
+
+		const nextSort =
+			typeof maxSortRow?.sort_order === "number"
+				? maxSortRow.sort_order + 1
+				: 0;
+
+		const { error: insertError } = await supabaseAdmin
+			.from("photo_attachments")
+			.insert({
+				photo_id: params.photoId,
+				context_type: params.contextType,
+				context_id: contextId,
+				sort_order: nextSort,
+			});
+		if (insertError) {
+			throw new Error(
+				`Failed to attach photo to context: ${insertError.message}`,
+			);
+		}
+	}
+
+	return { displayRef };
 }
 
 export async function updatePhotoAsset(params: {

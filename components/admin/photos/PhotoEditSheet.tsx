@@ -26,6 +26,7 @@ import {
 	AlertDialogHeader,
 	AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { PhotoLightbox } from "@/components/photos/PhotoLightbox";
 import { PhotoThumbnailCell } from "./PhotoThumbnailCell";
 import {
 	type AdminPhotoItem,
@@ -82,6 +83,7 @@ export function PhotoEditSheet({
 	const [draft, setDraft] = useState<Draft | null>(null);
 	const [saving, setSaving] = useState(false);
 	const [discardOpen, setDiscardOpen] = useState(false);
+	const [lightboxOpen, setLightboxOpen] = useState(false);
 
 	useEffect(() => {
 		if (photo && open) {
@@ -90,6 +92,7 @@ export function PhotoEditSheet({
 		if (!open) {
 			setDraft(null);
 			setDiscardOpen(false);
+			setLightboxOpen(false);
 		}
 	}, [photo, open]);
 
@@ -172,6 +175,7 @@ export function PhotoEditSheet({
 								<PhotoThumbnailCell
 									photoRef={photo.thumbnailRef ?? photo.displayRef}
 									alt={photo.title ?? "Photo"}
+									onClick={() => setLightboxOpen(true)}
 								/>
 								<div className="min-w-0 space-y-1 text-xs text-muted-foreground">
 									<div>Uploaded: {formatTimestamp(photo.createdAt)}</div>
@@ -321,6 +325,21 @@ export function PhotoEditSheet({
 					</AlertDialogFooter>
 				</AlertDialogContent>
 			</AlertDialog>
+
+			{photo && (
+				<PhotoLightbox
+					photos={[
+						{
+							ref: photo.displayRef,
+							thumbnailRef: photo.thumbnailRef,
+							alt: photo.title ?? "Photo",
+							caption: photo.caption ?? photo.title ?? undefined,
+						},
+					]}
+					index={lightboxOpen ? 0 : null}
+					onClose={() => setLightboxOpen(false)}
+				/>
+			)}
 		</>
 	);
 }

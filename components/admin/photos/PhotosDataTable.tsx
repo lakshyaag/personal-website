@@ -13,15 +13,18 @@ import {
 	type SortingState,
 	type VisibilityState,
 } from "@tanstack/react-table";
-import { ArrowUpDown, Columns3, MoreHorizontal } from "lucide-react";
+import { ArrowUpDown, Columns3, MoreHorizontal, PlusCircle, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
 	DropdownMenu,
 	DropdownMenuCheckboxItem,
 	DropdownMenuContent,
+	DropdownMenuGroup,
 	DropdownMenuItem,
 	DropdownMenuLabel,
+	DropdownMenuRadioGroup,
+	DropdownMenuRadioItem,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
@@ -33,6 +36,10 @@ import {
 	TableHeader,
 	TableRow,
 } from "@/components/ui/table";
+import {
+	PhotoLightbox,
+	type PhotoViewerItem,
+} from "@/components/photos/PhotoLightbox";
 import { PhotoThumbnailCell } from "./PhotoThumbnailCell";
 import {
 	type AdminPhotoItem,
@@ -45,6 +52,15 @@ interface PhotosDataTableProps {
 	photos: AdminPhotoItem[];
 	onRowClick: (photo: AdminPhotoItem) => void;
 	onDelete: (photo: AdminPhotoItem) => void;
+}
+
+function toLightboxItem(photo: AdminPhotoItem): PhotoViewerItem {
+	return {
+		ref: photo.displayRef,
+		thumbnailRef: photo.thumbnailRef,
+		alt: photo.title ?? "Photo",
+		caption: photo.caption ?? photo.title ?? undefined,
+	};
 }
 
 function SortHeader({
@@ -70,6 +86,65 @@ function SortHeader({
 	);
 }
 
+function ToolbarFilter({
+	label,
+	value,
+	options,
+	onChange,
+}: {
+	label: string;
+	value: string;
+	options: { label: string; value: string }[];
+	onChange: (value: string | undefined) => void;
+}) {
+	const active = Boolean(value);
+	const activeLabel =
+		options.find((option) => option.value === value)?.label ?? value;
+
+	return (
+		<DropdownMenu>
+			<DropdownMenuTrigger
+				render={
+					<Button
+						variant="outline"
+						size="sm"
+						className="gap-1.5 border-dashed"
+					/>
+				}
+			>
+				<PlusCircle className="size-3.5" />
+				{label}
+				{active && (
+					<>
+						<span className="mx-0.5 text-muted-foreground">·</span>
+						<Badge variant="secondary" className="rounded-sm px-1 font-normal">
+							{activeLabel}
+						</Badge>
+					</>
+				)}
+			</DropdownMenuTrigger>
+			<DropdownMenuContent align="start" className="w-44">
+				<DropdownMenuRadioGroup
+					value={value || "all"}
+					onValueChange={(next) =>
+						onChange(!next || next === "all" ? undefined : next)
+					}
+				>
+					<DropdownMenuGroup>
+						<DropdownMenuLabel>{label}</DropdownMenuLabel>
+						<DropdownMenuRadioItem value="all">All</DropdownMenuRadioItem>
+						{options.map((option) => (
+							<DropdownMenuRadioItem key={option.value} value={option.value}>
+								{option.label}
+							</DropdownMenuRadioItem>
+						))}
+					</DropdownMenuGroup>
+				</DropdownMenuRadioGroup>
+			</DropdownMenuContent>
+		</DropdownMenu>
+	);
+}
+
 export function PhotosDataTable({
 	photos,
 	onRowClick,
@@ -86,6 +161,12 @@ export function PhotosDataTable({
 		dimensions: false,
 	});
 	const [globalFilter, setGlobalFilter] = useState("");
+	const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
+
+	const lightboxPhotos = useMemo(
+		() => photos.map(toLightboxItem),
+		[photos],
+	);
 
 	const columns = useMemo<ColumnDef<AdminPhotoItem>[]>(
 		() => [
@@ -97,6 +178,12 @@ export function PhotosDataTable({
 					<PhotoThumbnailCell
 						photoRef={row.original.thumbnailRef ?? row.original.displayRef}
 						alt={row.original.title ?? "Photo"}
+						onClick={() => {
+							const index = photos.findIndex(
+								(photo) => photo.id === row.original.id,
+							);
+							if (index >= 0) setLightboxIndex(index);
+						}}
 					/>
 				),
 			},
@@ -132,6 +219,7 @@ export function PhotosDataTable({
 				header: ({ column }) => (
 					<SortHeader label="Visibility" column={column} />
 				),
+				filterFn: (row, id, value: string) => row.getValue(id) === value,
 				cell: ({ row }) => (
 					<Badge variant="secondary" className="capitalize">
 						{row.original.visibility}
@@ -141,6 +229,8 @@ export function PhotosDataTable({
 			{
 				accessorKey: "galleryFeatured",
 				header: ({ column }) => <SortHeader label="Featured" column={column} />,
+				filterFn: (row, id, value: string) =>
+					String(row.getValue(id)) === value,
 				cell: ({ row }) => (
 					<Badge variant={row.original.galleryFeatured ? "default" : "outline"}>
 						{row.original.galleryFeatured ? "Yes" : "No"}
@@ -246,7 +336,7 @@ export function PhotosDataTable({
 				),
 			},
 		],
-		[onDelete],
+		[onDelete, photos],
 	);
 
 	const table = useReactTable({
@@ -288,15 +378,64 @@ export function PhotosDataTable({
 		},
 	});
 
+	const visibilityFilter =
+		(table.getColumn("visibility")?.getFilterValue() as string | undefined) ??
+		"";
+	const featuredFilter =
+		(table
+			.getColumn("galleryFeatured")
+			?.getFilterValue() as string | undefined) ?? "";
+	const hasActiveFilters =
+		Boolean(visibilityFilter) || Boolean(featuredFilter) || Boolean(globalFilter);
+
 	return (
 		<div className="space-y-3">
-			<div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-				<Input
-					placeholder="Search title, caption, location, source..."
-					value={globalFilter}
-					onChange={(event) => setGlobalFilter(event.target.value)}
-					className="max-w-sm"
-				/>
+			<div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
+				<div className="flex flex-1 flex-wrap items-center gap-2">
+					<Input
+						placeholder="Search title, caption, location, source..."
+						value={globalFilter}
+						onChange={(event) => setGlobalFilter(event.target.value)}
+						className="max-w-sm"
+					/>
+					<ToolbarFilter
+						label="Visibility"
+						value={visibilityFilter}
+						options={[
+							{ label: "Private", value: "private" },
+							{ label: "Unlisted", value: "unlisted" },
+							{ label: "Public", value: "public" },
+						]}
+						onChange={(value) =>
+							table.getColumn("visibility")?.setFilterValue(value)
+						}
+					/>
+					<ToolbarFilter
+						label="Featured"
+						value={featuredFilter}
+						options={[
+							{ label: "Yes", value: "true" },
+							{ label: "No", value: "false" },
+						]}
+						onChange={(value) =>
+							table.getColumn("galleryFeatured")?.setFilterValue(value)
+						}
+					/>
+					{hasActiveFilters && (
+						<Button
+							variant="ghost"
+							size="sm"
+							className="gap-1.5"
+							onClick={() => {
+								setGlobalFilter("");
+								table.resetColumnFilters();
+							}}
+						>
+							Reset
+							<X className="size-3.5" />
+						</Button>
+					)}
+				</div>
 				<DropdownMenu>
 					<DropdownMenuTrigger
 						render={<Button variant="outline" size="sm" className="gap-1.5" />}
@@ -305,22 +444,24 @@ export function PhotosDataTable({
 						Columns
 					</DropdownMenuTrigger>
 					<DropdownMenuContent align="end" className="w-48">
-						<DropdownMenuLabel>Toggle columns</DropdownMenuLabel>
-						{table
-							.getAllColumns()
-							.filter((column) => column.getCanHide())
-							.map((column) => (
-								<DropdownMenuCheckboxItem
-									key={column.id}
-									checked={column.getIsVisible()}
-									onCheckedChange={(value) =>
-										column.toggleVisibility(value === true)
-									}
-									className="capitalize"
-								>
-									{column.id}
-								</DropdownMenuCheckboxItem>
-							))}
+						<DropdownMenuGroup>
+							<DropdownMenuLabel>Toggle columns</DropdownMenuLabel>
+							{table
+								.getAllColumns()
+								.filter((column) => column.getCanHide())
+								.map((column) => (
+									<DropdownMenuCheckboxItem
+										key={column.id}
+										checked={column.getIsVisible()}
+										onCheckedChange={(value) =>
+											column.toggleVisibility(value === true)
+										}
+										className="capitalize"
+									>
+										{column.id}
+									</DropdownMenuCheckboxItem>
+								))}
+						</DropdownMenuGroup>
 					</DropdownMenuContent>
 				</DropdownMenu>
 			</div>
@@ -402,6 +543,13 @@ export function PhotosDataTable({
 					</Button>
 				</div>
 			</div>
+
+			<PhotoLightbox
+				photos={lightboxPhotos}
+				index={lightboxIndex}
+				onClose={() => setLightboxIndex(null)}
+				onIndexChange={setLightboxIndex}
+			/>
 		</div>
 	);
 }

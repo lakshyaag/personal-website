@@ -5,6 +5,10 @@ import usePhotoUpload, {
 	type UsePhotoUploadOptions,
 } from "@/hooks/usePhotoUpload";
 import { PhotoThumbnail } from "@/components/admin/PhotoDisplay";
+import {
+	PhotoLibraryPicker,
+	PhotoLibraryPickerButton,
+} from "@/components/admin/PhotoLibraryPicker";
 
 interface PhotoUploaderProps extends UsePhotoUploadOptions {
 	label?: string;
@@ -13,6 +17,8 @@ interface PhotoUploaderProps extends UsePhotoUploadOptions {
 	onChange?: (photos: string[]) => void;
 	disabled?: boolean;
 	autoUpload?: boolean;
+	/** Attach existing gallery photos. Off for the gallery page itself. */
+	allowLibrary?: boolean;
 	onError?: (error: unknown) => void;
 }
 
@@ -24,6 +30,7 @@ export default function PhotoUploader(props: PhotoUploaderProps) {
 		onChange,
 		disabled,
 		autoUpload = true,
+		allowLibrary = true,
 		onSuccess,
 		onError,
 		...uploadOptions
@@ -32,6 +39,7 @@ export default function PhotoUploader(props: PhotoUploaderProps) {
 	const resolvedId = inputId ?? useId();
 	const syncingFromProps = useRef(false);
 	const [pendingFiles, setPendingFiles] = useState<File[]>([]);
+	const [libraryOpen, setLibraryOpen] = useState(false);
 
 	const pendingPreviews = useMemo(
 		() => pendingFiles.map((file) => URL.createObjectURL(file)),
@@ -91,14 +99,36 @@ export default function PhotoUploader(props: PhotoUploaderProps) {
 		setPendingFiles(Array.from(files));
 	};
 
+	const handleLibraryAttached = (refs: string[]) => {
+		setPhotos((prev) => {
+			const existing = new Set(prev);
+			const next = [...prev];
+			for (const ref of refs) {
+				if (!existing.has(ref)) next.push(ref);
+			}
+			return next;
+		});
+	};
+
+	const canUseLibrary =
+		allowLibrary && !disabled && Boolean(uploadOptions.identifier);
+
 	return (
 		<div>
-			<label
-				htmlFor={resolvedId}
-				className="mb-2 block text-sm font-medium text-zinc-700 dark:text-zinc-300"
-			>
-				{label}
-			</label>
+			<div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+				<label
+					htmlFor={resolvedId}
+					className="block text-sm font-medium text-zinc-700 dark:text-zinc-300"
+				>
+					{label}
+				</label>
+				{allowLibrary && (
+					<PhotoLibraryPickerButton
+						disabled={!canUseLibrary || uploading}
+						onClick={() => setLibraryOpen(true)}
+					/>
+				)}
+			</div>
 			<input
 				id={resolvedId}
 				type="file"
@@ -164,6 +194,17 @@ export default function PhotoUploader(props: PhotoUploaderProps) {
 						/>
 					))}
 				</div>
+			)}
+
+			{allowLibrary && (
+				<PhotoLibraryPicker
+					open={libraryOpen}
+					onOpenChange={setLibraryOpen}
+					alreadySelected={localPhotos}
+					folder={uploadOptions.folder}
+					contextId={uploadOptions.identifier}
+					onAttached={handleLibraryAttached}
+				/>
 			)}
 		</div>
 	);

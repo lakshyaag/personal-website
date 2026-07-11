@@ -1,18 +1,15 @@
 "use client";
 
-import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { createPortal } from "react-dom";
-import { ChevronLeft, ChevronRight, X } from "lucide-react";
+import { useMemo, useState } from "react";
 import { usePhotoUrls } from "@/hooks/usePhotoUrl";
+import {
+	PhotoLightbox,
+	normalizePhoto,
+	type PhotoInput,
+	type PhotoViewerItem,
+} from "@/components/photos/PhotoLightbox";
 
-type PhotoInput = string | PhotoViewerItem;
-
-export interface PhotoViewerItem {
-	ref: string;
-	thumbnailRef?: string | null;
-	alt?: string;
-	caption?: ReactNode;
-}
+export type { PhotoViewerItem };
 
 interface PhotoLightboxGridProps {
 	photos: PhotoInput[];
@@ -20,10 +17,6 @@ interface PhotoLightboxGridProps {
 	thumbnailClassName?: string;
 	thumbnailImageClassName?: string;
 	onPhotoClick?: (url: string) => void;
-}
-
-function normalizePhoto(photo: PhotoInput): PhotoViewerItem {
-	return typeof photo === "string" ? { ref: photo } : photo;
 }
 
 function cn(...classes: Array<string | undefined | false>) {
@@ -49,58 +42,6 @@ export function PhotoLightboxGrid({
 	}, [items]);
 	const photoUrlMap = usePhotoUrls(refs);
 	const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
-	const [selectedUrlFallback, setSelectedUrlFallback] = useState<string | null>(
-		null,
-	);
-	const [mounted, setMounted] = useState(false);
-
-	useEffect(() => {
-		setMounted(true);
-	}, []);
-
-	const selectedItem =
-		selectedIndex === null ? null : items[selectedIndex] ?? null;
-	const selectedUrl = selectedItem
-		? photoUrlMap.get(selectedItem.ref) ?? selectedUrlFallback
-		: null;
-
-	const closeLightbox = () => {
-		setSelectedIndex(null);
-		setSelectedUrlFallback(null);
-	};
-
-	useEffect(() => {
-		if (selectedIndex === null || onPhotoClick) return;
-
-		const previousOverflow = document.body.style.overflow;
-		document.body.style.overflow = "hidden";
-
-		const handleKeyDown = (event: KeyboardEvent) => {
-			if (event.key === "Escape") {
-				closeLightbox();
-				return;
-			}
-			if (items.length <= 1) return;
-			if (event.key === "ArrowLeft") {
-				setSelectedUrlFallback(null);
-				setSelectedIndex((current) =>
-					current === null ? current : (current - 1 + items.length) % items.length,
-				);
-			}
-			if (event.key === "ArrowRight") {
-				setSelectedUrlFallback(null);
-				setSelectedIndex((current) =>
-					current === null ? current : (current + 1) % items.length,
-				);
-			}
-		};
-
-		window.addEventListener("keydown", handleKeyDown);
-		return () => {
-			document.body.style.overflow = previousOverflow;
-			window.removeEventListener("keydown", handleKeyDown);
-		};
-	}, [items.length, onPhotoClick, selectedIndex]);
 
 	if (items.length === 0) return null;
 
@@ -110,93 +51,7 @@ export function PhotoLightboxGrid({
 			return;
 		}
 		setSelectedIndex(index);
-		setSelectedUrlFallback(fullUrl);
 	};
-
-	const goToPrevious = () => {
-		setSelectedUrlFallback(null);
-		setSelectedIndex((current) =>
-			current === null ? current : (current - 1 + items.length) % items.length,
-		);
-	};
-
-	const goToNext = () => {
-		setSelectedUrlFallback(null);
-		setSelectedIndex((current) =>
-			current === null ? current : (current + 1) % items.length,
-		);
-	};
-
-	const lightbox =
-		mounted && selectedIndex !== null && !onPhotoClick && selectedItem ? (
-			<div
-				className="fixed inset-0 z-[100] flex items-center justify-center bg-black/85 p-4 backdrop-blur-sm"
-				role="dialog"
-				aria-modal="true"
-				aria-label={selectedItem.alt ?? "Photo preview"}
-				onClick={closeLightbox}
-			>
-				<button
-					type="button"
-					aria-label="Close photo preview"
-					className="absolute right-4 top-4 rounded-full bg-white/10 p-2 text-white backdrop-blur transition hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-white/50"
-					onClick={closeLightbox}
-				>
-					<X className="h-5 w-5" />
-				</button>
-
-				{items.length > 1 && (
-					<button
-						type="button"
-						aria-label="Previous photo"
-						className="absolute left-4 top-1/2 -translate-y-1/2 rounded-full bg-white/10 p-2 text-white backdrop-blur transition hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-white/50"
-						onClick={(event) => {
-							event.stopPropagation();
-							goToPrevious();
-						}}
-					>
-						<ChevronLeft className="h-6 w-6" />
-					</button>
-				)}
-
-				<div
-					className="flex max-h-[92vh] max-w-[92vw] flex-col items-center gap-3"
-					onClick={(event) => event.stopPropagation()}
-				>
-					{selectedUrl ? (
-						<img
-							src={selectedUrl}
-							alt={selectedItem.alt ?? "Photo"}
-							className="max-h-[82vh] max-w-full rounded-xl object-contain shadow-2xl"
-						/>
-					) : (
-						<div className="h-[60vh] w-[70vw] animate-pulse rounded-xl bg-white/10" />
-					)}
-					<div className="max-w-3xl text-center text-sm text-zinc-200">
-						{selectedItem.caption && <div>{selectedItem.caption}</div>}
-						{items.length > 1 && (
-							<div className="mt-1 text-xs text-zinc-400">
-								{selectedIndex + 1} / {items.length}
-							</div>
-						)}
-					</div>
-				</div>
-
-				{items.length > 1 && (
-					<button
-						type="button"
-						aria-label="Next photo"
-						className="absolute right-4 top-1/2 -translate-y-1/2 rounded-full bg-white/10 p-2 text-white backdrop-blur transition hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-white/50"
-						onClick={(event) => {
-							event.stopPropagation();
-							goToNext();
-						}}
-					>
-						<ChevronRight className="h-6 w-6" />
-					</button>
-				)}
-			</div>
-		) : null;
 
 	return (
 		<>
@@ -242,7 +97,14 @@ export function PhotoLightboxGrid({
 				})}
 			</div>
 
-			{lightbox ? createPortal(lightbox, document.body) : null}
+			{!onPhotoClick && (
+				<PhotoLightbox
+					photos={items}
+					index={selectedIndex}
+					onClose={() => setSelectedIndex(null)}
+					onIndexChange={setSelectedIndex}
+				/>
+			)}
 		</>
 	);
 }
