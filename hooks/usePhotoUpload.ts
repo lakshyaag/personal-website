@@ -7,6 +7,7 @@ import {
 	useState,
 } from "react";
 import type { UploadFolder } from "@/lib/photos";
+import { createClient } from "@/lib/supabase-client";
 
 export interface UsePhotoUploadOptions {
 	folder: UploadFolder;
@@ -21,6 +22,38 @@ export interface UsePhotoUploadReturn {
 	removePhoto: (url: string) => void;
 	setPhotos: Dispatch<SetStateAction<string[]>>;
 	clearPhotos: () => void;
+}
+
+interface PreparedUpload {
+	photoId: string;
+	originalPath: string;
+	token: string;
+}
+
+interface FinalizedUpload {
+	photoRef: string;
+}
+
+async function parseApiResponse<T>(response: Response): Promise<T> {
+	const contentType = response.headers.get("content-type") ?? "";
+	const payload = contentType.includes("application/json")
+		? ((await response.json()) as unknown)
+		: await response.text();
+
+	if (!response.ok) {
+		const message =
+			typeof payload === "object" &&
+			payload !== null &&
+			"error" in payload &&
+			typeof payload.error === "string"
+				? payload.error
+				: typeof payload === "string" && payload.trim()
+					? payload.trim()
+					: `Upload failed with status ${response.status}`;
+		throw new Error(message);
+	}
+
+	return payload as T;
 }
 
 function usePhotoUpload(
@@ -40,27 +73,52 @@ function usePhotoUpload(
 			setUploading(true);
 			try {
 				const newRefs: string[] = [];
+				const supabase = createClient();
 
 				for (const file of Array.from(files)) {
-					const formData = new FormData();
-					formData.append("file", file);
-					formData.append("folder", folder);
-					formData.append("identifier", identifier);
-
-					const response = await fetch("/api/photos/upload", {
+					const prepareResponse = await fetch("/api/photos/upload", {
 						method: "POST",
-						body: formData,
+						headers: { "content-type": "application/json" },
+						body: JSON.stringify({
+							action: "prepare",
+							folder,
+							identifier,
+							fileName: file.name,
+							fileSize: file.size,
+							fileType: file.type,
+						}),
 					});
-					const payload = (await response.json()) as {
-						photoRef?: string;
-						error?: string;
-					};
-
-					if (!response.ok || !payload.photoRef) {
-						throw new Error(payload.error || "Unified upload failed");
+					const prepared =
+						await parseApiResponse<PreparedUpload>(prepareResponse);
+					if (!prepared.photoId || !prepared.originalPath || !prepared.token) {
+						throw new Error("Invalid upload target");
 					}
 
-					newRefs.push(payload.photoRef);
+					const { error: uploadError } = await supabase.storage
+						.from("photo-originals")
+						.uploadToSignedUrl(prepared.originalPath, prepared.token, file);
+					if (uploadError) {
+						throw new Error(uploadError.message);
+					}
+
+					const finalizeResponse = await fetch("/api/photos/upload", {
+						method: "POST",
+						headers: { "content-type": "application/json" },
+						body: JSON.stringify({
+							action: "finalize",
+							folder,
+							identifier,
+							photoId: prepared.photoId,
+							originalPath: prepared.originalPath,
+						}),
+					});
+					const finalized =
+						await parseApiResponse<FinalizedUpload>(finalizeResponse);
+					if (!finalized.photoRef) {
+						throw new Error("Invalid finalized upload");
+					}
+
+					newRefs.push(finalized.photoRef);
 				}
 
 				setPhotos((prev) => [...prev, ...newRefs]);
