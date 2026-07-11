@@ -2,6 +2,11 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { PhotoLightboxGrid } from "@/components/photos/PhotoLightboxGrid";
+import {
+	buildPhotoViewerItem,
+	formatPhotoDate,
+} from "@/components/photos/buildPhotoViewerItem";
+import type { ResolvedPhotoAsset } from "@/lib/photo-assets-db";
 
 interface PublicPhoto {
 	id: string;
@@ -25,29 +30,21 @@ function yearForPhoto(photo: PublicPhoto): string {
 	return new Date(displayDate(photo)).getFullYear().toString();
 }
 
-function formatDate(value: string | null): string | null {
-	if (!value) return null;
-	return new Date(value).toLocaleDateString("en-US", {
-		month: "long",
-		day: "numeric",
-		year: "numeric",
-	});
-}
-
-function formatDimensions(photo: PublicPhoto): string | null {
-	if (!photo.width || !photo.height) return null;
-	return `${photo.width} × ${photo.height}`;
-}
-
-function cameraLabel(safeExif: Record<string, unknown>): string | null {
-	const make = typeof safeExif.make === "string" ? safeExif.make : null;
-	const model = typeof safeExif.model === "string" ? safeExif.model : null;
-	if (make && model) {
-		return model.toLowerCase().includes(make.toLowerCase())
-			? model
-			: `${make} ${model}`;
-	}
-	return model ?? make;
+function toResolved(photo: PublicPhoto): ResolvedPhotoAsset {
+	return {
+		id: photo.id,
+		visibility: "public",
+		displayRef: photo.displayRef,
+		thumbnailRef: photo.thumbnailRef,
+		createdAt: photo.createdAt,
+		takenAt: photo.takenAt,
+		width: photo.width,
+		height: photo.height,
+		safeExif: photo.safeExif,
+		title: photo.title,
+		caption: photo.caption,
+		locationLabel: photo.locationLabel,
+	};
 }
 
 export default function PhotosPage() {
@@ -130,38 +127,15 @@ export default function PhotosPage() {
 								</p>
 							</div>
 							<PhotoLightboxGrid
-								photos={yearPhotos.map((photo, index) => {
-									const taken = formatDate(photo.takenAt);
-									const dimensions = formatDimensions(photo);
-									const camera = cameraLabel(photo.safeExif);
-									const metadata = [
-										taken,
-										photo.locationLabel,
-										dimensions,
-										camera,
-									].filter(Boolean);
-
-									return {
+								photos={yearPhotos.map((photo, index) =>
+									buildPhotoViewerItem({
 										ref: photo.displayRef,
-										thumbnailRef: photo.thumbnailRef ?? photo.displayRef,
-										alt: photo.title ?? `Photo ${index + 1}`,
-										caption: (
-											<div className="space-y-1">
-												{photo.title && (
-													<div className="text-base font-medium text-zinc-100">
-														{photo.title}
-													</div>
-												)}
-												{photo.caption && <div>{photo.caption}</div>}
-												{metadata.length > 0 && (
-													<div className="text-xs text-zinc-400">
-														{metadata.join(" · ")}
-													</div>
-												)}
-											</div>
-										),
-									};
-								})}
+										photo: toResolved(photo),
+										index,
+										includeExifMeta: true,
+										fallbackCaption: formatPhotoDate(photo.createdAt),
+									}),
+								)}
 								gridClassName="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4"
 								thumbnailClassName="aspect-[4/5] w-full rounded-xl"
 							/>

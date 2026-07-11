@@ -298,9 +298,21 @@ export function PhotosDataTable({
 			{
 				id: "source",
 				header: ({ column }) => <SortHeader label="Source" column={column} />,
-				accessorFn: (row) => contextLabel(row.contextType),
+				accessorFn: (row) =>
+					[contextLabel(row.contextType), row.contextId]
+						.filter(Boolean)
+						.join(" "),
 				cell: ({ row }) => (
-					<Badge variant="outline">{contextLabel(row.original.contextType)}</Badge>
+					<div className="min-w-0 space-y-0.5">
+						<Badge variant="outline">
+							{contextLabel(row.original.contextType)}
+						</Badge>
+						{row.original.contextId ? (
+							<p className="truncate font-mono text-[11px] text-muted-foreground">
+								{row.original.contextId}
+							</p>
+						) : null}
+					</div>
 				),
 			},
 			{
@@ -368,6 +380,7 @@ export function PhotosDataTable({
 				photo.caption,
 				photo.locationLabel,
 				photo.visibility,
+				photo.contextId,
 				contextLabel(photo.contextType),
 				formatGps(photo),
 			]

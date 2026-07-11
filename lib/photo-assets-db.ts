@@ -1,6 +1,10 @@
 import { supabaseAdmin } from "./supabase-client";
 import { encodeSupabaseRef, parseSupabaseRef } from "./photo-refs";
-import type { PhotoContextType, PhotoVisibility } from "./photos";
+import {
+	sanitizeIdentifier,
+	type PhotoContextType,
+	type PhotoVisibility,
+} from "./photos";
 
 interface PhotoAssetRow {
 	id: string;
@@ -57,6 +61,22 @@ export interface PhotoAssetListItem {
 	thumbnailRef: string | null;
 	contextType: string | null;
 	contextId: string | null;
+}
+
+/** Public-safe metadata keyed by an input display/thumb ref. */
+export interface ResolvedPhotoAsset {
+	id: string;
+	visibility: PhotoVisibility;
+	displayRef: string;
+	thumbnailRef: string | null;
+	createdAt: string;
+	takenAt: string | null;
+	width: number | null;
+	height: number | null;
+	safeExif: Record<string, unknown>;
+	title: string | null;
+	caption: string | null;
+	locationLabel: string | null;
 }
 
 export async function listPhotoAssets(options?: {
@@ -167,6 +187,122 @@ export async function listPhotoAssets(options?: {
 }
 
 /**
+ * Resolve photo_assets metadata for stored display/thumb refs.
+ * Content tables store refs; this is how callers treat photo_assets as source of truth.
+ */
+export async function resolvePhotoAssetsByDisplayRefs(
+	refs: string[],
+): Promise<Map<string, ResolvedPhotoAsset>> {
+	const uniqueRefs = Array.from(
+		new Set(refs.filter((ref) => typeof ref === "string" && ref.length > 0)),
+	);
+	const result = new Map<string, ResolvedPhotoAsset>();
+	if (uniqueRefs.length === 0) return result;
+
+	const parsedByRef = new Map<
+		string,
+		{ bucket: string; path: string }
+	>();
+	for (const ref of uniqueRefs) {
+		const parsed = parseSupabaseRef(ref);
+		if (parsed) parsedByRef.set(ref, parsed);
+	}
+	if (parsedByRef.size === 0) return result;
+
+	const paths = Array.from(
+		new Set(Array.from(parsedByRef.values()).map((item) => item.path)),
+	);
+
+	const { data: derivativeRows, error: derivativeError } = await supabaseAdmin
+		.from("photo_derivatives")
+		.select("photo_id,kind,bucket,path")
+		.in("path", paths);
+	if (derivativeError) {
+		throw new Error(
+			`Failed to resolve photo derivatives: ${derivativeError.message}`,
+		);
+	}
+
+	const derivatives = (derivativeRows ?? []) as PhotoDerivativeRow[];
+	const photoIdByInputRef = new Map<string, string>();
+	for (const [ref, parsed] of parsedByRef) {
+		const match = derivatives.find(
+			(row) => row.bucket === parsed.bucket && row.path === parsed.path,
+		);
+		if (match) photoIdByInputRef.set(ref, match.photo_id);
+	}
+	if (photoIdByInputRef.size === 0) return result;
+
+	const photoIds = Array.from(new Set(photoIdByInputRef.values()));
+	const { data: assetRows, error: assetError } = await supabaseAdmin
+		.from("photo_assets")
+		.select(
+			"id,visibility,gallery_featured,created_at,taken_at,width,height,safe_exif,title,caption,location_label,gps_latitude,gps_longitude,gps_altitude,gps_public",
+		)
+		.in("id", photoIds);
+	if (assetError) {
+		throw new Error(`Failed to resolve photo assets: ${assetError.message}`);
+	}
+
+	const assets = (assetRows ?? []) as PhotoAssetRow[];
+	const assetById = new Map(assets.map((asset) => [asset.id, asset]));
+
+	const { data: allDerivativeRows, error: allDerivativeError } =
+		await supabaseAdmin
+			.from("photo_derivatives")
+			.select("photo_id,kind,bucket,path,width,height")
+			.in("photo_id", photoIds);
+	if (allDerivativeError) {
+		throw new Error(
+			`Failed to resolve photo display derivatives: ${allDerivativeError.message}`,
+		);
+	}
+
+	const derivativesByPhotoId = new Map<string, PhotoDerivativeRow[]>();
+	for (const row of (allDerivativeRows ?? []) as PhotoDerivativeRow[]) {
+		const list = derivativesByPhotoId.get(row.photo_id) ?? [];
+		list.push(row);
+		derivativesByPhotoId.set(row.photo_id, list);
+	}
+
+	for (const [inputRef, photoId] of photoIdByInputRef) {
+		const asset = assetById.get(photoId);
+		if (!asset) continue;
+
+		const photoDerivatives = derivativesByPhotoId.get(photoId) ?? [];
+		const fullPublic = photoDerivatives.find((item) => item.kind === "full");
+		const fullPrivate = photoDerivatives.find(
+			(item) => item.kind === "private_full",
+		);
+		const thumb = photoDerivatives.find((item) => item.kind === "thumb");
+		const display =
+			(asset.visibility === "public" ? fullPublic : undefined) ??
+			fullPrivate ??
+			fullPublic;
+		if (!display) continue;
+
+		result.set(inputRef, {
+			id: asset.id,
+			visibility: asset.visibility,
+			displayRef: encodeSupabaseRef(display.bucket, display.path),
+			thumbnailRef: thumb
+				? encodeSupabaseRef(thumb.bucket, thumb.path)
+				: null,
+			createdAt: asset.created_at,
+			takenAt: asset.taken_at,
+			width: asset.width,
+			height: asset.height,
+			safeExif: asset.safe_exif ?? {},
+			title: asset.title,
+			caption: asset.caption,
+			locationLabel: asset.location_label,
+		});
+	}
+
+	return result;
+}
+
+/**
  * Resolve the preferred display ref for an existing photo asset.
  */
 export async function getPhotoAssetDisplayRef(
@@ -217,7 +353,7 @@ export async function attachPhotoAsset(params: {
 	contextType: PhotoContextType;
 	contextId: string;
 }): Promise<{ displayRef: string }> {
-	const contextId = params.contextId.trim();
+	const contextId = sanitizeIdentifier(params.contextId.trim());
 	if (!contextId) {
 		throw new Error("Missing context id");
 	}

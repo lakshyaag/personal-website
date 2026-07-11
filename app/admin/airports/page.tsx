@@ -278,7 +278,10 @@ export default function AdminAirportsPage() {
 							value={query}
 							onChange={(e) => {
 								setQuery(e.target.value);
-								if (selectedAirport) setSelectedAirport(null);
+								if (selectedAirport) {
+									setSelectedAirport(null);
+									setUploadedPhotos([]);
+								}
 							}}
 						/>
 
@@ -290,6 +293,7 @@ export default function AdminAirportsPage() {
 										key={airport.ident}
 										className="w-full px-4 py-2 text-left text-sm transition-colors hover:bg-zinc-100 dark:hover:bg-zinc-800"
 										onClick={() => {
+											setUploadedPhotos([]);
 											setSelectedAirport(airport);
 											setQuery(airport.name);
 										}}
@@ -399,7 +403,6 @@ export default function AdminAirportsPage() {
 						folder="airports"
 						identifier={selectedAirport?.ident ?? ""}
 						disabled={!selectedAirport}
-						onError={() => alert("Failed to upload photos")}
 					/>
 
 					<FormActions

@@ -5,6 +5,7 @@ import { supabaseAdmin } from "./supabase-client";
 import {
 	contextTypeForFolder,
 	derivePreferredPhotoRef,
+	sanitizeIdentifier,
 	type PhotoVisibility,
 	visibilityForFolder,
 	type UploadFolder,
@@ -49,10 +50,6 @@ export interface PhotoUploadTarget {
 export const MAX_PHOTO_UPLOAD_BYTES = 50 * 1024 * 1024;
 
 const ORIGINALS_BUCKET = "photo-originals";
-
-function sanitizeIdentifier(identifier: string): string {
-	return identifier.replace(/[^a-zA-Z0-9_-]/g, "-").slice(0, 120);
-}
 
 function extensionFromFile(fileName: string): string {
 	const parts = fileName.split(".");

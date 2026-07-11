@@ -3,7 +3,12 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { PhotoLightboxGrid } from "@/components/photos/PhotoLightboxGrid";
+import {
+	buildPhotoViewerItem,
+	formatPhotoDate,
+} from "@/components/photos/buildPhotoViewerItem";
 import { SvgArrowRight } from "@/components/ui/svg-arrow-right";
+import type { ResolvedPhotoAsset } from "@/lib/photo-assets-db";
 
 interface TeaserPhoto {
 	id: string;
@@ -14,14 +19,26 @@ interface TeaserPhoto {
 	locationLabel: string | null;
 	takenAt: string | null;
 	createdAt: string;
+	width?: number | null;
+	height?: number | null;
+	safeExif?: Record<string, unknown>;
 }
 
-function formatDate(value: string | null): string | null {
-	if (!value) return null;
-	return new Date(value).toLocaleDateString("en-US", {
-		month: "short",
-		year: "numeric",
-	});
+function toResolved(photo: TeaserPhoto): ResolvedPhotoAsset {
+	return {
+		id: photo.id,
+		visibility: "public",
+		displayRef: photo.displayRef,
+		thumbnailRef: photo.thumbnailRef,
+		createdAt: photo.createdAt,
+		takenAt: photo.takenAt,
+		width: photo.width ?? null,
+		height: photo.height ?? null,
+		safeExif: photo.safeExif ?? {},
+		title: photo.title,
+		caption: photo.caption,
+		locationLabel: photo.locationLabel,
+	};
 }
 
 export function PhotoTeaser() {
@@ -70,27 +87,22 @@ export function PhotoTeaser() {
 			</div>
 			{photos.length > 0 ? (
 				<PhotoLightboxGrid
-					photos={photos.map((photo, index) => ({
-						ref: photo.displayRef,
-						thumbnailRef: photo.thumbnailRef ?? photo.displayRef,
-						alt: photo.title ?? `Photo ${index + 1}`,
-						caption: (
-							<div className="space-y-1">
-								{photo.title && (
-									<div className="font-medium text-zinc-100">{photo.title}</div>
-								)}
-								{photo.caption && <div>{photo.caption}</div>}
-								<div className="text-xs text-zinc-400">
-									{[
-										photo.locationLabel,
-										formatDate(photo.takenAt ?? photo.createdAt),
-									]
-										.filter(Boolean)
-										.join(" · ")}
-								</div>
-							</div>
-						),
-					}))}
+					photos={photos.map((photo, index) =>
+						buildPhotoViewerItem({
+							ref: photo.displayRef,
+							photo: toResolved(photo),
+							index,
+							fallbackCaption: [
+								photo.locationLabel,
+								formatPhotoDate(photo.takenAt ?? photo.createdAt, {
+									month: "short",
+									year: "numeric",
+								}),
+							]
+								.filter(Boolean)
+								.join(" · "),
+						}),
+					)}
 					gridClassName="grid grid-cols-2 gap-3 sm:grid-cols-4"
 					thumbnailClassName="aspect-[4/5] w-full rounded-xl"
 				/>

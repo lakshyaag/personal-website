@@ -4,7 +4,7 @@ import { useState, useMemo } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import type { Visit, Airport } from "@/lib/models";
 import { ChevronDown, Plane, Mountain, MapPin } from "lucide-react";
-import { PhotoLightboxGrid } from "@/components/photos/PhotoLightboxGrid";
+import { ResolvedPhotoLightboxGrid } from "@/components/photos/ResolvedPhotoLightboxGrid";
 
 interface AirportListProps {
 	visits: Visit[];
@@ -191,12 +191,14 @@ export default function AirportList({
 
 								{/* Photos */}
 								{visit.photos && visit.photos.length > 0 && (
-									<PhotoLightboxGrid
-										photos={visit.photos.map((photo, idx) => ({
-											ref: photo,
-											alt: `${airport.name} photo ${idx + 1}`,
-											caption: `${airport.name} · ${formatDate(visit.date)}`,
-										}))}
+									<ResolvedPhotoLightboxGrid
+										refs={visit.photos}
+										fallbackAlt={(_ref, idx) =>
+											`${airport.name} photo ${idx + 1}`
+										}
+										fallbackCaption={() =>
+											`${airport.name} · ${formatDate(visit.date)}`
+										}
 										gridClassName="grid grid-cols-2 gap-2 sm:grid-cols-3"
 										thumbnailClassName="h-32 w-full rounded-lg"
 									/>
@@ -330,12 +332,14 @@ export default function AirportList({
 												</p>
 											)}
 											{lastVisit.photos && lastVisit.photos.length > 0 && (
-												<PhotoLightboxGrid
-													photos={lastVisit.photos.map((photo, idx) => ({
-														ref: photo,
-														alt: `${airport.name} photo ${idx + 1}`,
-														caption: `${airport.name} · ${formatDate(lastVisit.date)}`,
-													}))}
+												<ResolvedPhotoLightboxGrid
+													refs={lastVisit.photos}
+													fallbackAlt={(_ref, idx) =>
+														`${airport.name} photo ${idx + 1}`
+													}
+													fallbackCaption={() =>
+														`${airport.name} · ${formatDate(lastVisit.date)}`
+													}
 													gridClassName="grid grid-cols-2 gap-2 sm:grid-cols-3"
 													thumbnailClassName="h-32 w-full rounded-lg"
 												/>
@@ -426,12 +430,14 @@ export default function AirportList({
 															</p>
 														)}
 														{visit.photos && visit.photos.length > 0 && (
-															<PhotoLightboxGrid
-																photos={visit.photos.map((photo, photoIdx) => ({
-																	ref: photo,
-																	alt: `Visit photo ${photoIdx + 1}`,
-																	caption: `${airport.name} · ${formatDate(visit.date)}`,
-																}))}
+															<ResolvedPhotoLightboxGrid
+																refs={visit.photos}
+																fallbackAlt={(_ref, photoIdx) =>
+																	`Visit photo ${photoIdx + 1}`
+																}
+																fallbackCaption={() =>
+																	`${airport.name} · ${formatDate(visit.date)}`
+																}
 																gridClassName="grid grid-cols-2 gap-2 sm:grid-cols-3"
 																thumbnailClassName="h-24 w-full rounded-lg"
 															/>

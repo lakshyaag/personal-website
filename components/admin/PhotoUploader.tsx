@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useId, useMemo, useRef, useState } from "react";
+import { toast } from "sonner";
 import usePhotoUpload, {
 	type UsePhotoUploadOptions,
 } from "@/hooks/usePhotoUpload";
@@ -38,6 +39,8 @@ export default function PhotoUploader(props: PhotoUploaderProps) {
 
 	const resolvedId = inputId ?? useId();
 	const syncingFromProps = useRef(false);
+	const clearingForContext = useRef(false);
+	const previousIdentifier = useRef<string | null>(null);
 	const [pendingFiles, setPendingFiles] = useState<File[]>([]);
 	const [libraryOpen, setLibraryOpen] = useState(false);
 
@@ -52,16 +55,52 @@ export default function PhotoUploader(props: PhotoUploaderProps) {
 		};
 	}, [pendingPreviews]);
 
+	const handleUploadSuccess = (urls: string[]) => {
+		toast.success(
+			urls.length === 1
+				? "1 photo uploaded successfully"
+				: `${urls.length} photos uploaded successfully`,
+		);
+		onSuccess?.(urls);
+	};
+
 	const {
 		photos: localPhotos,
 		uploading,
 		uploadPhotos,
 		removePhoto,
 		setPhotos,
+		clearPhotos,
 	} = usePhotoUpload({
 		...uploadOptions,
-		onSuccess,
+		onSuccess: handleUploadSuccess,
 	});
+
+	useEffect(() => {
+		const nextIdentifier = uploadOptions.identifier ?? "";
+		const previous = previousIdentifier.current;
+
+		if (previous === null) {
+			previousIdentifier.current = nextIdentifier;
+			return;
+		}
+
+		// Clear draft photos when context changes. Skip when parent is loading an
+		// edit (photos prop already populated for the new identifier).
+		if (
+			previous !== "" &&
+			nextIdentifier !== "" &&
+			previous !== nextIdentifier &&
+			photos.length === 0
+		) {
+			clearingForContext.current = true;
+			clearPhotos();
+			setPendingFiles([]);
+			onChange?.([]);
+		}
+
+		previousIdentifier.current = nextIdentifier;
+	}, [uploadOptions.identifier, photos.length, clearPhotos, onChange]);
 
 	useEffect(() => {
 		syncingFromProps.current = true;
@@ -71,6 +110,10 @@ export default function PhotoUploader(props: PhotoUploaderProps) {
 	useEffect(() => {
 		if (syncingFromProps.current) {
 			syncingFromProps.current = false;
+			return;
+		}
+		if (clearingForContext.current) {
+			clearingForContext.current = false;
 			return;
 		}
 		onChange?.(localPhotos);
@@ -85,7 +128,9 @@ export default function PhotoUploader(props: PhotoUploaderProps) {
 		} catch (error) {
 			onError?.(error);
 			if (!onError) {
-				alert("Failed to upload photos");
+				toast.error(
+					error instanceof Error ? error.message : "Failed to upload photos",
+				);
 			}
 		}
 	};
@@ -108,6 +153,11 @@ export default function PhotoUploader(props: PhotoUploaderProps) {
 			}
 			return next;
 		});
+		toast.success(
+			refs.length === 1
+				? "1 photo added from library"
+				: `${refs.length} photos added from library`,
+		);
 	};
 
 	const canUseLibrary =
