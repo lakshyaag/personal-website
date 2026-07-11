@@ -32,10 +32,10 @@ import { formatDate, getTodayDate } from "@/lib/date-utils";
 import type { WorkoutExercise, WorkoutLog } from "@/lib/models";
 import { BarChart3, Sparkles } from "lucide-react";
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 export default function AdminWorkoutsPage() {
-	const [date, setDate] = useState("");
+	const [date, setDate] = useState(() => getTodayDate());
 	const [weight, setWeight] = useState("");
 	const [content, setContent] = useState("");
 	const [uploadedPhotos, setUploadedPhotos] = useState<string[]>([]);
@@ -46,6 +46,7 @@ export default function AdminWorkoutsPage() {
 	>({});
 	const [viewMode, setViewMode] = useState<ViewMode>("date");
 	const [activeTab, setActiveTab] = useState<"entry" | "lookup">("entry");
+	const didLoadLogs = useRef(false);
 
 	const [analyzingLog, setAnalyzingLog] = useState<WorkoutLog | null>(null);
 	const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -81,14 +82,21 @@ export default function AdminWorkoutsPage() {
 	}, [loadGrouped]);
 
 	useEffect(() => {
-		const today = getTodayDate();
-		setDate(today);
-		loadTodaysLogs(today);
+		if (didLoadLogs.current) return;
+		didLoadLogs.current = true;
+		void loadTodaysLogs(date);
+		// Intentionally mount-once; date changes go through handleDateChange.
+		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [loadTodaysLogs]);
 
 	const handleDateChange = useCallback(
 		(newDate: string) => {
-			setDate(newDate);
+			setDate((current) => {
+				if (current !== newDate) {
+					setUploadedPhotos([]);
+				}
+				return newDate;
+			});
 			loadTodaysLogs(newDate);
 		},
 		[loadTodaysLogs],

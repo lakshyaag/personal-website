@@ -17,6 +17,10 @@ export type UploadFolder =
 	| "fits"
 	| "gallery";
 
+export function sanitizeIdentifier(identifier: string): string {
+	return identifier.replace(/[^a-zA-Z0-9_-]/g, "-").slice(0, 120);
+}
+
 export function visibilityForFolder(folder: UploadFolder): PhotoVisibility {
 	if (folder === "airports") {
 		return "public";

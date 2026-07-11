@@ -1,7 +1,7 @@
 "use client";
 
 import { usePhotoUrl } from "@/hooks/usePhotoUrl";
-import { PhotoLightboxGrid } from "@/components/photos/PhotoLightboxGrid";
+import { ResolvedPhotoLightboxGrid } from "@/components/photos/ResolvedPhotoLightboxGrid";
 
 interface PhotoDisplayProps {
 	/** Photo reference (HTTP URL or sb:// ref) */
@@ -90,7 +90,7 @@ interface PhotoGridProps {
 }
 
 /**
- * Photo grid that resolves sb:// refs to display URLs
+ * Photo grid that resolves sb:// refs to display URLs + photo_assets metadata.
  */
 export function PhotoGrid({
 	photos,
@@ -99,11 +99,9 @@ export function PhotoGrid({
 	className = "",
 }: PhotoGridProps) {
 	return (
-		<PhotoLightboxGrid
-			photos={photos.map((photo, index) => ({
-				ref: photo,
-				alt: `Entry photo ${index + 1}`,
-			}))}
+		<ResolvedPhotoLightboxGrid
+			refs={photos}
+			fallbackAlt={(_ref, index) => `Entry photo ${index + 1}`}
 			gridClassName={`mt-3 grid ${gridCols} gap-2 ${className}`.trim()}
 			thumbnailClassName="aspect-square w-full rounded"
 			onPhotoClick={onPhotoClick}

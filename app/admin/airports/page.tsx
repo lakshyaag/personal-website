@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import PhotoUploader from "@/components/admin/PhotoUploader";
 import { DateInput } from "@/components/admin/DateTimeInputs";
 import { TextInput, TextArea } from "@/components/admin/FormInputs";
@@ -21,7 +21,7 @@ type AirportViewMode = "byDate" | "byAirport";
 
 export default function AdminAirportsPage() {
 	const [query, setQuery] = useState("");
-	const [date, setDate] = useState("");
+	const [date, setDate] = useState(() => getTodayDate());
 	const [flightNumbers, setFlightNumbers] = useState<string[]>([""]);
 	const [isLayover, setIsLayover] = useState(false);
 	const [notes, setNotes] = useState("");
@@ -32,6 +32,8 @@ export default function AdminAirportsPage() {
 		Record<string, Visit[]>
 	>({});
 	const [viewMode, setViewMode] = useState<AirportViewMode>("byDate");
+	const formRef = useRef<HTMLDivElement>(null);
+	const didLoadVisits = useRef(false);
 
 	const showDropdown = query && !selectedAirport;
 	const results: Airport[] = showDropdown
@@ -46,7 +48,7 @@ export default function AdminAirportsPage() {
 				.slice(0, 20)
 		: [];
 
-	const { saving, loading, save, remove, loadByDate, loadGrouped, loadAll } =
+	const { saving, loading, save, remove, loadGrouped, loadAll } =
 		useAdminCrud<Visit>({
 			endpoint: "/api/visits",
 			entityName: "visit",
@@ -77,9 +79,9 @@ export default function AdminAirportsPage() {
 	}, [loadAll]);
 
 	useEffect(() => {
-		const today = getTodayDate();
-		setDate(today);
-		loadAllVisitsByDate();
+		if (didLoadVisits.current) return;
+		didLoadVisits.current = true;
+		void loadAllVisitsByDate();
 	}, [loadAllVisitsByDate]);
 
 	const handleDateChange = useCallback((newDate: string) => {
@@ -148,7 +150,12 @@ export default function AdminAirportsPage() {
 		const airport = (airportsData as Airport[]).find(
 			(a) => a.ident === visit.airportIdent,
 		);
-		if (!airport) return;
+		if (!airport) {
+			alert(
+				`Could not find airport ${visit.airportIdent} in the local airport list.`,
+			);
+			return;
+		}
 
 		setSelectedAirport(airport);
 		setDate(visit.date);
@@ -162,6 +169,11 @@ export default function AdminAirportsPage() {
 		setUploadedPhotos(visit.photos || []);
 		setEditingVisit(visit);
 		setQuery(airport.name);
+
+		// Form lives at the top of the page; scroll so Edit feels responsive.
+		requestAnimationFrame(() => {
+			formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+		});
 	}
 
 	function resetForm() {
@@ -247,7 +259,7 @@ export default function AdminAirportsPage() {
 			/>
 
 			<AdminSection className="space-y-8">
-				<div className="space-y-4">
+				<div ref={formRef} className="space-y-4 scroll-mt-4">
 					<SectionHeader
 						title={editingVisit ? "Edit Visit" : "Add New Visit"}
 					/>
@@ -266,7 +278,10 @@ export default function AdminAirportsPage() {
 							value={query}
 							onChange={(e) => {
 								setQuery(e.target.value);
-								if (selectedAirport) setSelectedAirport(null);
+								if (selectedAirport) {
+									setSelectedAirport(null);
+									setUploadedPhotos([]);
+								}
 							}}
 						/>
 
@@ -278,6 +293,7 @@ export default function AdminAirportsPage() {
 										key={airport.ident}
 										className="w-full px-4 py-2 text-left text-sm transition-colors hover:bg-zinc-100 dark:hover:bg-zinc-800"
 										onClick={() => {
+											setUploadedPhotos([]);
 											setSelectedAirport(airport);
 											setQuery(airport.name);
 										}}
@@ -387,7 +403,6 @@ export default function AdminAirportsPage() {
 						folder="airports"
 						identifier={selectedAirport?.ident ?? ""}
 						disabled={!selectedAirport}
-						onError={() => alert("Failed to upload photos")}
 					/>
 
 					<FormActions
@@ -437,7 +452,7 @@ export default function AdminAirportsPage() {
 							) : (
 								sortedGroupKeys.map((groupDate) => (
 									<div key={groupDate} className="space-y-3">
-										<h3 className="text-lg font-medium text-zinc-700 dark:text-zinc-300 sticky top-0 bg-white dark:bg-zinc-950 py-2">
+										<h3 className="text-lg font-medium text-zinc-700 dark:text-zinc-300 py-2">
 											{formatDate(groupDate)} (
 											{allVisitsGrouped[groupDate].length})
 										</h3>
@@ -461,7 +476,7 @@ export default function AdminAirportsPage() {
 							) : (
 								sortedGroupKeys.map((airportIdent) => (
 									<div key={airportIdent} className="space-y-3">
-										<h3 className="text-lg font-medium text-zinc-700 dark:text-zinc-300 sticky top-0 bg-white dark:bg-zinc-950 py-2">
+										<h3 className="text-lg font-medium text-zinc-700 dark:text-zinc-300 py-2">
 											{getAirportName(airportIdent)} (
 											{allVisitsGrouped[airportIdent].length})
 										</h3>

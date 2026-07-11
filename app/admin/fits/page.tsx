@@ -98,7 +98,12 @@ function AdminFitsPageContent() {
 
 	const handleDateChange = useCallback(
 		(newDate: string) => {
-			setDate(newDate);
+			setDate((current) => {
+				if (current !== newDate) {
+					setUploadedPhotos([]);
+				}
+				return newDate;
+			});
 			loadTodaysEntries(newDate);
 		},
 		[loadTodaysEntries],
@@ -271,10 +276,6 @@ function AdminFitsPageContent() {
 						onChange={setUploadedPhotos}
 						folder="fits"
 						identifier={date.replace(/-/g, "")}
-						onSuccess={(urls) =>
-							toast.success(`${urls.length} photo(s) uploaded successfully`)
-						}
-						onError={() => toast.error("Failed to upload photos")}
 					/>
 
 					<FormActions

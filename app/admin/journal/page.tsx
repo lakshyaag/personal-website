@@ -85,7 +85,12 @@ function AdminJournalPageContent() {
 
 	const handleDateChange = useCallback(
 		(newDate: string) => {
-			setDate(newDate);
+			setDate((current) => {
+				if (current !== newDate) {
+					setUploadedPhotos([]);
+				}
+				return newDate;
+			});
 			loadTodaysEntries(newDate);
 		},
 		[loadTodaysEntries],
@@ -231,10 +236,6 @@ function AdminJournalPageContent() {
 						onChange={setUploadedPhotos}
 						folder="journal"
 						identifier={date.replace(/-/g, "")}
-						onSuccess={(urls) =>
-							toast.success(`${urls.length} photo(s) uploaded successfully`)
-						}
-						onError={() => toast.error("Failed to upload photos")}
 					/>
 
 					<FormActions
