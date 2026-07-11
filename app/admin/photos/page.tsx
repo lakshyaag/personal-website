@@ -1,106 +1,40 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { ChevronDown } from "lucide-react";
+import { toast } from "sonner";
 import PhotoUploader from "@/components/admin/PhotoUploader";
-import { PhotoLightboxGrid } from "@/components/photos/PhotoLightboxGrid";
+import { PhotoEditSheet } from "@/components/admin/photos/PhotoEditSheet";
+import { PhotosDataTable } from "@/components/admin/photos/PhotosDataTable";
+import {
+	type AdminPhotoItem,
+	type FeaturedFilter,
+} from "@/components/admin/photos/types";
 import type { PhotoVisibility } from "@/lib/photos";
-
-interface AdminPhotoItem {
-	id: string;
-	visibility: PhotoVisibility;
-	galleryFeatured: boolean;
-	displayRef: string;
-	thumbnailRef: string | null;
-	createdAt: string;
-	takenAt: string | null;
-	width: number | null;
-	height: number | null;
-	title: string | null;
-	caption: string | null;
-	locationLabel: string | null;
-	gpsLatitude: number | null;
-	gpsLongitude: number | null;
-	gpsAltitude: number | null;
-	gpsPublic: boolean;
-	contextType: string | null;
-	contextId: string | null;
-}
-
-type SortOption =
-	| "created_desc"
-	| "created_asc"
-	| "taken_desc"
-	| "taken_asc";
-type FeaturedFilter = "all" | "featured" | "not_featured";
-type PhotoPatch = Partial<{
-	visibility: PhotoVisibility;
-	galleryFeatured: boolean;
-	title: string | null;
-	caption: string | null;
-	locationLabel: string | null;
-	gpsPublic: boolean;
-}>;
-
-const CONTEXT_LABELS: Record<string, string> = {
-	airport_visit: "Airport Visits",
-	food: "Food",
-	fit: "Fits",
-	gallery: "Gallery",
-	journal: "Journal",
-	workout: "Workouts",
-};
-
-const CONTEXT_ORDER = [
-	"gallery",
-	"airport_visit",
-	"journal",
-	"food",
-	"workout",
-	"fit",
-	"unassigned",
-];
-
-function formatTimestamp(value: string | null): string {
-	if (!value) return "Unknown";
-	return new Date(value).toLocaleString("en-US", {
-		month: "short",
-		day: "numeric",
-		year: "numeric",
-		hour: "numeric",
-		minute: "2-digit",
-	});
-}
-
-function normalizeOptionalText(value: string): string | null {
-	const trimmed = value.trim();
-	return trimmed.length > 0 ? trimmed : null;
-}
-
-function formatGps(photo: AdminPhotoItem): string | null {
-	if (photo.gpsLatitude === null || photo.gpsLongitude === null) return null;
-	const coordinates = `${photo.gpsLatitude.toFixed(6)}, ${photo.gpsLongitude.toFixed(6)}`;
-	return photo.gpsAltitude === null
-		? coordinates
-		: `${coordinates} · ${Math.round(photo.gpsAltitude)}m`;
-}
-
-function mapsUrl(photo: AdminPhotoItem): string | null {
-	if (photo.gpsLatitude === null || photo.gpsLongitude === null) return null;
-	return `https://maps.google.com/?q=${photo.gpsLatitude},${photo.gpsLongitude}`;
-}
+import {
+	AlertDialog,
+	AlertDialogAction,
+	AlertDialogCancel,
+	AlertDialogContent,
+	AlertDialogDescription,
+	AlertDialogFooter,
+	AlertDialogHeader,
+	AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 export default function AdminPhotosPage() {
 	const [photos, setPhotos] = useState<AdminPhotoItem[]>([]);
 	const [uploadRefs, setUploadRefs] = useState<string[]>([]);
 	const [loading, setLoading] = useState(true);
-	const [deletingPhotoId, setDeletingPhotoId] = useState<string | null>(null);
-	const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
-	const [sortBy, setSortBy] = useState<SortOption>("created_desc");
 	const [visibilityFilter, setVisibilityFilter] = useState<
 		PhotoVisibility | "all"
 	>("all");
 	const [featuredFilter, setFeaturedFilter] = useState<FeaturedFilter>("all");
+	const [selectedPhoto, setSelectedPhoto] = useState<AdminPhotoItem | null>(
+		null,
+	);
+	const [sheetOpen, setSheetOpen] = useState(false);
+	const [deleteTarget, setDeleteTarget] = useState<AdminPhotoItem | null>(null);
+	const [deleting, setDeleting] = useState(false);
 
 	const loadPhotos = useCallback(async () => {
 		setLoading(true);
@@ -113,6 +47,7 @@ export default function AdminPhotosPage() {
 			setPhotos(data);
 		} catch (error) {
 			console.error(error);
+			toast.error("Failed to load photos");
 		} finally {
 			setLoading(false);
 		}
@@ -122,62 +57,8 @@ export default function AdminPhotosPage() {
 		void loadPhotos();
 	}, [loadPhotos]);
 
-	const updatePhoto = useCallback(
-		async (id: string, patch: PhotoPatch) => {
-			const response = await fetch("/api/photos", {
-				method: "PATCH",
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({ id, ...patch }),
-			});
-			if (!response.ok) {
-				throw new Error("Failed to update photo");
-			}
-			await loadPhotos();
-		},
-		[loadPhotos],
-	);
-
-	const updateTextField = useCallback(
-		(
-			photo: AdminPhotoItem,
-			field: "title" | "caption" | "locationLabel",
-			value: string,
-		) => {
-			const nextValue = normalizeOptionalText(value);
-			if ((photo[field] ?? null) === nextValue) return;
-			void updatePhoto(photo.id, { [field]: nextValue });
-		},
-		[updatePhoto],
-	);
-
-	const deletePhoto = useCallback(
-		async (id: string) => {
-			const confirmed = window.confirm(
-				"Delete this photo from the system? This also removes it from the associated context where it is attached.",
-			);
-			if (!confirmed) return;
-
-			setDeletingPhotoId(id);
-			try {
-				const response = await fetch(`/api/photos?id=${encodeURIComponent(id)}`, {
-					method: "DELETE",
-				});
-				if (!response.ok) {
-					throw new Error("Failed to delete photo");
-				}
-				await loadPhotos();
-			} catch (error) {
-				console.error(error);
-				alert("Failed to delete photo");
-			} finally {
-				setDeletingPhotoId(null);
-			}
-		},
-		[loadPhotos],
-	);
-
-	const filteredAndSortedPhotos = useMemo(() => {
-		const filtered = photos.filter((photo) => {
+	const filteredPhotos = useMemo(() => {
+		return photos.filter((photo) => {
 			if (visibilityFilter !== "all" && photo.visibility !== visibilityFilter) {
 				return false;
 			}
@@ -189,48 +70,38 @@ export default function AdminPhotosPage() {
 			}
 			return true;
 		});
+	}, [photos, visibilityFilter, featuredFilter]);
 
-		const sortValue = (photo: AdminPhotoItem) => {
-			if (sortBy.startsWith("taken")) {
-				return photo.takenAt ? new Date(photo.takenAt).getTime() : 0;
-			}
-			return new Date(photo.createdAt).getTime();
-		};
-
-		filtered.sort((a, b) => {
-			const delta = sortValue(a) - sortValue(b);
-			return sortBy.endsWith("asc") ? delta : -delta;
-		});
-		return filtered;
-	}, [photos, sortBy, visibilityFilter, featuredFilter]);
-
-	const groupedPhotos = useMemo(() => {
-		const groups = new Map<string, AdminPhotoItem[]>();
-		for (const photo of filteredAndSortedPhotos) {
-			const key = photo.contextType ?? "unassigned";
-			const list = groups.get(key) ?? [];
-			list.push(photo);
-			groups.set(key, list);
-		}
-		return CONTEXT_ORDER.filter((key) => groups.has(key)).map((key) => ({
-			key,
-			label:
-				key === "unassigned" ? "Unassigned" : (CONTEXT_LABELS[key] ?? key),
-			photos: groups.get(key) ?? [],
-		}));
-	}, [filteredAndSortedPhotos]);
-
-	const toggleGroup = useCallback((key: string) => {
-		setCollapsedGroups((previous) => {
-			const next = new Set(previous);
-			if (next.has(key)) {
-				next.delete(key);
-			} else {
-				next.add(key);
-			}
-			return next;
-		});
+	const openEditor = useCallback((photo: AdminPhotoItem) => {
+		setSelectedPhoto(photo);
+		setSheetOpen(true);
 	}, []);
+
+	const handleDelete = useCallback(async () => {
+		if (!deleteTarget) return;
+		setDeleting(true);
+		try {
+			const response = await fetch(
+				`/api/photos?id=${encodeURIComponent(deleteTarget.id)}`,
+				{ method: "DELETE" },
+			);
+			if (!response.ok) {
+				throw new Error("Failed to delete photo");
+			}
+			toast.success("Photo deleted");
+			setDeleteTarget(null);
+			if (selectedPhoto?.id === deleteTarget.id) {
+				setSheetOpen(false);
+				setSelectedPhoto(null);
+			}
+			await loadPhotos();
+		} catch (error) {
+			console.error(error);
+			toast.error("Failed to delete photo");
+		} finally {
+			setDeleting(false);
+		}
+	}, [deleteTarget, loadPhotos, selectedPhoto?.id]);
 
 	return (
 		<main className="mx-auto max-w-6xl px-6 py-12">
@@ -238,7 +109,8 @@ export default function AdminPhotosPage() {
 				Manage Photos
 			</h1>
 			<p className="mt-2 text-zinc-600 dark:text-zinc-400">
-				Upload photos once, then control visibility and gallery publishing.
+				Upload photos once, then edit metadata in the drawer. Click a row to
+				edit.
 			</p>
 
 			<div className="mt-8 rounded-xl border border-zinc-200 bg-zinc-50/40 p-4 dark:border-zinc-800 dark:bg-zinc-900/30">
@@ -252,26 +124,11 @@ export default function AdminPhotosPage() {
 					folder="gallery"
 					identifier="gallery"
 					autoUpload={false}
-					onError={() => alert("Upload failed")}
+					onError={() => toast.error("Upload failed")}
 				/>
 			</div>
 
-			<div className="mt-5 grid gap-3 sm:grid-cols-3">
-				<label className="space-y-1">
-					<span className="text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
-						Sort
-					</span>
-					<select
-						value={sortBy}
-						onChange={(event) => setSortBy(event.target.value as SortOption)}
-						className="w-full rounded border border-zinc-300 bg-white px-2 py-1.5 text-sm dark:border-zinc-700 dark:bg-zinc-900"
-					>
-						<option value="created_desc">Newest uploaded</option>
-						<option value="created_asc">Oldest uploaded</option>
-						<option value="taken_desc">Newest taken date</option>
-						<option value="taken_asc">Oldest taken date</option>
-					</select>
-				</label>
+			<div className="mt-5 grid gap-3 sm:grid-cols-2">
 				<label className="space-y-1">
 					<span className="text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
 						Visibility
@@ -307,190 +164,56 @@ export default function AdminPhotosPage() {
 				</label>
 			</div>
 
-			{loading ? (
-				<p className="mt-8 text-zinc-600 dark:text-zinc-400">
-					Loading photos...
-				</p>
-			) : filteredAndSortedPhotos.length === 0 ? (
-				<p className="mt-8 text-zinc-600 dark:text-zinc-400">
-					No photos match the selected filters.
-				</p>
-			) : (
-				<div className="mt-6 space-y-4">
-					{groupedPhotos.map((group) => (
-						<section
-							key={group.key}
-							className="rounded-xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900/40"
-						>
-							<button
-								type="button"
-								onClick={() => toggleGroup(group.key)}
-								className="flex w-full items-center justify-between px-4 py-3 text-left transition-colors hover:bg-zinc-50 dark:hover:bg-zinc-900/70"
-							>
-								<div className="flex items-center gap-3">
-									<h2 className="text-base font-medium text-zinc-900 dark:text-zinc-100">
-										{group.label}
-									</h2>
-									<span className="rounded-full bg-zinc-100 px-2 py-0.5 text-xs text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400">
-										{group.photos.length}
-									</span>
-								</div>
-								<ChevronDown
-									className={`h-4 w-4 text-zinc-500 transition-transform ${
-										collapsedGroups.has(group.key) ? "" : "rotate-180"
-									}`}
-								/>
-							</button>
+			<div className="mt-6">
+				{loading ? (
+					<p className="text-zinc-600 dark:text-zinc-400">Loading photos...</p>
+				) : (
+					<PhotosDataTable
+						photos={filteredPhotos}
+						onRowClick={openEditor}
+						onDelete={setDeleteTarget}
+					/>
+				)}
+			</div>
 
-							{!collapsedGroups.has(group.key) && (
-								<div className="border-t border-zinc-200 p-4 dark:border-zinc-800">
-									<div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-										{group.photos.map((photo) => (
-											<div
-												key={photo.id}
-												className="rounded-lg border border-zinc-200 bg-zinc-50/40 p-2.5 dark:border-zinc-800 dark:bg-zinc-900/40"
-											>
-												<PhotoLightboxGrid
-													photos={[
-														{
-															ref: photo.displayRef,
-															thumbnailRef: photo.thumbnailRef ?? photo.displayRef,
-															alt: photo.title ?? "Uploaded photo",
-															caption: (
-																<div className="space-y-1">
-																	<div className="font-medium text-zinc-100">
-																		{photo.title ?? group.label}
-																	</div>
-																	{photo.caption && <div>{photo.caption}</div>}
-																	<div className="text-xs text-zinc-400">
-																		{photo.locationLabel ??
-																			photo.contextId ??
-																			group.label} · Taken {formatTimestamp(photo.takenAt)}
-																	</div>
-																</div>
-															),
-														},
-													]}
-													gridClassName="mb-2 grid grid-cols-1"
-													thumbnailClassName="aspect-[4/3] w-full rounded"
-												/>
-												<div className="mb-2 space-y-0.5 text-[11px] text-zinc-500 dark:text-zinc-400">
-													<div>Uploaded: {formatTimestamp(photo.createdAt)}</div>
-													<div>Taken: {formatTimestamp(photo.takenAt)}</div>
-													{photo.width && photo.height && (
-														<div>
-															{photo.width} × {photo.height}
-														</div>
-													)}
-													{formatGps(photo) && (
-														<div>
-															GPS: {formatGps(photo)}{" "}
-															{mapsUrl(photo) && (
-																<a
-																	href={mapsUrl(photo) ?? undefined}
-																	target="_blank"
-																	rel="noopener noreferrer"
-																	className="underline"
-																>
-																	Map
-																</a>
-															)}
-														</div>
-													)}
-													<div>Source: {group.label}</div>
-												</div>
-												<div className="mb-2 space-y-1.5">
-													<input
-														defaultValue={photo.title ?? ""}
-														onBlur={(event) =>
-															updateTextField(photo, "title", event.target.value)
-														}
-														placeholder="Title"
-														className="w-full rounded border border-zinc-300 bg-white px-2 py-1 text-xs dark:border-zinc-700 dark:bg-zinc-900"
-													/>
-													<input
-														defaultValue={photo.locationLabel ?? ""}
-														onBlur={(event) =>
-															updateTextField(
-																photo,
-																"locationLabel",
-																event.target.value,
-															)
-														}
-														placeholder="Location label"
-														className="w-full rounded border border-zinc-300 bg-white px-2 py-1 text-xs dark:border-zinc-700 dark:bg-zinc-900"
-													/>
-													<textarea
-														defaultValue={photo.caption ?? ""}
-														onBlur={(event) =>
-															updateTextField(photo, "caption", event.target.value)
-														}
-														placeholder="Caption"
-														rows={2}
-														className="w-full resize-none rounded border border-zinc-300 bg-white px-2 py-1 text-xs dark:border-zinc-700 dark:bg-zinc-900"
-													/>
-												</div>
-												<div className="space-y-1.5">
-													<select
-														value={photo.visibility}
-														onChange={(event) => {
-															void updatePhoto(photo.id, {
-																visibility: event.target.value as PhotoVisibility,
-															});
-														}}
-														className="w-full rounded border border-zinc-300 bg-white px-2 py-1 text-xs dark:border-zinc-700 dark:bg-zinc-900"
-													>
-														<option value="private">Private</option>
-														<option value="unlisted">Unlisted</option>
-														<option value="public">Public</option>
-													</select>
-													<label className="flex items-center gap-2 text-xs text-zinc-700 dark:text-zinc-300">
-														<input
-															type="checkbox"
-															checked={photo.galleryFeatured}
-															onChange={(event) => {
-																void updatePhoto(photo.id, {
-																	galleryFeatured: event.target.checked,
-																});
-															}}
-														/>
-														Feature in `/photos`
-													</label>
-													<label className="flex items-center gap-2 text-xs text-zinc-700 dark:text-zinc-300">
-														<input
-															type="checkbox"
-															checked={photo.gpsPublic}
-															disabled={
-																photo.gpsLatitude === null || photo.gpsLongitude === null
-															}
-															onChange={(event) => {
-																void updatePhoto(photo.id, {
-																	gpsPublic: event.target.checked,
-																});
-															}}
-														/>
-														Show GPS for public
-													</label>
-													<button
-														type="button"
-														disabled={deletingPhotoId === photo.id}
-														onClick={() => void deletePhoto(photo.id)}
-														className="w-full rounded border border-red-300 px-2 py-1 text-xs text-red-700 transition-colors hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-900/30"
-													>
-														{deletingPhotoId === photo.id
-															? "Deleting..."
-															: "Delete Photo"}
-													</button>
-												</div>
-											</div>
-										))}
-									</div>
-								</div>
-							)}
-						</section>
-					))}
-				</div>
-			)}
+			<PhotoEditSheet
+				photo={selectedPhoto}
+				open={sheetOpen}
+				onOpenChange={(open) => {
+					setSheetOpen(open);
+					if (!open) setSelectedPhoto(null);
+				}}
+				onSaved={loadPhotos}
+			/>
+
+			<AlertDialog
+				open={deleteTarget !== null}
+				onOpenChange={(open) => {
+					if (!open && !deleting) setDeleteTarget(null);
+				}}
+			>
+				<AlertDialogContent>
+					<AlertDialogHeader>
+						<AlertDialogTitle>Delete this photo?</AlertDialogTitle>
+						<AlertDialogDescription>
+							This removes it from the system and from the associated context
+							where it is attached.
+						</AlertDialogDescription>
+					</AlertDialogHeader>
+					<AlertDialogFooter>
+						<AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
+						<AlertDialogAction
+							disabled={deleting}
+							onClick={(event) => {
+								event.preventDefault();
+								void handleDelete();
+							}}
+						>
+							{deleting ? "Deleting..." : "Delete"}
+						</AlertDialogAction>
+					</AlertDialogFooter>
+				</AlertDialogContent>
+			</AlertDialog>
 		</main>
 	);
 }

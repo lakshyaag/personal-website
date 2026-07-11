@@ -66,7 +66,7 @@ export function EntryCard({
 	const resolvedActions =
 		actions ??
 		(onEdit || onDelete ? (
-			<div className="flex flex-col gap-2 ml-4 flex-shrink-0">
+			<div className="flex flex-col gap-2 ml-4 flex-shrink-0 relative z-10">
 				{onEdit && (
 					<EntryCardActionButton onClick={onEdit} variant="neutral">
 						Edit
