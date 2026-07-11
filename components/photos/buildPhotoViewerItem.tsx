@@ -39,13 +39,21 @@ export function cameraLabel(
 	return model ?? make;
 }
 
+/**
+ * Standard lightbox caption stack:
+ * 1. title (if set)
+ * 2. caption (if set)
+ * 3. soft context: location · takenAt
+ * 4. else surface fallbackCaption (or blank)
+ *
+ * Never leads with dimensions/camera EXIF.
+ */
 export function buildPhotoViewerItem(options: {
 	ref: string;
 	photo?: ResolvedPhotoAsset | null;
 	index?: number;
 	fallbackAlt?: string;
 	fallbackCaption?: ReactNode;
-	includeExifMeta?: boolean;
 }): PhotoViewerItem {
 	const {
 		ref,
@@ -53,7 +61,6 @@ export function buildPhotoViewerItem(options: {
 		index = 0,
 		fallbackAlt,
 		fallbackCaption,
-		includeExifMeta = false,
 	} = options;
 
 	if (!photo) {
@@ -64,38 +71,46 @@ export function buildPhotoViewerItem(options: {
 		};
 	}
 
-	const metadata = [
-		formatPhotoDate(photo.takenAt),
-		photo.locationLabel,
-		includeExifMeta
-			? formatPhotoDimensions(photo.width, photo.height)
-			: null,
-		includeExifMeta ? cameraLabel(photo.safeExif) : null,
-	].filter(Boolean);
+	const contextLine = [photo.locationLabel, formatPhotoDate(photo.takenAt)]
+		.filter(Boolean)
+		.join(" · ");
 
-	const hasRichCaption =
-		Boolean(photo.title) ||
-		Boolean(photo.caption) ||
-		metadata.length > 0;
+	const hasStory = Boolean(photo.title) || Boolean(photo.caption);
+	const hasContext = contextLine.length > 0;
+
+	const overlayMeta = [
+		photo.locationLabel,
+		formatPhotoDate(photo.takenAt ?? photo.createdAt, {
+			month: "short",
+			day: "numeric",
+		}),
+	]
+		.filter(Boolean)
+		.join(" · ");
 
 	return {
 		ref: photo.displayRef,
 		thumbnailRef: photo.thumbnailRef ?? photo.displayRef,
 		alt: photo.title ?? fallbackAlt ?? `Photo ${index + 1}`,
-		caption: hasRichCaption ? (
-			<div className="space-y-1">
-				{photo.title && (
-					<div className="text-base font-medium text-zinc-100">
-						{photo.title}
-					</div>
-				)}
-				{photo.caption && <div>{photo.caption}</div>}
-				{metadata.length > 0 && (
-					<div className="text-xs text-zinc-400">{metadata.join(" · ")}</div>
-				)}
-			</div>
-		) : (
-			fallbackCaption
-		),
+		width: photo.width,
+		height: photo.height,
+		overlayTitle: photo.title,
+		overlayMeta: overlayMeta || null,
+		caption:
+			hasStory || hasContext ? (
+				<div className="space-y-1">
+					{photo.title && (
+						<div className="text-base font-medium text-zinc-100">
+							{photo.title}
+						</div>
+					)}
+					{photo.caption && <div>{photo.caption}</div>}
+					{hasContext && (
+						<div className="text-xs text-zinc-400">{contextLine}</div>
+					)}
+				</div>
+			) : (
+				fallbackCaption
+			),
 	};
 }

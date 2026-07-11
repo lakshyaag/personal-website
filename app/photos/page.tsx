@@ -1,12 +1,17 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { PhotoLightboxGrid } from "@/components/photos/PhotoLightboxGrid";
+import { motion } from "motion/react";
+import { PhotoJustifiedGallery } from "@/components/photos/PhotoJustifiedGallery";
 import {
 	buildPhotoViewerItem,
-	formatPhotoDate,
 } from "@/components/photos/buildPhotoViewerItem";
 import type { ResolvedPhotoAsset } from "@/lib/photo-assets-db";
+import {
+	TRANSITION_SECTION,
+	VARIANTS_CONTAINER,
+	VARIANTS_SECTION,
+} from "@/lib/utils";
 
 interface PublicPhoto {
 	id: string;
@@ -26,8 +31,20 @@ function displayDate(photo: PublicPhoto): string {
 	return photo.takenAt ?? photo.createdAt;
 }
 
-function yearForPhoto(photo: PublicPhoto): string {
-	return new Date(displayDate(photo)).getFullYear().toString();
+function monthKeyForPhoto(photo: PublicPhoto): string {
+	const date = new Date(displayDate(photo));
+	const year = date.getFullYear();
+	const month = String(date.getMonth() + 1).padStart(2, "0");
+	return `${year}-${month}`;
+}
+
+function formatMonthHeading(monthKey: string): string {
+	const [year, month] = monthKey.split("-").map(Number);
+	const date = new Date(year, month - 1, 1);
+	return date.toLocaleDateString("en-US", {
+		month: "long",
+		year: "numeric",
+	});
 }
 
 function toResolved(photo: PublicPhoto): ResolvedPhotoAsset {
@@ -84,17 +101,26 @@ export default function PhotosPage() {
 		);
 		const groups = new Map<string, PublicPhoto[]>();
 		for (const photo of sorted) {
-			const year = yearForPhoto(photo);
-			const list = groups.get(year) ?? [];
+			const key = monthKeyForPhoto(photo);
+			const list = groups.get(key) ?? [];
 			list.push(photo);
-			groups.set(year, list);
+			groups.set(key, list);
 		}
 		return Array.from(groups.entries()).sort(([a], [b]) => b.localeCompare(a));
 	}, [photos]);
 
 	return (
-		<main className="mx-auto max-w-6xl px-6 py-12">
-			<div className="max-w-2xl">
+		<motion.main
+			className="mx-auto max-w-6xl px-2 py-12 sm:px-4"
+			variants={VARIANTS_CONTAINER}
+			initial="hidden"
+			animate="visible"
+		>
+			<motion.div
+				variants={VARIANTS_SECTION}
+				transition={TRANSITION_SECTION}
+				className="max-w-2xl px-4 sm:px-2"
+			>
 				<p className="text-xs font-semibold uppercase tracking-[0.22em] text-zinc-500 dark:text-zinc-400">
 					Photo Archive
 				</p>
@@ -104,45 +130,50 @@ export default function PhotosPage() {
 				<p className="mt-4 text-zinc-600 dark:text-zinc-400">
 					A collection of photos from everyday life and places I have been.
 				</p>
-			</div>
+			</motion.div>
 
 			{loading ? (
-				<p className="mt-12 text-zinc-600 dark:text-zinc-400">
+				<p className="mt-12 px-4 text-zinc-600 dark:text-zinc-400 sm:px-2">
 					Loading photos...
 				</p>
 			) : photos.length === 0 ? (
-				<p className="mt-12 text-zinc-600 dark:text-zinc-400">
+				<p className="mt-12 px-4 text-zinc-600 dark:text-zinc-400 sm:px-2">
 					No featured photos yet.
 				</p>
 			) : (
-				<div className="mt-12 space-y-14">
-					{groupedPhotos.map(([year, yearPhotos]) => (
-						<section key={year} className="grid gap-6 md:grid-cols-[9rem_1fr]">
-							<div className="md:sticky md:top-24 md:self-start">
-								<h2 className="text-2xl font-semibold text-zinc-950 dark:text-zinc-50">
-									{year}
+				<div className="mt-14 space-y-16">
+					{groupedPhotos.map(([monthKey, monthPhotos]) => (
+						<motion.section
+							key={monthKey}
+							variants={VARIANTS_SECTION}
+							transition={TRANSITION_SECTION}
+							className="space-y-5"
+						>
+							<div className="flex items-center gap-3 px-4 sm:px-2">
+								<h2 className="shrink-0 text-lg font-semibold text-zinc-950 dark:text-zinc-50">
+									{formatMonthHeading(monthKey)}
 								</h2>
-								<p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
-									{yearPhotos.length} frame{yearPhotos.length === 1 ? "" : "s"}
+								<div className="h-px flex-1 bg-zinc-200 dark:bg-zinc-800" />
+								<p className="shrink-0 text-sm text-zinc-500 dark:text-zinc-400">
+									{monthPhotos.length} frame
+									{monthPhotos.length === 1 ? "" : "s"}
 								</p>
 							</div>
-							<PhotoLightboxGrid
-								photos={yearPhotos.map((photo, index) =>
+							<PhotoJustifiedGallery
+								photos={monthPhotos.map((photo, index) =>
 									buildPhotoViewerItem({
 										ref: photo.displayRef,
 										photo: toResolved(photo),
 										index,
-										includeExifMeta: true,
-										fallbackCaption: formatPhotoDate(photo.createdAt),
 									}),
 								)}
-								gridClassName="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4"
-								thumbnailClassName="aspect-[4/5] w-full rounded-xl"
+								gap={12}
+								targetRowHeight={248}
 							/>
-						</section>
+						</motion.section>
 					))}
 				</div>
 			)}
-		</main>
+		</motion.main>
 	);
 }

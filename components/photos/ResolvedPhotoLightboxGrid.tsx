@@ -9,7 +9,6 @@ interface ResolvedPhotoLightboxGridProps {
 	refs: string[];
 	fallbackCaption?: (ref: string, index: number) => ReactNode;
 	fallbackAlt?: (ref: string, index: number) => string;
-	includeExifMeta?: boolean;
 	gridClassName?: string;
 	thumbnailClassName?: string;
 	thumbnailImageClassName?: string;
@@ -23,7 +22,6 @@ export function ResolvedPhotoLightboxGrid({
 	refs,
 	fallbackCaption,
 	fallbackAlt,
-	includeExifMeta = false,
 	gridClassName,
 	thumbnailClassName,
 	thumbnailImageClassName,
@@ -40,10 +38,9 @@ export function ResolvedPhotoLightboxGrid({
 					index,
 					fallbackAlt: fallbackAlt?.(ref, index),
 					fallbackCaption: fallbackCaption?.(ref, index),
-					includeExifMeta,
 				}),
 			),
-		[refs, photos, fallbackAlt, fallbackCaption, includeExifMeta],
+		[refs, photos, fallbackAlt, fallbackCaption],
 	);
 
 	return (

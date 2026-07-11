@@ -10,6 +10,12 @@ export interface PhotoViewerItem {
 	thumbnailRef?: string | null;
 	alt?: string;
 	caption?: ReactNode;
+	width?: number | null;
+	height?: number | null;
+	/** Short hover label shown on gallery thumbnails */
+	overlayTitle?: string | null;
+	/** Secondary hover meta (location, date, etc.) */
+	overlayMeta?: string | null;
 }
 
 export type PhotoInput = string | PhotoViewerItem;

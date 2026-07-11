@@ -3,10 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { PhotoLightboxGrid } from "@/components/photos/PhotoLightboxGrid";
-import {
-	buildPhotoViewerItem,
-	formatPhotoDate,
-} from "@/components/photos/buildPhotoViewerItem";
+import { buildPhotoViewerItem } from "@/components/photos/buildPhotoViewerItem";
 import { SvgArrowRight } from "@/components/ui/svg-arrow-right";
 import type { ResolvedPhotoAsset } from "@/lib/photo-assets-db";
 
@@ -92,15 +89,6 @@ export function PhotoTeaser() {
 							ref: photo.displayRef,
 							photo: toResolved(photo),
 							index,
-							fallbackCaption: [
-								photo.locationLabel,
-								formatPhotoDate(photo.takenAt ?? photo.createdAt, {
-									month: "short",
-									year: "numeric",
-								}),
-							]
-								.filter(Boolean)
-								.join(" · "),
 						}),
 					)}
 					gridClassName="grid grid-cols-2 gap-3 sm:grid-cols-4"
