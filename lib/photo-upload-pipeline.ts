@@ -12,7 +12,14 @@ import {
 import { encodeSupabaseRef } from "./photo-refs";
 
 interface UploadPhotoParams {
-	file: File;
+	photoId: string;
+	originalPath: string;
+	folder: UploadFolder;
+	identifier: string;
+}
+
+interface CreatePhotoUploadTargetParams {
+	fileName: string;
 	folder: UploadFolder;
 	identifier: string;
 }
@@ -33,6 +40,16 @@ export interface UploadPhotoResult {
 	visibility: PhotoVisibility;
 }
 
+export interface PhotoUploadTarget {
+	photoId: string;
+	originalPath: string;
+	token: string;
+}
+
+export const MAX_PHOTO_UPLOAD_BYTES = 50 * 1024 * 1024;
+
+const ORIGINALS_BUCKET = "photo-originals";
+
 function sanitizeIdentifier(identifier: string): string {
 	return identifier.replace(/[^a-zA-Z0-9_-]/g, "-").slice(0, 120);
 }
@@ -40,7 +57,11 @@ function sanitizeIdentifier(identifier: string): string {
 function extensionFromFile(fileName: string): string {
 	const parts = fileName.split(".");
 	if (parts.length < 2) return "jpg";
-	return parts[parts.length - 1]?.toLowerCase() || "jpg";
+	const extension = parts[parts.length - 1]
+		?.toLowerCase()
+		.replace(/[^a-z0-9]/g, "")
+		.slice(0, 10);
+	return extension || "jpg";
 }
 
 interface ParsedPhotoExif {
@@ -93,21 +114,98 @@ async function uploadObject(
 	}
 }
 
-export async function uploadPhotoWithUnifiedPipeline(
-	params: UploadPhotoParams,
-): Promise<UploadPhotoResult> {
-	const { file, folder, identifier } = params;
+export async function createPhotoUploadTarget(
+	params: CreatePhotoUploadTargetParams,
+): Promise<PhotoUploadTarget> {
+	const { fileName, folder, identifier } = params;
 	const normalizedIdentifier = sanitizeIdentifier(identifier);
 	if (!normalizedIdentifier) {
 		throw new Error("Missing valid identifier for upload");
 	}
 
 	const photoId = randomUUID();
-	const now = Date.now();
-	const sourceExt = extensionFromFile(file.name);
-	const basePath = `${folder}/${normalizedIdentifier}/${now}-${photoId}`;
+	const sourceExt = extensionFromFile(fileName);
+	const basePath = `${folder}/${normalizedIdentifier}/${Date.now()}-${photoId}`;
+	const originalPath = `${basePath}/original.${sourceExt}`;
+	const { data, error } = await supabaseAdmin.storage
+		.from(ORIGINALS_BUCKET)
+		.createSignedUploadUrl(originalPath);
 
-	const fileBuffer = Buffer.from(await file.arrayBuffer());
+	if (error || !data?.token) {
+		throw new Error(
+			`Failed to create signed photo upload: ${error?.message ?? "Missing upload token"}`,
+		);
+	}
+
+	return {
+		photoId,
+		originalPath,
+		token: data.token,
+	};
+}
+
+export async function finalizePhotoUpload(
+	params: UploadPhotoParams,
+): Promise<UploadPhotoResult> {
+	const { photoId, originalPath, folder, identifier } = params;
+	const normalizedIdentifier = sanitizeIdentifier(identifier);
+	if (!normalizedIdentifier) {
+		throw new Error("Missing valid identifier for upload");
+	}
+
+	const pathPrefix = `${folder}/${normalizedIdentifier}/`;
+	const originalFileSegment = "/original.";
+	const originalFileIndex = originalPath.lastIndexOf(originalFileSegment);
+	const basePath =
+		originalFileIndex === -1 ? "" : originalPath.slice(0, originalFileIndex);
+	const baseName = basePath.slice(pathPrefix.length);
+	const originalExtension =
+		originalFileIndex === -1
+			? ""
+			: originalPath.slice(originalFileIndex + originalFileSegment.length);
+	const timestamp = baseName.slice(0, -(photoId.length + 1));
+
+	if (
+		!originalPath.startsWith(pathPrefix) ||
+		!baseName.endsWith(`-${photoId}`) ||
+		!/^\d{13}$/.test(timestamp) ||
+		!/^[a-z0-9]{1,10}$/.test(originalExtension)
+	) {
+		throw new Error("Invalid original photo path");
+	}
+
+	const originalFileName = `original.${originalExtension}`;
+	const { data: originalObjects, error: listError } =
+		await supabaseAdmin.storage.from(ORIGINALS_BUCKET).list(basePath, {
+			limit: 10,
+			search: originalFileName,
+		});
+	const originalObject = originalObjects?.find(
+		(object) => object.name === originalFileName,
+	);
+	if (listError || !originalObject) {
+		throw new Error(
+			`Failed to find original photo: ${listError?.message ?? "Missing file"}`,
+		);
+	}
+
+	const originalSize = Number(originalObject.metadata?.size);
+	if (Number.isFinite(originalSize) && originalSize > MAX_PHOTO_UPLOAD_BYTES) {
+		throw new Error("Photo exceeds the maximum upload size");
+	}
+
+	const { data: originalBlob, error: downloadError } =
+		await supabaseAdmin.storage.from(ORIGINALS_BUCKET).download(originalPath);
+	if (downloadError || !originalBlob) {
+		throw new Error(
+			`Failed to download original photo: ${downloadError?.message ?? "Missing file"}`,
+		);
+	}
+
+	const fileBuffer = Buffer.from(await originalBlob.arrayBuffer());
+	if (fileBuffer.byteLength > MAX_PHOTO_UPLOAD_BYTES) {
+		throw new Error("Photo exceeds the maximum upload size");
+	}
 	const image = sharp(fileBuffer, { failOn: "none" }).rotate();
 	const metadata = await image.metadata();
 
@@ -135,9 +233,6 @@ export async function uploadPhotoWithUnifiedPipeline(
 
 	const visibility = visibilityForFolder(folder);
 	const contextType = contextTypeForFolder(folder);
-
-	const originalPath = `${basePath}/original.${sourceExt}`;
-	await uploadObject("photo-originals", originalPath, fileBuffer, file.type || "application/octet-stream");
 
 	const fullBuffer = await image
 		.clone()
@@ -206,7 +301,7 @@ export async function uploadPhotoWithUnifiedPipeline(
 
 	const { error: assetError } = await supabaseAdmin.from("photo_assets").insert({
 		id: photoId,
-		original_private_ref: encodeSupabaseRef("photo-originals", originalPath),
+		original_private_ref: encodeSupabaseRef(ORIGINALS_BUCKET, originalPath),
 		width: metadata.width ?? null,
 		height: metadata.height ?? null,
 		taken_at: takenAt,
