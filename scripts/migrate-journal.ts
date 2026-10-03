@@ -25,6 +25,7 @@ const { values } = parseArgs({
 		"persist-to": { type: "string" },
 		"worker-config": { type: "string" },
 		"confirm-staging": { type: "boolean", default: false },
+		merge: { type: "boolean", default: false },
 	},
 });
 interface ExportedFile {
@@ -257,6 +258,8 @@ async function plan() {
 }
 async function apply() {
 	const target = values.target;
+	if (values.merge && target !== "local")
+		throw new Error("Merge imports are supported only for the local journal");
 	if (target !== "local" && target !== "staging")
 		throw new Error(
 			"Apply requires --target local or staging. Production imports are not enabled.",
@@ -316,10 +319,33 @@ async function apply() {
 			"--json",
 		]),
 	) as { results: { count: number }[] }[];
-	if (result[0]?.results[0]?.count !== 0)
+	if (result[0]?.results[0]?.count !== 0 && !values.merge)
 		throw new Error(
-			"Import requires an empty target journal. Existing entries will not be overwritten.",
+			"Import requires an empty target journal. Use --merge for a collision-checked local import that preserves existing entries.",
 		);
+	if (values.merge) {
+		const existing = JSON.parse(
+			await wrangler([
+				"d1",
+				"execute",
+				database,
+				location,
+				"--command",
+				"SELECT id FROM journal_entries; SELECT id FROM photos;",
+				"--json",
+			]),
+		) as { results: { id: string }[] }[];
+		const entryIds = new Set(existing[0]?.results.map((row) => row.id));
+		const photoIds = new Set(existing[1]?.results.map((row) => row.id));
+		if (
+			manifest.entries.some((entry) => entryIds.has(entry.id)) ||
+			manifest.photos.some((photo) => photoIds.has(photo.id))
+		) {
+			throw new Error(
+				"An imported ID already exists locally. No existing data will be overwritten. Review the source and target before retrying.",
+			);
+		}
+	}
 	let client: S3Client | undefined;
 	if (target === "staging") {
 		const {
@@ -444,13 +470,16 @@ async function verify() {
 				)
 			).json();
 		for (const entry of result.entries) {
-			if (!expectedIds.has(entry.id) || foundIds.has(entry.id))
+			if (
+				(!values.merge && !expectedIds.has(entry.id)) ||
+				foundIds.has(entry.id)
+			)
 				throw new Error("Target entry count or pagination mismatch");
 			foundIds.add(entry.id);
 		}
 		cursor = result.nextCursor;
 	} while (cursor);
-	if (foundIds.size !== expectedIds.size)
+	if ([...expectedIds].some((id) => !foundIds.has(id)))
 		throw new Error("Target entry count mismatch");
 	for (const source of manifest.entries) {
 		const entry = (await (await get(`/v1/journal/${source.id}`)).json()) as {
@@ -501,7 +530,8 @@ async function verify() {
 	console.log(
 		JSON.stringify({
 			mode: "verify",
-			entries: foundIds.size,
+			entries: expectedIds.size,
+			preservedEntries: foundIds.size - expectedIds.size,
 			photos: manifest.photos.length,
 			result: "All counts, fields, relationships, sizes, and checksums match",
 		}),

@@ -66,9 +66,7 @@ test("creates, edits, filters and deletes a journal entry", async ({
 	await signIn(context);
 	await ready(page);
 	await page.getByLabel("Entry date", { exact: true }).fill("2026-04-16");
-	await page
-		.getByLabel("Time zone", { exact: true })
-		.fill("America/Los_Angeles");
+	await expect(page.getByLabel("Time zone", { exact: true })).toHaveCount(0);
 	await page.getByLabel("Your thoughts").fill("Browser test: first thought");
 	await page.getByRole("button", { name: "Save entry", exact: true }).click();
 	const card = page

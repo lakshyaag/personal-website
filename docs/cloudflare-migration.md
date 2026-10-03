@@ -94,14 +94,17 @@ bun run migration:journal --mode plan --time-zone Asia/Kolkata
 
 Choose the correct historical time zone explicitly. The script preserves entry IDs, calendar dates, and timestamp instants. It stops on missing originals, unsupported files, oversized originals, and invalid entries instead of silently dropping them. Review `snapshot.json` and `manifest.json`. Shared old photos receive deterministic per-entry IDs; their original bytes are preserved.
 
-Apply only to a fresh local or staging journal:
+Use a fresh local or staging journal by default. For a local journal with new entries you want to keep, add `--merge` to apply and verify. Merge checks entry and photo IDs for collisions and never overwrites existing records. It is not enabled for staging or production.
 
 ```sh
 bun run migration:journal --mode apply --target local
+# Or preserve your existing local entries:
+# bun run migration:journal --mode apply --target local --merge
 # Or, after staging resources and credentials are configured:
 bun run migration:journal --mode apply --target staging --confirm-staging
 # Set CLOUDFLARE_WORKER_URL/SECRET to the same target, then:
 bun run migration:journal --mode verify
+# Add --merge here too if the local target already contained entries.
 ```
 
 The import does not overwrite existing entries. If a partial import fails, use fresh staging resources; do not retry over existing journal rows. Verification compares counts, fields, timestamps, photo order, original sizes/checksums, and variant checksums. Run it before adding test entries to the imported database. Production imports are deliberately disabled.

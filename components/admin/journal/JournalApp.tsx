@@ -397,7 +397,7 @@ export default function JournalApp({ editId }: { editId?: string }) {
 						disabled={editorLocked}
 						className="space-y-5 disabled:opacity-70"
 					>
-						<div className="grid gap-4 sm:grid-cols-2">
+						<div className="max-w-xs">
 							<label className="space-y-2">
 								<span className="block text-sm font-medium">Entry date</span>
 								<input
@@ -410,21 +410,6 @@ export default function JournalApp({ editId }: { editId?: string }) {
 									}
 									className={fieldClass}
 								/>
-							</label>
-							<label className="space-y-2">
-								<span className="block text-sm font-medium">Time zone</span>
-								<input
-									required
-									aria-label="Time zone"
-									value={draft.timeZone}
-									onChange={(event) =>
-										setDraft({ ...draft, timeZone: event.target.value })
-									}
-									className={fieldClass}
-								/>
-								<span className="text-sm text-zinc-500">
-									The date stays on the day you selected.
-								</span>
 							</label>
 						</div>
 						<label className="block space-y-2">
