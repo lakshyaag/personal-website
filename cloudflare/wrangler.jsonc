@@ -1,0 +1,41 @@
+{
+  "$schema": "../node_modules/wrangler/config-schema.json",
+  "name": "personal-journal-local",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-03-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "workers_dev": true,
+  "d1_databases": [{ "binding": "DB", "database_name": "personal-journal-local", "database_id": "00000000-0000-0000-0000-000000000000", "migrations_dir": "migrations" }],
+  "r2_buckets": [{ "binding": "PHOTOS", "bucket_name": "personal-journal-local-private" }],
+  "images": { "binding": "IMAGES" },
+  "queues": {
+    "producers": [{ "binding": "PHOTO_QUEUE", "queue": "personal-journal-local-photos" }],
+    "consumers": [{ "queue": "personal-journal-local-photos", "max_batch_size": 5, "max_retries": 5, "dead_letter_queue": "personal-journal-local-photos-dlq" }]
+  },
+  "triggers": { "crons": ["*/10 * * * *"] },
+  "observability": { "enabled": true },
+  "env": {
+    "staging": {
+      "name": "personal-journal-staging",
+      "d1_databases": [{ "binding": "DB", "database_name": "personal-journal-staging", "database_id": "REPLACE_WITH_STAGING_D1_ID", "migrations_dir": "migrations" }],
+      "r2_buckets": [{ "binding": "PHOTOS", "bucket_name": "personal-journal-staging-private" }],
+      "images": { "binding": "IMAGES" },
+      "queues": {
+        "producers": [{ "binding": "PHOTO_QUEUE", "queue": "personal-journal-staging-photos" }],
+        "consumers": [{ "queue": "personal-journal-staging-photos", "max_batch_size": 5, "max_retries": 5, "dead_letter_queue": "personal-journal-staging-photos-dlq" }]
+      },
+      "triggers": { "crons": ["*/10 * * * *"] }
+    },
+    "production": {
+      "name": "personal-journal-production",
+      "d1_databases": [{ "binding": "DB", "database_name": "personal-journal-production", "database_id": "REPLACE_WITH_PRODUCTION_D1_ID", "migrations_dir": "migrations" }],
+      "r2_buckets": [{ "binding": "PHOTOS", "bucket_name": "personal-journal-production-private" }],
+      "images": { "binding": "IMAGES" },
+      "queues": {
+        "producers": [{ "binding": "PHOTO_QUEUE", "queue": "personal-journal-production-photos" }],
+        "consumers": [{ "queue": "personal-journal-production-photos", "max_batch_size": 5, "max_retries": 5, "dead_letter_queue": "personal-journal-production-photos-dlq" }]
+      },
+      "triggers": { "crons": ["*/10 * * * *"] }
+    }
+  }
+}

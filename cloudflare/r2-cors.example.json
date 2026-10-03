@@ -1,0 +1,13 @@
+{
+  "rules": [
+    {
+      "allowed": {
+        "origins": ["https://REPLACE_WITH_YOUR_EXACT_STAGING_HOST"],
+        "methods": ["PUT"],
+        "headers": ["Content-Type", "If-None-Match"]
+      },
+      "exposeHeaders": ["ETag"],
+      "maxAgeSeconds": 300
+    }
+  ]
+}

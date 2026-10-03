@@ -1,0 +1,5 @@
+# Copy to cloudflare/.dev.vars (gitignored).
+# Generate: openssl rand -hex 32. Use the same value as CLOUDFLARE_WORKER_SECRET.
+WORKER_API_SECRET=REPLACE_WITH_THE_SAME_RANDOM_WORKER_SECRET_AS_NEXTJS
+# Only local development may proxy uploads through Next.js to local R2.
+LOCAL_UPLOADS=true

@@ -37,6 +37,9 @@
     ".next/dev/types/**/*.ts"
   ],
   "exclude": [
-    "node_modules"
+    "node_modules",
+    "cloudflare",
+    "playwright.config.ts",
+    "tests/e2e"
   ]
 }
