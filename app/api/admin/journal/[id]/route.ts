@@ -1,6 +1,7 @@
 import { privateJson, privateRoute } from "@/lib/backend/api";
 import { workerJson, workerRequest } from "@/lib/backend/worker";
-import { entrySchema, idSchema } from "@/shared/journal";
+import { idSchema } from "@/shared/common";
+import { entrySchema } from "@/shared/journal";
 import { z } from "zod";
 
 type Context = { params: Promise<{ id: string }> };

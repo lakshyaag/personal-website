@@ -35,7 +35,7 @@ test("retains a successful upload when another file fails, then saves only the r
 		{ name: "first.png", mimeType: "image/png", buffer: image },
 		{ name: "second.png", mimeType: "image/png", buffer: image },
 	]);
-	await expect(page.getByText("Ready · private")).toBeVisible({
+	await expect(page.getByText("Ready", { exact: true })).toBeVisible({
 		timeout: 60_000,
 	});
 	await expect(page.getByText(/Upload failed \(503\)/)).toBeVisible();
@@ -48,7 +48,7 @@ test("retains a successful upload when another file fails, then saves only the r
 	await failed
 		.getByRole("button", { name: "Remove photo", exact: true })
 		.click();
-	await expect(page.getByText("Ready · private")).toBeVisible();
+	await expect(page.getByText("Ready", { exact: true })).toBeVisible();
 	await page.getByRole("button", { name: "Save entry", exact: true }).click();
 	const card = page
 		.getByTestId("journal-entry")

@@ -4,13 +4,13 @@ import {
 	safeRedirect,
 	validSecret,
 } from "../../lib/backend/config";
+import { dateSchema, localDate } from "../../shared/common";
+import { saveJournalSchema } from "../../shared/journal";
 import {
 	MAX_PHOTO_BYTES,
 	createPhotoSchema,
-	dateSchema,
-	localDate,
-	saveJournalSchema,
-} from "../../shared/journal";
+	updatePhotoSchema,
+} from "../../shared/photos";
 
 describe("Journal contracts", () => {
 	it("rejects impossible dates while preserving a selected local calendar day", () => {
@@ -47,7 +47,6 @@ describe("Journal contracts", () => {
 	it("limits uploaded image types and sizes", () => {
 		const data = {
 			id: crypto.randomUUID(),
-			entryId: crypto.randomUUID(),
 			fileName: "memory.png",
 			mimeType: "image/png",
 			byteSize: 4,
@@ -60,6 +59,18 @@ describe("Journal contracts", () => {
 		expect(
 			createPhotoSchema.safeParse({ ...data, mimeType: "image/svg+xml" })
 				.success,
+		).toBe(false);
+	});
+	it("trims photo metadata, clears empty text, and rejects unknown fields", () => {
+		expect(updatePhotoSchema.parse({ title: "  Dusk ", caption: "" })).toEqual({
+			title: "Dusk",
+			caption: null,
+		});
+		expect(updatePhotoSchema.safeParse({ generation: "x" }).success).toBe(
+			false,
+		);
+		expect(
+			updatePhotoSchema.safeParse({ visibility: "unlisted" }).success,
 		).toBe(false);
 	});
 });

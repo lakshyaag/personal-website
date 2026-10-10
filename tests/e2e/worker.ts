@@ -11,13 +11,18 @@ execFileSync("bun", ["run", "build:development"], {
 	stdio: "inherit",
 });
 
+const bundle = path.join(root, ".cloudflare/output/v0/workers/default/bundle");
 const mf = new Miniflare({
-	scriptPath: path.join(
-		root,
-		".cloudflare/output/v0/workers/default/bundle/index.js",
+	// Explicit modules: the bundle has a dynamic import (exifr) that auto-discovery rejects.
+	modules: await Promise.all(
+		(await readdir(bundle))
+			.filter((file) => file.endsWith(".js"))
+			.map(async (file) => ({
+				type: "ESModule" as const,
+				path: path.join(bundle, file),
+				contents: await readFile(path.join(bundle, file), "utf8"),
+			})),
 	),
-	modules: true,
-	modulesRoot: path.join(root, ".cloudflare/output/v0/workers/default/bundle"),
 	compatibilityDate: "2026-03-01",
 	compatibilityFlags: ["nodejs_compat"],
 	port: 8788,

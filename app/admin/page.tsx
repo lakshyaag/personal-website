@@ -22,13 +22,21 @@ export default async function AdminPage() {
 					</button>
 				</form>
 			</div>
-			<Link
-				href="/admin/journal"
-				className="block rounded-xl border border-zinc-300 p-6 dark:border-zinc-700"
-			>
-				<h2 className="text-xl font-medium">Journal</h2>
-				<p className="mt-2 text-zinc-500">Entries and photos</p>
-			</Link>
+			<nav className="grid gap-4 sm:grid-cols-2">
+				{[
+					["/admin/journal", "Journal", "Entries and photos"],
+					["/admin/photos", "Photos", "Library and public gallery"],
+				].map(([href, title, description]) => (
+					<Link
+						key={href}
+						href={href}
+						className="block rounded-xl border border-zinc-300 p-6 dark:border-zinc-700"
+					>
+						<h2 className="text-xl font-medium">{title}</h2>
+						<p className="mt-2 text-zinc-500">{description}</p>
+					</Link>
+				))}
+			</nav>
 		</main>
 	);
 }

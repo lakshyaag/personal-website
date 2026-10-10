@@ -29,8 +29,8 @@ export async function proxy(request: NextRequest) {
 			url.searchParams.set("redirectTo", path + request.nextUrl.search);
 			return NextResponse.redirect(url);
 		}
-		// Other admin features have not been migrated. Never silently write to Supabase.
-		if (!["/admin", "/admin/journal"].includes(path))
+		// Unmigrated admin features must never silently write to Supabase.
+		if (!["/admin", "/admin/journal", "/admin/photos"].includes(path))
 			return NextResponse.redirect(new URL("/admin", request.url));
 		const response = NextResponse.next();
 		response.headers.set("Cache-Control", "private, no-store");

@@ -1,10 +1,10 @@
 import "server-only";
-import { type JournalPhoto, originalKey } from "@/shared/journal";
+import { type Photo, originalKey } from "@/shared/photos";
 import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { BackendError } from "./worker";
 
-export async function photoUploadUrl(photo: JournalPhoto) {
+export async function photoUploadUrl(photo: Photo) {
 	const account = process.env.R2_ACCOUNT_ID;
 	const accessKeyId = process.env.PRIVATE_R2_ACCESS_KEY_ID;
 	const secretAccessKey = process.env.PRIVATE_R2_SECRET_ACCESS_KEY;

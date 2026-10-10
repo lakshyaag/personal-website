@@ -170,7 +170,7 @@ test("uploads a real image, waits for Cloudflare processing and saves its privat
 		mimeType: "image/jpeg",
 		buffer: image,
 	});
-	await expect(page.getByText("Ready · private")).toBeVisible({
+	await expect(page.getByText("Ready", { exact: true })).toBeVisible({
 		timeout: 60000,
 	});
 	await page.getByRole("button", { name: "Save entry", exact: true }).click();

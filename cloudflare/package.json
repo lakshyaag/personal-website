@@ -1,18 +1,18 @@
 {
-  "name": "personal-website-backend",
-  "private": true,
-  "type": "module",
-  "scripts": {
-    "dev": "cf dev --mode development -- --port 8787 --test-scheduled",
-    "build": "cf build --mode production",
-    "build:development": "cf build --mode development",
-    "check": "cf deploy --mode production --dry-run",
-    "deploy": "cf deploy --mode production --secrets-file .secrets.production.json",
-    "migrate:local": "cf d1 migrations apply 2a0807fc-e848-424d-af30-e028e831ac8d --local --persist-to .wrangler/state --dir migrations",
-    "migrate:production": "cf d1 migrations apply 6302f028-7188-46d5-8077-8a7fbfd0cc95 --dir migrations"
-  },
-  "devDependencies": {
-    "cf": "1.0.0-beta.12",
-    "wrangler": "4.147.0"
-  }
+	"name": "personal-website-backend",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"dev": "cf dev --mode development -- --port 8787 --test-scheduled",
+		"build": "cf build --mode production",
+		"build:development": "cf build --mode development",
+		"check": "cf deploy --mode production --dry-run",
+		"deploy": "cf deploy --mode production --secrets-file .secrets.production.json",
+		"migrate:local": "cf d1 migrations apply 2a0807fc-e848-424d-af30-e028e831ac8d --local --persist-to .wrangler/state --dir migrations",
+		"migrate:production": "cf d1 migrations apply 6302f028-7188-46d5-8077-8a7fbfd0cc95 --dir migrations"
+	},
+	"devDependencies": {
+		"cf": "1.0.0-beta.12",
+		"wrangler": "4.147.0"
+	}
 }

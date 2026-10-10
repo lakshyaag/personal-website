@@ -1,12 +1,21 @@
 import { applyD1Migrations, env } from "cloudflare:test";
 import { beforeAll, describe, expect, it, vi } from "vitest";
-import { originalKey } from "../../shared/journal";
+import { originalKey } from "../../shared/photos";
 import worker, {
 	assertSafeWebp,
 	processPhoto,
 	recoverPhotos,
 	type Env,
 } from "../src/index";
+import { extractMetadata } from "../src/photos";
+
+// Synthetic 8x6 JPEG: Canon EOS R6, 2024-06-01 18:30 +02:00, Sydney GPS. No real photo data.
+const exifJpeg = Uint8Array.from(
+	atob(
+		"/9j/4QGcRXhpZgAASUkqAAgAAAAJAA8BAgAGAAAAkgAAABABAgAHAAAAigAAABIBAwABAAAAAQAAABoBBQABAAAAegAAABsBBQABAAAAggAAACgBAwABAAAAAgAAABMCAwABAAAAAQAAAGmHBAABAAAAmAAAACWIBAABAAAALgEAAAAAAAA4YwAA6AMAADhjAADoAwAARU9TIFI2AABDYW5vbgAJAACQBwAEAAAAMDIxMAOQAgAUAAAAGgEAABGQAgAHAAAAEgEAAAGRBwAEAAAAAQIDAACgBwAEAAAAMDEwMAGgAwABAAAA//8AAAKgBAABAAAACAAAAAOgBAABAAAABgAAADSkAgAIAAAACgEAAAAAAABSRiAzNW1tACswMjowMAAAMjAyNDowNjowMSAxODozMDowMAAEAAEAAgACAAAAUwAAAAIABQADAAAAfAEAAAMAAgACAAAARQAAAAQABQADAAAAZAEAAAAAAACXAAAAAQAAAAwAAAABAAAAJAAAAAEAAAAhAAAAAQAAADMAAAABAAAAAAAAAAEAAAD/2wBDABQODxIPDRQSEBIXFRQYHjIhHhwcHj0sLiQySUBMS0dARkVQWnNiUFVtVkVGZIhlbXd7gYKBTmCNl4x9lnN+gXz/2wBDARUXFx4aHjshITt8U0ZTfHx8fHx8fHx8fHx8fHx8fHx8fHx8fHx8fHx8fHx8fHx8fHx8fHx8fHx8fHx8fHx8fHz/wAARCAAGAAgDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAT/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFQEBAQAAAAAAAAAAAAAAAAAABAX/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIRAxEAPwCMAVdf/9k=",
+	),
+	(c) => c.charCodeAt(0),
+);
 
 const bindings = env as unknown as Env & {
 	TEST_MIGRATIONS: Parameters<typeof applyD1Migrations>[1];
@@ -43,15 +52,30 @@ async function request(
 		customEnv,
 	);
 }
-async function photo(entryId = id()) {
+async function photo() {
 	const data = {
 		id: id(),
-		entryId,
 		fileName: "memory.png",
 		mimeType: "image/png",
 		byteSize: 4,
 	};
 	expect((await request("/v1/photos", "POST", data)).status).toBe(201);
+	return data;
+}
+async function state(photoId: string) {
+	return (
+		(await (await request(`/v1/photos/${photoId}`)).json()) as {
+			state: string;
+		}
+	).state;
+}
+async function readyPhoto() {
+	const data = await photo();
+	await bindings.DB.prepare(
+		"UPDATE photos SET state='ready',generation=? WHERE id=?",
+	)
+		.bind(crypto.randomUUID(), data.id)
+		.run();
 	return data;
 }
 function minimalWebp() {
@@ -180,7 +204,7 @@ describe("Journal transactions", () => {
 	});
 	it("rolls back entry creation/update when attachments are invalid", async () => {
 		const data = input();
-		const pending = await photo(data.id);
+		const pending = await photo();
 		expect(
 			(
 				await request("/v1/journal", "POST", {
@@ -207,7 +231,7 @@ describe("Journal transactions", () => {
 		expect(preserved.version).toBe(1);
 		expect(preserved.content).toBe(data.content);
 	});
-	it("rejects missing edits and attachments from another draft", async () => {
+	it("rejects missing edits and unknown photos", async () => {
 		expect(
 			(
 				await request(
@@ -217,18 +241,9 @@ describe("Journal transactions", () => {
 				)
 			).status,
 		).toBe(409);
-		const other = await photo();
-		await bindings.DB.prepare("UPDATE photos SET state='ready' WHERE id=?")
-			.bind(other.id)
-			.run();
 		expect(
-			(
-				await request(
-					"/v1/journal",
-					"POST",
-					input(id(), { photoIds: [other.id] }),
-				)
-			).status,
+			(await request("/v1/journal", "POST", input(id(), { photoIds: [id()] })))
+				.status,
 		).toBe(409);
 	});
 	it("pages consistently across equal timestamps and filters by local date", async () => {
@@ -304,7 +319,7 @@ describe("Private photo lifecycle", () => {
 	});
 	it("processes once, serves only a private variant, attaches, and deletes durably", async () => {
 		const entry = input();
-		const data = await photo(entry.id);
+		const data = await photo();
 		await bindings.PHOTOS.put(originalKey(data.id), new Uint8Array(4), {
 			httpMetadata: { contentType: "image/png" },
 		});
@@ -316,6 +331,10 @@ describe("Private photo lifecycle", () => {
 		await processPhoto(processingEnv, data.id);
 		await processPhoto(processingEnv, data.id);
 		expect(images.info).toHaveBeenCalledTimes(1);
+		expect(images.input).toHaveBeenCalledTimes(2);
+		const thumb = await request(`/v1/photos/${data.id}/thumb`);
+		expect(thumb.status).toBe(200);
+		await thumb.arrayBuffer();
 		const display = await request(`/v1/photos/${data.id}/display`);
 		expect(display.status).toBe(200);
 		expect(display.headers.get("cache-control")).toBe("private, no-store");
@@ -368,29 +387,20 @@ describe("Private photo lifecycle", () => {
 			).state,
 		).toBe("deleting");
 	});
-	it("cleans abandoned drafts but preserves attached photos", async () => {
-		const draft = await photo();
-		const entry = input();
-		const attached = await photo(entry.id);
+	it("cleans abandoned uploads but keeps ready library photos", async () => {
+		const abandoned = await photo();
+		const library = await photo();
 		await bindings.DB.prepare(
-			"UPDATE photos SET state='ready',updated_at='2020-01-01T00:00:00.000Z'",
-		).run();
-		await request("/v1/journal", "POST", { ...entry, photoIds: [attached.id] });
+			"UPDATE photos SET updated_at='2020-01-01T00:00:00.000Z' WHERE id IN (?,?)",
+		)
+			.bind(abandoned.id, library.id)
+			.run();
+		await bindings.DB.prepare("UPDATE photos SET state='ready' WHERE id=?")
+			.bind(library.id)
+			.run();
 		await recoverPhotos(bindings);
-		expect(
-			(
-				(await (await request(`/v1/photos/${draft.id}`)).json()) as {
-					state: string;
-				}
-			).state,
-		).toBe("deleting");
-		expect(
-			(
-				(await (await request(`/v1/photos/${attached.id}`)).json()) as {
-					state: string;
-				}
-			).state,
-		).toBe("ready");
+		expect(await state(abandoned.id)).toBe("deleting");
+		expect(await state(library.id)).toBe("ready");
 	});
 	it("blocks metadata in generated WebP variants", () => {
 		expect(() => assertSafeWebp(minimalWebp())).not.toThrow();
@@ -398,5 +408,105 @@ describe("Private photo lifecycle", () => {
 		bytes.set(new TextEncoder().encode("EXIF"), 12);
 		expect(() => assertSafeWebp(bytes)).toThrow("metadata");
 		expect(() => assertSafeWebp(new Uint8Array(4))).toThrow();
+	});
+});
+describe("Photo library", () => {
+	it("extracts capture time, GPS and camera inside the Workers runtime", async () => {
+		const metadata = await extractMetadata(exifJpeg.buffer);
+		expect(metadata.takenAt).toBe("2024-06-01T16:30:00.000Z");
+		expect(metadata.latitude).toBeCloseTo(-33.85);
+		expect(metadata.longitude).toBeCloseTo(151.21);
+		expect(metadata.camera).toMatchObject({ make: "Canon", model: "EOS R6" });
+		expect(await extractMetadata(new Uint8Array(4).buffer)).toEqual({
+			takenAt: null,
+			latitude: null,
+			longitude: null,
+			camera: null,
+		});
+	});
+	it("serves public variants without auth only while public and at the current generation", async () => {
+		const data = await readyPhoto();
+		const row = (await (await request(`/v1/photos/${data.id}`)).json()) as {
+			generation: string;
+		};
+		const key = `display/${data.id}/${row.generation}.webp`;
+		await bindings.PHOTOS.put(key, minimalWebp());
+		const url = `/public/photos/${data.id}/${row.generation}/display.webp`;
+		const anonymous = () => request(url, "GET", undefined, {} as typeof token);
+		expect((await anonymous()).status).toBe(404);
+		expect(
+			(
+				await request(`/v1/photos/${data.id}`, "PATCH", {
+					visibility: "public",
+				})
+			).status,
+		).toBe(200);
+		const served = await anonymous();
+		expect(served.status).toBe(200);
+		expect(served.headers.get("cache-control")).toContain("immutable");
+		await served.arrayBuffer();
+		expect(
+			(
+				await request(
+					`/public/photos/${data.id}/${crypto.randomUUID()}/display.webp`,
+					"GET",
+					undefined,
+					{} as typeof token,
+				)
+			).status,
+		).toBe(404);
+		await request(`/v1/photos/${data.id}`, "PATCH", { visibility: "private" });
+		expect((await anonymous()).status).toBe(404);
+	});
+	it("edits metadata, rejects unknown fields, and lists with links and filters", async () => {
+		const data = await readyPhoto();
+		const updated = (await (
+			await request(`/v1/photos/${data.id}`, "PATCH", {
+				title: "  Harbour  ",
+				caption: "",
+				featured: true,
+			})
+		).json()) as { title: string; caption: string | null; featured: boolean };
+		expect(updated).toMatchObject({
+			title: "Harbour",
+			caption: null,
+			featured: true,
+		});
+		expect(
+			(await request(`/v1/photos/${data.id}`, "PATCH", { state: "ready" }))
+				.status,
+		).toBe(400);
+		const entry = input(id(), { photoIds: [data.id] });
+		expect((await request("/v1/journal", "POST", entry)).status).toBe(200);
+		const featured = (await (
+			await request("/v1/photos?featured=true&limit=200")
+		).json()) as { photos: { id: string; links: unknown[] }[] };
+		expect(featured.photos.find((p) => p.id === data.id)?.links).toEqual([
+			{ context: "journal", contextId: entry.id },
+		]);
+		const unused = (await (
+			await request("/v1/photos?unused=true&limit=200")
+		).json()) as { photos: { id: string }[] };
+		expect(unused.photos.some((p) => p.id === data.id)).toBe(false);
+		expect((await request("/v1/photos?context=fits")).status).toBe(400);
+	});
+	it("deletes private photos dropped from an entry but keeps featured library photos", async () => {
+		const own = await readyPhoto();
+		const library = await readyPhoto();
+		await request(`/v1/photos/${library.id}`, "PATCH", { featured: true });
+		const entry = input(id(), { photoIds: [own.id, library.id] });
+		await request("/v1/journal", "POST", entry);
+		expect(
+			(
+				await request("/v1/journal", "POST", {
+					...entry,
+					expectedVersion: 1,
+					photoIds: [],
+					content: "No photos now",
+				})
+			).status,
+		).toBe(200);
+		expect(await state(own.id)).toBe("deleting");
+		expect(await state(library.id)).toBe("ready");
 	});
 });

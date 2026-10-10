@@ -1,4 +1,5 @@
-import { NextResponse } from "next/server";
+import { cloudflareAdmin } from "@/lib/backend/config";
+import { publicGallery } from "@/lib/backend/public-photos";
 import {
 	deletePhotoAssetById,
 	listPhotoAssets,
@@ -6,6 +7,7 @@ import {
 } from "@/lib/photo-assets-db";
 import type { PhotoVisibility } from "@/lib/photos";
 import { createServerSupabaseClient } from "@/lib/supabase-server";
+import { NextResponse } from "next/server";
 
 function isVisibility(value: string): value is PhotoVisibility {
 	return value === "private" || value === "unlisted" || value === "public";
@@ -15,6 +17,14 @@ export async function GET(req: Request) {
 	try {
 		const { searchParams } = new URL(req.url);
 		const admin = searchParams.get("admin") === "true";
+		if (cloudflareAdmin()) {
+			if (admin)
+				return NextResponse.json(
+					{ error: "Use /api/admin/photos" },
+					{ status: 410 },
+				);
+			return NextResponse.json(await publicGallery());
+		}
 
 		if (admin) {
 			const supabase = await createServerSupabaseClient();
@@ -63,7 +73,10 @@ export async function PATCH(req: Request) {
 			return NextResponse.json({ error: "Missing id" }, { status: 400 });
 		}
 		if (body.visibility !== undefined && !isVisibility(body.visibility)) {
-			return NextResponse.json({ error: "Invalid visibility" }, { status: 400 });
+			return NextResponse.json(
+				{ error: "Invalid visibility" },
+				{ status: 400 },
+			);
 		}
 
 		await updatePhotoAsset({

@@ -1,23 +1,20 @@
 "use client";
 
+import { localDate } from "@/shared/common";
 import {
 	type JournalEntry,
 	type JournalList,
 	entrySchema,
 	journalListSchema,
-	localDate,
 	saveJournalSchema,
 } from "@/shared/journal";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
-import PhotoEditor, { photoIsReady, type DraftPhoto } from "./PhotoEditor";
-import { journalRequest } from "./client";
+import PhotoField, { type DraftPhoto, photoIsReady } from "../PhotoField";
+import { adminRequest } from "../client";
+import { buttonClass, fieldClass } from "../styles";
 
-const fieldClass =
-	"w-full rounded-lg border border-zinc-300 bg-transparent px-3 py-2 outline-none focus:ring-2 focus:ring-zinc-500 dark:border-zinc-700";
-const buttonClass =
-	"rounded-lg border border-zinc-300 px-4 py-2 text-sm font-medium disabled:opacity-50 dark:border-zinc-700";
 interface Draft {
 	id: string;
 	date: string;
@@ -122,7 +119,7 @@ export default function JournalApp({ editId }: { editId?: string }) {
 		const epoch = ++editEpoch.current;
 		let completed = false;
 		setEditingLoading(true);
-		void journalRequest<JournalEntry>(`journal/${encodeURIComponent(editId)}`, {
+		void adminRequest<JournalEntry>(`journal/${encodeURIComponent(editId)}`, {
 			signal: controller.signal,
 		})
 			.then((entry) => {
@@ -189,7 +186,7 @@ export default function JournalApp({ editId }: { editId?: string }) {
 		}
 		const query = new URLSearchParams({ limit: "20" });
 		if (queryDate) query.set("date", queryDate);
-		void journalRequest<JournalList>(`journal?${query}`, {
+		void adminRequest<JournalList>(`journal?${query}`, {
 			signal: controller.signal,
 		})
 			.then((data) => {
@@ -221,7 +218,7 @@ export default function JournalApp({ editId }: { editId?: string }) {
 		if (filter === "date") query.set("date", filterDate);
 		try {
 			const result = journalListSchema.parse(
-				await journalRequest(`journal?${query}`),
+				await adminRequest(`journal?${query}`),
 			);
 			if (epoch === listEpoch.current) {
 				setEntries((old) => [
@@ -256,7 +253,7 @@ export default function JournalApp({ editId }: { editId?: string }) {
 				photos
 					.filter((item) => !item.existing && item.photo)
 					.map((item) =>
-						journalRequest(`photos/${item.id}`, { method: "DELETE" }).catch(
+						adminRequest(`photos/${item.id}`, { method: "DELETE" }).catch(
 							() => undefined,
 						),
 					),
@@ -296,7 +293,7 @@ export default function JournalApp({ editId }: { editId?: string }) {
 				photoIds: photos.map((item) => item.id),
 			});
 			entrySchema.parse(
-				await journalRequest("journal", {
+				await adminRequest("journal", {
 					method: "POST",
 					body: JSON.stringify(input),
 				}),
@@ -329,7 +326,7 @@ export default function JournalApp({ editId }: { editId?: string }) {
 		setDeleting(entry.id);
 		setListError(null);
 		try {
-			await journalRequest(
+			await adminRequest(
 				`journal/${entry.id}?expectedVersion=${entry.version}`,
 				{ method: "DELETE" },
 			);
@@ -424,8 +421,7 @@ export default function JournalApp({ editId }: { editId?: string }) {
 					<output>Preparing your journal…</output>
 				)}
 				{draft && (
-					<PhotoEditor
-						entryId={draft.id}
+					<PhotoField
 						photos={photos}
 						onChange={setPhotos}
 						disabled={editorLocked}

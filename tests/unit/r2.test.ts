@@ -1,10 +1,9 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { photoUploadUrl } from "../../lib/backend/r2";
-import type { JournalPhoto } from "../../shared/journal";
+import type { Photo } from "../../shared/photos";
 
-const photo: JournalPhoto = {
+const photo: Photo = {
 	id: "650241be-cfeb-42be-99a3-592fe9496b0f",
-	entryId: "213b941d-2f11-4ae1-a457-e6cbbcf12796",
 	state: "pending",
 	fileName: "memory.jpg",
 	mimeType: "image/jpeg",
@@ -12,6 +11,18 @@ const photo: JournalPhoto = {
 	width: null,
 	height: null,
 	error: null,
+	generation: null,
+	visibility: "private",
+	featured: false,
+	title: null,
+	caption: null,
+	location: null,
+	takenAt: null,
+	latitude: null,
+	longitude: null,
+	showLocation: false,
+	camera: null,
+	createdAt: "2026-10-10T00:00:00.000Z",
 };
 function configure() {
 	vi.stubEnv("R2_ACCOUNT_ID", "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");

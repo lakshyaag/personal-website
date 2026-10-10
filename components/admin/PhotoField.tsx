@@ -1,16 +1,12 @@
 "use client";
 
-import {
-	type JournalPhoto,
-	MAX_PHOTOS,
-	MAX_PHOTO_BYTES,
-} from "@/shared/journal";
+import { MAX_PHOTOS, MAX_PHOTO_BYTES, type Photo } from "@/shared/photos";
 import { useEffect, useRef } from "react";
-import { journalRequest } from "./client";
+import { adminRequest } from "./client";
 
 export interface DraftPhoto {
 	id: string;
-	photo?: JournalPhoto;
+	photo?: Photo;
 	file?: File;
 	preview?: string;
 	progress: number;
@@ -19,7 +15,6 @@ export interface DraftPhoto {
 	existing: boolean;
 }
 interface Props {
-	entryId: string;
 	photos: DraftPhoto[];
 	onChange: React.Dispatch<React.SetStateAction<DraftPhoto[]>>;
 	disabled: boolean;
@@ -27,12 +22,7 @@ interface Props {
 export function photoIsReady(item: DraftPhoto) {
 	return !item.uploading && !item.error && item.photo?.state === "ready";
 }
-export default function PhotoEditor({
-	entryId,
-	photos,
-	onChange,
-	disabled,
-}: Props) {
+export default function PhotoField({ photos, onChange, disabled }: Props) {
 	const uploads = useRef(new Map<string, XMLHttpRequest>());
 	const previews = useRef(new Set<string>());
 	const mounted = useRef(true);
@@ -72,10 +62,9 @@ export default function PhotoEditor({
 			await Promise.all(
 				pending.map(async (item) => {
 					try {
-						const photo = await journalRequest<JournalPhoto>(
-							`photos/${item.id}`,
-							{ signal: controller.signal },
-						);
+						const photo = await adminRequest<Photo>(`photos/${item.id}`, {
+							signal: controller.signal,
+						});
 						if (active)
 							onChange((items) =>
 								items.map((current) =>
@@ -121,15 +110,14 @@ export default function PhotoEditor({
 		if (!item.file) return;
 		update(item.id, { uploading: true, error: undefined, progress: 0 });
 		try {
-			const prepared = await journalRequest<{
-				photo: JournalPhoto;
+			const prepared = await adminRequest<{
+				photo: Photo;
 				uploadUrl: string | null;
 				headers: Record<string, string>;
 			}>("photos", {
 				method: "POST",
 				body: JSON.stringify({
 					id: item.id,
-					entryId,
 					fileName: item.file.name,
 					mimeType: item.file.type,
 					byteSize: item.file.size,
@@ -180,10 +168,9 @@ export default function PhotoEditor({
 					xhr.send(item.file);
 				});
 			if (!mounted.current) return;
-			const photo = await journalRequest<JournalPhoto>(
-				`photos/${item.id}/complete`,
-				{ method: "POST" },
-			);
+			const photo = await adminRequest<Photo>(`photos/${item.id}/complete`, {
+				method: "POST",
+			});
 			update(item.id, {
 				photo,
 				uploading: false,
@@ -207,10 +194,9 @@ export default function PhotoEditor({
 		}
 		update(item.id, { uploading: true, error: undefined });
 		try {
-			const photo = await journalRequest<JournalPhoto>(
-				`photos/${item.id}/retry`,
-				{ method: "POST" },
-			);
+			const photo = await adminRequest<Photo>(`photos/${item.id}/retry`, {
+				method: "POST",
+			});
 			update(item.id, {
 				photo,
 				uploading: false,
@@ -229,7 +215,7 @@ export default function PhotoEditor({
 	async function remove(item: DraftPhoto) {
 		if (!item.existing && item.photo) {
 			try {
-				await journalRequest(`photos/${item.id}`, { method: "DELETE" });
+				await adminRequest(`photos/${item.id}`, { method: "DELETE" });
 			} catch (error) {
 				update(item.id, {
 					error:
@@ -267,7 +253,7 @@ export default function PhotoEditor({
 		for (const item of additions) if (!item.error) void upload(item);
 	}
 	return (
-		<section className="space-y-3" aria-label="Journal photos">
+		<section className="space-y-3" aria-label="Photos">
 			<div className="flex items-center justify-between">
 				<h3 className="font-medium">
 					Photos{" "}
@@ -289,8 +275,7 @@ export default function PhotoEditor({
 				</label>
 			</div>
 			<p className="text-sm text-zinc-500">
-				Private originals. JPEG, PNG, WebP, or AVIF · up to 20 MB and 40
-				megapixels each. Save when processing is complete.
+				JPEG, PNG, WebP, or AVIF · up to 20 MB each.
 			</p>
 			<div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
 				{photos.map((item) => (
@@ -304,10 +289,10 @@ export default function PhotoEditor({
 							<img
 								src={
 									item.photo?.state === "ready"
-										? `/api/admin/photos/${item.id}/display`
+										? `/api/admin/photos/${item.id}/thumb`
 										: item.preview
 								}
-								alt={item.photo?.fileName ?? item.file?.name ?? "Journal photo"}
+								alt={item.photo?.fileName ?? item.file?.name ?? "Photo"}
 								className="aspect-square w-full object-cover"
 							/>
 						)}
@@ -319,7 +304,7 @@ export default function PhotoEditor({
 								{item.uploading
 									? `Uploading ${item.progress}%`
 									: item.photo?.state === "ready"
-										? "Ready · private"
+										? "Ready"
 										: (item.photo?.state ?? "Not uploaded")}
 							</output>
 							{item.error && (

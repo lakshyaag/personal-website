@@ -1,4 +1,4 @@
-export class JournalRequestError extends Error {
+export class AdminRequestError extends Error {
 	constructor(
 		message: string,
 		public status: number,
@@ -6,7 +6,7 @@ export class JournalRequestError extends Error {
 		super(message);
 	}
 }
-export async function journalRequest<T>(
+export async function adminRequest<T>(
 	path: string,
 	init: RequestInit = {},
 ): Promise<T> {
@@ -23,7 +23,7 @@ export async function journalRequest<T>(
 		const data = (await response.json().catch(() => ({}))) as {
 			error?: string;
 		};
-		throw new JournalRequestError(
+		throw new AdminRequestError(
 			data.error ?? "Request failed. Retry shortly.",
 			response.status,
 		);

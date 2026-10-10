@@ -1,13 +1,16 @@
 {
-  "rules": [
-    {
-      "allowed": {
-        "origins": ["http://localhost:3000", "https://REPLACE_WITH_EXACT_VERCEL_ORIGIN"],
-        "methods": ["PUT"],
-        "headers": ["Content-Type", "If-None-Match"]
-      },
-      "exposeHeaders": ["ETag"],
-      "maxAgeSeconds": 300
-    }
-  ]
+	"rules": [
+		{
+			"allowed": {
+				"origins": [
+					"http://localhost:3000",
+					"https://REPLACE_WITH_EXACT_VERCEL_ORIGIN"
+				],
+				"methods": ["PUT"],
+				"headers": ["Content-Type", "If-None-Match"]
+			},
+			"exposeHeaders": ["ETag"],
+			"maxAgeSeconds": 300
+		}
+	]
 }

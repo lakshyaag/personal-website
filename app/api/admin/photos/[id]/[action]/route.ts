@@ -1,7 +1,8 @@
 import { privateJson, privateRoute } from "@/lib/backend/api";
 import { localWorkerUploads } from "@/lib/backend/config";
 import { BackendError, workerJson, workerRequest } from "@/lib/backend/worker";
-import { MAX_PHOTO_BYTES, idSchema, photoSchema } from "@/shared/journal";
+import { idSchema } from "@/shared/common";
+import { MAX_PHOTO_BYTES, photoSchema } from "@/shared/photos";
 import { z } from "zod";
 
 type Context = { params: Promise<{ id: string; action: string }> };
@@ -22,9 +23,10 @@ export function POST(request: Request, context: Context) {
 export function GET(request: Request, context: Context) {
 	return privateRoute(request, async () => {
 		const { id, action } = await context.params;
-		if (action !== "display") throw new BackendError(404, "Not found");
+		if (action !== "display" && action !== "thumb")
+			throw new BackendError(404, "Not found");
 		const response = await workerRequest(
-			`/v1/photos/${idSchema.parse(id)}/display`,
+			`/v1/photos/${idSchema.parse(id)}/${action}`,
 		);
 		return new Response(response.body, {
 			headers: {
