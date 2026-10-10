@@ -31,7 +31,7 @@ export default defineConfig((ctx) => {
 				LOCAL_UPLOADS: bindings.text(production ? "false" : "true"),
 				// Food/workout analysis via Prime Intellect's OpenAI-compatible API.
 				PRIME_API_KEY: bindings.secret(),
-				AI_MODEL: bindings.text("google/gemini-3-flash-preview"),
+				AI_MODEL: bindings.text("z-ai/glm-5.3-flash"),
 			},
 			triggers: [triggers.scheduled({ schedule: "*/10 * * * *" })],
 		},

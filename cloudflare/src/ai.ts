@@ -2,7 +2,7 @@ import { z } from "zod";
 import { ApiError, type Env } from "./http";
 
 const BASE_URL = "https://api.pinference.ai/api/v1";
-const DEFAULT_MODEL = "google/gemini-3-flash-preview";
+const DEFAULT_MODEL = "z-ai/glm-5.3-flash";
 
 type Part =
 	| { type: "text"; text: string }

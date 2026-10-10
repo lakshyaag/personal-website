@@ -30,7 +30,7 @@ The admin backend is moving from Supabase to Cloudflare, ending with Supabase re
 
 ## AI analysis
 
-Food and workout entries are analyzed by Prime Intellect (`google/gemini-3-flash-preview`, the `AI_MODEL` value in `cloudflare.config.ts`; key in the `PRIME_API_KEY` secret) through its OpenAI-compatible API with a JSON schema response. `POST /v1/{food,workouts}/:id/analyze` runs it.
+Food and workout entries are analyzed by Prime Intellect (`z-ai/glm-5.3-flash`, the `AI_MODEL` value in `cloudflare.config.ts`; key in the `PRIME_API_KEY` secret) through its OpenAI-compatible API with a JSON schema response. `POST /v1/{food,workouts}/:id/analyze` runs it.
 
 - **Photos** are sent as short-lived signed links (`/signed/photos/:id/:generation/display?expires=…&sig=…`, HMAC, 10 minutes) that the provider fetches itself. The Worker never downloads or encodes images.
 - **When:** after a save that leaves an entry unanalyzed, the Next.js route runs analysis in `after()`, like the old Supabase webhook. A failure only leaves the "Analyze" button. Saving keeps the analysis unless the description/photos (food) or text (workout) changed.
