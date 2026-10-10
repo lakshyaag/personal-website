@@ -25,6 +25,8 @@ export const foodEntrySchema = z.object({
 	aiCarbsG: z.number().optional(),
 	aiFatG: z.number().optional(),
 	aiNotes: z.string().optional(),
+	/** An analysis job is queued; the result replaces the ai* fields when it lands. */
+	analysisPending: z.boolean(),
 	createdAt: z.iso.datetime(),
 	updatedAt: z.iso.datetime(),
 });

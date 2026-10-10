@@ -12,7 +12,12 @@ import {
 } from "../../shared/photos";
 import { saveVisitSchema } from "../../shared/visits";
 import { saveWorkoutSchema } from "../../shared/workouts";
-import { type AnalysisJob, consumeAnalysis, queueAnalysis } from "./analysis";
+import {
+	type AnalysisJob,
+	consumeAnalysis,
+	queueAnalysis,
+	requestAnalysis,
+} from "./analysis";
 import {
 	createRecommendation,
 	deleteBook,
@@ -22,7 +27,7 @@ import {
 	saveBook,
 	setCurrentBook,
 } from "./books";
-import { analyzeFood, deleteFood, getFood, listFood, saveFood } from "./food";
+import { deleteFood, getFood, listFood, saveFood } from "./food";
 import { ApiError, type Env, authorized, jsonBody, responseJson } from "./http";
 import { deleteEntry, getEntry, listEntries, saveEntry } from "./journal";
 import {
@@ -40,7 +45,6 @@ import {
 } from "./photos";
 import { deleteVisit, getVisit, listVisits, saveVisit } from "./visits";
 import {
-	analyzeWorkout,
 	deleteWorkout,
 	getWorkout,
 	listWorkouts,
@@ -169,10 +173,14 @@ async function recordRoute(request: Request, env: Env, url: URL) {
 	const id = idSchema.parse(rawId);
 	if (action) {
 		if (method !== "POST") return null;
-		if (resource === "food" && action === "analyze")
-			return responseJson(await analyzeFood(env, id, url.origin));
-		if (resource === "workouts" && action === "analyze")
-			return responseJson(await analyzeWorkout(env, id));
+		if (
+			(resource === "food" || resource === "workouts") &&
+			action === "analyze"
+		)
+			return responseJson(
+				await requestAnalysis(env, resource, id, url.origin),
+				202,
+			);
 		if (resource === "books" && action === "current")
 			return responseJson(await setCurrentBook(env, id));
 		return null;
@@ -184,17 +192,22 @@ async function recordRoute(request: Request, env: Env, url: URL) {
 	}
 	if (method === "PUT") {
 		const body = await jsonBody(request);
+		// A save that leaves the entry unanalyzed queues analysis (when AI is configured).
 		if (resource === "food") {
 			const entry = await saveFood(env, id, saveFoodSchema.parse(body));
-			if (!entry.aiFoodName)
-				await queueAnalysis(env, { kind: "food", id, origin: url.origin });
-			return responseJson(entry);
+			return responseJson(
+				entry.aiFoodName || !env.PRIME_API_KEY
+					? entry
+					: await queueAnalysis(env, "food", id, url.origin),
+			);
 		}
 		if (resource === "workouts") {
 			const log = await saveWorkout(env, id, saveWorkoutSchema.parse(body));
-			if (log.content && !log.aiSessionType)
-				await queueAnalysis(env, { kind: "workouts", id, origin: url.origin });
-			return responseJson(log);
+			return responseJson(
+				!log.content || log.aiSessionType || !env.PRIME_API_KEY
+					? log
+					: await queueAnalysis(env, "workouts", id, url.origin),
+			);
 		}
 		if (resource === "visits")
 			return responseJson(

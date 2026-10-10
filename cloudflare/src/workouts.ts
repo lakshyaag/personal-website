@@ -9,6 +9,7 @@ import {
 	workoutAnalysisSchema,
 } from "../../shared/workouts";
 import { generateJson, looseNumber } from "./ai";
+import { analysisPending } from "./analysis";
 import {
 	ApiError,
 	type Env,
@@ -30,6 +31,7 @@ interface WorkoutRow {
 	ai_total_volume: number | null;
 	ai_muscle_groups: string | null;
 	ai_notes: string | null;
+	analysis_queued_at: string | null;
 	created_at: string;
 	updated_at: string;
 }
@@ -58,6 +60,7 @@ async function workoutDtos(
 			? jsonColumn<string[]>(row.ai_muscle_groups, [])
 			: undefined,
 		aiNotes: optional(row.ai_notes),
+		analysisPending: analysisPending(row.analysis_queued_at),
 		createdAt: row.created_at,
 		updatedAt: row.updated_at,
 	}));

@@ -338,11 +338,13 @@ export function useAdminList<T>(
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
 	const [version, setVersion] = useState(0);
+	const quiet = useRef(false);
 	// biome-ignore lint/correctness/useExhaustiveDependencies: version deliberately triggers a refetch.
 	useEffect(() => {
 		if (!path) return;
 		const controller = new AbortController();
-		setLoading(true);
+		if (!quiet.current) setLoading(true);
+		quiet.current = false;
 		setError(null);
 		adminRequest(path, { signal: controller.signal })
 			.then((data) => setItems(parse(data)))
@@ -356,7 +358,49 @@ export function useAdminList<T>(
 		return () => controller.abort();
 	}, [path, parse, version]);
 	const reload = useCallback(() => setVersion((value) => value + 1), []);
-	return { items, loading, error, reload };
+	/** Refetches without the loading state, so the list stays on screen. */
+	const refresh = useCallback(() => {
+		quiet.current = true;
+		setVersion((value) => value + 1);
+	}, []);
+	return { items, loading, error, reload, refresh };
+}
+
+/** Quietly refetches every few seconds while any item has an AI analysis queued. */
+export function useAnalysisRefresh(
+	items: { analysisPending: boolean }[],
+	refresh: () => void,
+) {
+	useEffect(() => {
+		if (!items.some((item) => item.analysisPending)) return;
+		const timer = setTimeout(refresh, 4000);
+		return () => clearTimeout(timer);
+	}, [items, refresh]);
+}
+
+/**
+ * The editor's copy of a saved entry, re-read every few seconds while its analysis is queued.
+ * `onDone` runs once the result (or a failure) lands.
+ */
+export function useAnalyzedEntry<
+	T extends { id: string; analysisPending: boolean },
+>(initial: T | null, path: string, onDone: (entry: T) => void) {
+	const [entry, setEntry] = useState(initial);
+	useEffect(() => {
+		if (!entry?.analysisPending) return;
+		const timer = setTimeout(async () => {
+			try {
+				const next = await adminRequest<T>(`${path}/${entry.id}`);
+				setEntry(next);
+				if (!next.analysisPending) onDone(next);
+			} catch {
+				// Try again on the next tick.
+				setEntry((current) => current && { ...current });
+			}
+		}, 3000);
+		return () => clearTimeout(timer);
+	}, [entry, path, onDone]);
+	return [entry, setEntry] as const;
 }
 
 /**

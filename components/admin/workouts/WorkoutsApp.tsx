@@ -17,6 +17,8 @@ import {
 	message,
 	secondaryButton,
 	useAdminList,
+	useAnalysisRefresh,
+	useAnalyzedEntry,
 	useUndoDelete,
 } from "@/components/admin/kit";
 import {
@@ -31,7 +33,7 @@ import { localDate } from "@/shared/common";
 import { type WorkoutLog, workoutListSchema } from "@/shared/workouts";
 import { BarChart3, Loader2, Sparkles } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useState } from "react";
 import { toast } from "sonner";
 import { ExerciseCard } from "./ExerciseCard";
 
@@ -72,8 +74,7 @@ export default function WorkoutsApp() {
 	);
 	const { hidden, remove } = useUndoDelete();
 	const [editor, setEditor] = useState<{ log: WorkoutLog | null } | null>(null);
-	const refresh = useRef<ReturnType<typeof setTimeout>>(undefined);
-	useEffect(() => () => clearTimeout(refresh.current), []);
+	useAnalysisRefresh(list.items, list.refresh);
 
 	const logs = list.items.filter((log) => !hidden.has(log.id));
 	const card = (log: WorkoutLog) => (
@@ -88,6 +89,12 @@ export default function WorkoutsApp() {
 			)}
 			{log.content && (
 				<p className="mt-1 line-clamp-4 whitespace-pre-wrap">{log.content}</p>
+			)}
+			{log.analysisPending && !log.aiSessionType && (
+				<div className="mt-2 flex items-center gap-1 text-xs text-zinc-500">
+					<Loader2 className="h-3 w-3 animate-spin" />
+					Analyzing…
+				</div>
 			)}
 			<Summary log={log} />
 		</RecordCard>
@@ -149,16 +156,11 @@ export default function WorkoutsApp() {
 					log={editor.log}
 					defaultDate={view === "day" ? day : today}
 					onClose={() => setEditor(null)}
-					onSaved={(analyzeSoon) => {
+					onSaved={() => {
 						setEditor(null);
 						list.reload();
-						// Changed text is analyzed after saving; pick up the result.
-						if (analyzeSoon) {
-							clearTimeout(refresh.current);
-							refresh.current = setTimeout(list.reload, 12_000);
-						}
 					}}
-					onAnalyzed={list.reload}
+					onAnalyzed={list.refresh}
 					onDelete={(log) => {
 						setEditor(null);
 						remove(log.id, "Workout deleted", `workouts/${log.id}`);
@@ -180,7 +182,7 @@ function WorkoutEditor({
 	log: WorkoutLog | null;
 	defaultDate: string;
 	onClose: () => void;
-	onSaved: (analyzeSoon: boolean) => void;
+	onSaved: () => void;
 	onAnalyzed: () => void;
 	onDelete: (log: WorkoutLog) => void;
 }) {
@@ -195,7 +197,18 @@ function WorkoutEditor({
 	);
 	const [saving, setSaving] = useState(false);
 	const [analyzing, setAnalyzing] = useState(false);
-	const [saved, setSaved] = useState(log);
+	const [saved, setSaved] = useAnalyzedEntry(
+		log,
+		"workouts",
+		useCallback(
+			(next: WorkoutLog) => {
+				onAnalyzed();
+				if (!next.aiSessionType) toast.error("Analysis failed. Try again.");
+			},
+			[onAnalyzed],
+		),
+	);
+	const analysisBusy = analyzing || Boolean(saved?.analysisPending);
 	const dirty =
 		JSON.stringify(form) !== JSON.stringify(initial) ||
 		!samePhotos(photos, log?.photos);
@@ -218,10 +231,7 @@ function WorkoutEditor({
 				}),
 			});
 			toast.success(log ? "Workout updated" : "Workout saved");
-			onSaved(
-				Boolean(form.content.trim()) &&
-					form.content.trim() !== initial.content.trim(),
-			);
+			onSaved();
 		} catch (error) {
 			toast.error(message(error, "Failed to save workout"));
 			setSaving(false);
@@ -288,15 +298,19 @@ function WorkoutEditor({
 					<div className="flex items-center justify-between gap-2">
 						<h3 className="flex items-center gap-1.5 text-sm font-medium">
 							<Sparkles className="h-4 w-4 text-purple-600" />
-							{saved.aiSessionType ? "Analysis" : "Not analyzed yet"}
+							{saved.aiSessionType
+								? "Analysis"
+								: saved.analysisPending
+									? "Analyzing…"
+									: "Not analyzed yet"}
 						</h3>
 						<button
 							type="button"
 							className={secondaryButton}
-							disabled={analyzing || dirty}
+							disabled={analysisBusy || dirty}
 							onClick={() => void analyze()}
 						>
-							{analyzing ? (
+							{analysisBusy ? (
 								<Loader2 className="h-4 w-4 animate-spin" />
 							) : saved.aiSessionType ? (
 								"Re-analyze"

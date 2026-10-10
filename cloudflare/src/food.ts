@@ -6,6 +6,7 @@ import {
 	foodAnalysisSchema,
 } from "../../shared/food";
 import { generateJson, looseNumber } from "./ai";
+import { analysisPending } from "./analysis";
 import {
 	ApiError,
 	type Env,
@@ -27,6 +28,7 @@ interface FoodRow {
 	ai_carbs_g: number | null;
 	ai_fat_g: number | null;
 	ai_notes: string | null;
+	analysis_queued_at: string | null;
 	created_at: string;
 	updated_at: string;
 }
@@ -49,6 +51,7 @@ async function foodDtos(env: Env, rows: FoodRow[]): Promise<FoodEntry[]> {
 		aiCarbsG: optional(row.ai_carbs_g),
 		aiFatG: optional(row.ai_fat_g),
 		aiNotes: optional(row.ai_notes),
+		analysisPending: analysisPending(row.analysis_queued_at),
 		createdAt: row.created_at,
 		updatedAt: row.updated_at,
 	}));

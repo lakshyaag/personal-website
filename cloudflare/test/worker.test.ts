@@ -525,7 +525,38 @@ describe("Photo library", () => {
 	});
 });
 describe("Food, workouts, visits and books", () => {
-	const aiEnv = { ...bindings, PRIME_API_KEY: "test-key" } as Env;
+	// AI configured, with a queue that records jobs; tests run the consumer by hand.
+	const sent: AnalysisJob[] = [];
+	const aiEnv = {
+		...bindings,
+		PRIME_API_KEY: "test-key",
+		ANALYSIS_QUEUE: {
+			send: async (job: AnalysisJob) => {
+				sent.push(job);
+			},
+		},
+	} as unknown as Env;
+	const aiRequest = (path: string, method = "POST", body?: unknown) =>
+		request(path, method, body, token, aiEnv);
+	async function consume(job: AnalysisJob, attempts = 1) {
+		const message = { body: job, attempts, ack: vi.fn(), retry: vi.fn() };
+		await consumeAnalysis(
+			{ messages: [message] } as unknown as MessageBatch<AnalysisJob>,
+			aiEnv,
+		);
+		return message;
+	}
+	/** Presses "Analyze": the Worker answers at once with the entry pending, then the consumer runs. */
+	async function analyze(path: string) {
+		const queued = await aiRequest(`${path}/analyze`);
+		expect(queued.status).toBe(202);
+		expect(
+			((await queued.json()) as { analysisPending: boolean }).analysisPending,
+		).toBe(true);
+		const job = sent.at(-1) as AnalysisJob;
+		expect((await consume(job)).ack).toHaveBeenCalled();
+		return (await request(path)).json();
+	}
 	function stubModel(answer: unknown, seen: string[] = []) {
 		return vi
 			.spyOn(globalThis, "fetch")
@@ -579,17 +610,18 @@ describe("Food, workouts, visits and books", () => {
 			},
 			seen,
 		);
-		const analyzed = (await (
-			await worker.fetch(
-				new Request(`https://worker.test/v1/food/${foodId}/analyze`, {
-					method: "POST",
-					headers: token,
-				}),
-				aiEnv,
-			)
-		).json()) as { aiCalories: number; aiCarbsG: number; photos: unknown[] };
+		const analyzed = (await analyze(`/v1/food/${foodId}`)) as {
+			aiCalories: number;
+			aiCarbsG: number;
+			photos: unknown[];
+			analysisPending: boolean;
+		};
 		spy.mockRestore();
-		expect(analyzed).toMatchObject({ aiCalories: 510, aiCarbsG: 35 });
+		expect(analyzed).toMatchObject({
+			aiCalories: 510,
+			aiCarbsG: 35,
+			analysisPending: false,
+		});
 		expect(analyzed.photos).toHaveLength(1);
 		// The model gets a short-lived link that works without the API secret.
 		expect(seen).toHaveLength(1);
@@ -642,85 +674,126 @@ describe("Food, workouts, visits and books", () => {
 			muscleGroups: ["quads"],
 			notes: null,
 		});
-		const response = await worker.fetch(
-			new Request(`https://worker.test/v1/workouts/${logId}/analyze`, {
-				method: "POST",
-				headers: token,
-			}),
-			aiEnv,
-		);
-		spy.mockRestore();
-		const log = (await response.json()) as {
+		const log = (await analyze(`/v1/workouts/${logId}`)) as {
 			weight: number;
 			aiTotalVolume: number;
 			aiExercises: { sets: { weight: number | null; reps: number }[] }[];
 		};
+		spy.mockRestore();
 		expect(log.weight).toBe(79.2);
 		expect(log.aiTotalVolume).toBe(25 * 9 + 35 * 9);
 		expect(log.aiExercises[0].sets[2]).toEqual({ weight: null, reps: 10 });
-		expect((await request(`/v1/workouts/${id()}/analyze`, "POST")).status).toBe(
-			404,
-		);
+		expect((await aiRequest(`/v1/workouts/${id()}/analyze`)).status).toBe(404);
 	});
-	it("queues analysis on save, applies it in the consumer, and retries only model failures", async () => {
-		const sent: AnalysisJob[] = [];
-		const queueEnv = {
-			...aiEnv,
-			ANALYSIS_QUEUE: { send: async (job: AnalysisJob) => sent.push(job) },
-		} as unknown as Env;
+	it("queues analysis on save and retries model failures until the last attempt", async () => {
 		const logId = id();
 		const save = (content: string) =>
-			worker.fetch(
-				new Request(`https://worker.test/v1/workouts/${logId}`, {
-					method: "PUT",
-					headers: { ...token, "Content-Type": "application/json" },
-					body: JSON.stringify({
-						date: "2026-04-16",
-						content,
-						weight: null,
-						photoIds: [],
-					}),
-				}),
-				queueEnv,
-			);
-		await save("Push-ups 3x20");
-		expect(sent).toEqual([
-			{ kind: "workouts", id: logId, origin: "https://worker.test" },
-		]);
-		const consume = async (job: AnalysisJob) => {
-			const message = { body: job, attempts: 1, ack: vi.fn(), retry: vi.fn() };
-			await consumeAnalysis(
-				{ messages: [message] } as unknown as MessageBatch<AnalysisJob>,
-				queueEnv,
-			);
-			return message;
+			aiRequest(`/v1/workouts/${logId}`, "PUT", {
+				date: "2026-04-16",
+				content,
+				weight: null,
+				photoIds: [],
+			});
+		const before = sent.length;
+		const saved = (await (await save("Push-ups 3x20")).json()) as {
+			analysisPending: boolean;
 		};
+		expect(saved.analysisPending).toBe(true);
+		const job = sent.at(-1) as AnalysisJob;
+		expect(sent).toHaveLength(before + 1);
+		expect(job).toMatchObject({
+			kind: "workouts",
+			id: logId,
+			origin: "https://worker.test",
+		});
+		const pending = async () =>
+			(await (await request(`/v1/workouts/${logId}`)).json()) as {
+				analysisPending: boolean;
+				aiSessionType?: string;
+			};
 		const failing = vi
 			.spyOn(globalThis, "fetch")
 			.mockResolvedValue(new Response("busy", { status: 503 }));
-		const failed = await consume(sent[0]);
-		failing.mockRestore();
+		const failed = await consume(job);
 		expect(failed.retry).toHaveBeenCalled();
-		expect(failed.ack).not.toHaveBeenCalled();
+		expect((await pending()).analysisPending).toBe(true);
+		// The last attempt gives up and clears the flag, so the editor offers "Analyze" again.
+		const last = await consume(job, 4);
+		failing.mockRestore();
+		expect(last.retry).not.toHaveBeenCalled();
+		expect(last.ack).toHaveBeenCalled();
+		expect(await pending()).toMatchObject({ analysisPending: false });
+		expect((await pending()).aiSessionType).toBeUndefined();
+		// Unchanged text after a successful analysis isn't queued again.
+		await save("Push-ups 3x21");
 		const spy = stubModel({
 			sessionType: "strength",
 			exercises: [],
 			muscleGroups: ["chest"],
 			notes: "Solid",
 		});
-		const done = await consume(sent[0]);
+		expect((await consume(sent.at(-1) as AnalysisJob)).ack).toHaveBeenCalled();
 		spy.mockRestore();
-		expect(done.ack).toHaveBeenCalled();
+		expect(await pending()).toMatchObject({
+			analysisPending: false,
+			aiSessionType: "strength",
+		});
+		const count = sent.length;
+		await save("Push-ups 3x21");
+		expect(sent).toHaveLength(count);
+	});
+	it("drops jobs for deleted or changed entries without clearing a newer job", async () => {
+		const logId = id();
+		const save = (content: string) =>
+			aiRequest(`/v1/workouts/${logId}`, "PUT", {
+				date: "2026-04-16",
+				content,
+				weight: null,
+				photoIds: [],
+			});
+		await save("Rows 3x12");
+		const stale = sent.at(-1) as AnalysisJob;
+		// Edited while the first job waits: the conflict drops that job, and the newer one stays pending.
+		await new Promise((resolve) => setTimeout(resolve, 5));
+		await save("Rows 4x12");
+		const newer = sent.at(-1) as AnalysisJob;
+		expect(newer.queuedAt).not.toBe(stale.queuedAt);
+		const spy = vi.spyOn(globalThis, "fetch").mockImplementation(async () => {
+			// The edit lands while the model is answering.
+			await bindings.DB.prepare(
+				"UPDATE workout_logs SET updated_at = ? WHERE id = ?",
+			)
+				.bind(new Date(Date.now() + 60_000).toISOString(), logId)
+				.run();
+			return Response.json({
+				choices: [
+					{
+						message: {
+							content: JSON.stringify({
+								sessionType: "strength",
+								exercises: [],
+								muscleGroups: [],
+								notes: "",
+							}),
+						},
+					},
+				],
+			});
+		});
+		const dropped = await consume(stale);
+		spy.mockRestore();
+		expect(dropped.ack).toHaveBeenCalled();
+		expect(dropped.retry).not.toHaveBeenCalled();
 		const log = (await (await request(`/v1/workouts/${logId}`)).json()) as {
+			analysisPending: boolean;
 			aiSessionType?: string;
 		};
-		expect(log.aiSessionType).toBe("strength");
-		// An analyzed workout saved unchanged isn't queued again; a deleted one is dropped.
-		await save("Push-ups 3x20");
-		expect(sent).toHaveLength(1);
-		const gone = await consume({ ...sent[0], id: id() });
+		expect(log).toMatchObject({ analysisPending: true });
+		expect(log.aiSessionType).toBeUndefined();
+		const gone = await consume({ ...newer, id: id() });
 		expect(gone.ack).toHaveBeenCalled();
 		expect(gone.retry).not.toHaveBeenCalled();
+		expect((await aiRequest(`/v1/workouts/${id()}/analyze`)).status).toBe(404);
 	});
 	it("refuses analysis without an API key", async () => {
 		const logId = id();

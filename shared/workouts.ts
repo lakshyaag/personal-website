@@ -39,6 +39,8 @@ export const workoutLogSchema = z.object({
 	aiTotalVolume: z.number().optional(),
 	aiMuscleGroups: z.array(z.string()).optional(),
 	aiNotes: z.string().optional(),
+	/** An analysis job is queued; the result replaces the ai* fields when it lands. */
+	analysisPending: z.boolean(),
 	createdAt: z.iso.datetime(),
 	updatedAt: z.iso.datetime(),
 });

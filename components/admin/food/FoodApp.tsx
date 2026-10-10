@@ -18,6 +18,8 @@ import {
 	message,
 	secondaryButton,
 	useAdminList,
+	useAnalysisRefresh,
+	useAnalyzedEntry,
 	useUndoDelete,
 } from "@/components/admin/kit";
 import {
@@ -32,7 +34,7 @@ import { localDate } from "@/shared/common";
 import { type FoodEntry, foodListSchema } from "@/shared/food";
 import { Loader2, Sparkles } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 
 const parse = (data: unknown) => foodListSchema.parse(data).entries;
@@ -76,8 +78,7 @@ export default function FoodApp({ editId }: { editId?: string }) {
 	const [editor, setEditor] = useState<{ entry: FoodEntry | null } | null>(
 		null,
 	);
-	const refresh = useRef<ReturnType<typeof setTimeout>>(undefined);
-	useEffect(() => () => clearTimeout(refresh.current), []);
+	useAnalysisRefresh(list.items, list.refresh);
 
 	useEffect(() => {
 		if (!editId) return;
@@ -103,6 +104,12 @@ export default function FoodApp({ editId }: { editId?: string }) {
 		>
 			<div className="flex items-center gap-2 text-xs text-zinc-500">
 				<span>{formatTime(entry.eatenAt)}</span>
+				{entry.analysisPending && !entry.aiFoodName && (
+					<span className="flex items-center gap-1">
+						<Loader2 className="h-3 w-3 animate-spin" />
+						Analyzing…
+					</span>
+				)}
 				{entry.aiFoodName && (
 					<span className="flex items-center gap-0.5 text-green-600 dark:text-green-400">
 						<Sparkles className="h-3 w-3" />
@@ -172,16 +179,11 @@ export default function FoodApp({ editId }: { editId?: string }) {
 					entry={editor.entry}
 					defaultDate={view === "day" ? day : today}
 					onClose={close}
-					onSaved={(isNew) => {
+					onSaved={() => {
 						close();
 						list.reload();
-						// Analysis runs after a new entry is saved; pick up its result.
-						if (isNew) {
-							clearTimeout(refresh.current);
-							refresh.current = setTimeout(list.reload, 12_000);
-						}
 					}}
-					onAnalyzed={list.reload}
+					onAnalyzed={list.refresh}
 					onDelete={(entry) => {
 						close();
 						remove(entry.id, "Food entry deleted", `food/${entry.id}`);
@@ -203,7 +205,7 @@ function FoodEditor({
 	entry: FoodEntry | null;
 	defaultDate: string;
 	onClose: () => void;
-	onSaved: (isNew: boolean) => void;
+	onSaved: () => void;
 	onAnalyzed: () => void;
 	onDelete: (entry: FoodEntry) => void;
 }) {
@@ -218,7 +220,18 @@ function FoodEditor({
 	);
 	const [saving, setSaving] = useState(false);
 	const [analyzing, setAnalyzing] = useState(false);
-	const [saved, setSaved] = useState(entry);
+	const [saved, setSaved] = useAnalyzedEntry(
+		entry,
+		"food",
+		useCallback(
+			(next: FoodEntry) => {
+				onAnalyzed();
+				if (!next.aiFoodName) toast.error("Analysis failed. Try again.");
+			},
+			[onAnalyzed],
+		),
+	);
+	const analysisBusy = analyzing || Boolean(saved?.analysisPending);
 	const dirty =
 		JSON.stringify(form) !== JSON.stringify(initial) ||
 		!samePhotos(photos, entry?.photos);
@@ -242,7 +255,7 @@ function FoodEditor({
 				}),
 			});
 			toast.success(entry ? "Entry updated" : "Entry saved. Analyzing…");
-			onSaved(!entry);
+			onSaved();
 		} catch (error) {
 			toast.error(message(error, "Failed to save entry"));
 			setSaving(false);
@@ -302,15 +315,16 @@ function FoodEditor({
 					<div className="flex items-center justify-between gap-2">
 						<h3 className="flex items-center gap-1.5 text-sm font-medium">
 							<Sparkles className="h-4 w-4 text-green-600" />
-							{saved.aiFoodName ?? "Not analyzed yet"}
+							{saved.aiFoodName ??
+								(saved.analysisPending ? "Analyzing…" : "Not analyzed yet")}
 						</h3>
 						<button
 							type="button"
 							className={secondaryButton}
-							disabled={analyzing || dirty}
+							disabled={analysisBusy || dirty}
 							onClick={() => void analyze()}
 						>
-							{analyzing ? (
+							{analysisBusy ? (
 								<Loader2 className="h-4 w-4 animate-spin" />
 							) : saved.aiFoodName ? (
 								"Re-analyze"
