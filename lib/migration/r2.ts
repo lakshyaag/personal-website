@@ -6,9 +6,9 @@ import { BackendError } from "./worker-client";
 
 export async function photoUploadUrl(photo: JournalPhoto) {
 	const account = process.env.R2_ACCOUNT_ID;
-	const accessKeyId = process.env.JOURNAL_R2_ACCESS_KEY_ID;
-	const secretAccessKey = process.env.JOURNAL_R2_SECRET_ACCESS_KEY;
-	const bucket = process.env.JOURNAL_R2_BUCKET;
+	const accessKeyId = process.env.PRIVATE_R2_ACCESS_KEY_ID;
+	const secretAccessKey = process.env.PRIVATE_R2_SECRET_ACCESS_KEY;
+	const bucket = process.env.PRIVATE_R2_BUCKET;
 	if (
 		!account ||
 		!accessKeyId ||
@@ -27,7 +27,7 @@ export async function photoUploadUrl(photo: JournalPhoto) {
 	if (bucket === "site-assets" || bucket === process.env.R2_BUCKET)
 		throw new BackendError(
 			503,
-			"Journal requires a separate private R2 bucket",
+			"Private uploads require a separate private R2 bucket",
 			"CONFIGURATION",
 		);
 	const client = new S3Client({

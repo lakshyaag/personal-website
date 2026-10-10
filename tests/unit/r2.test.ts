@@ -15,9 +15,9 @@ const photo: JournalPhoto = {
 };
 function configure() {
 	vi.stubEnv("R2_ACCOUNT_ID", "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
-	vi.stubEnv("JOURNAL_R2_ACCESS_KEY_ID", "test-private-bucket-key");
-	vi.stubEnv("JOURNAL_R2_SECRET_ACCESS_KEY", "test-private-bucket-secret");
-	vi.stubEnv("JOURNAL_R2_BUCKET", "personal-journal-staging-private");
+	vi.stubEnv("PRIVATE_R2_ACCESS_KEY_ID", "test-private-bucket-key");
+	vi.stubEnv("PRIVATE_R2_SECRET_ACCESS_KEY", "test-private-bucket-secret");
+	vi.stubEnv("PRIVATE_R2_BUCKET", "personal-website-production-private");
 	vi.stubEnv("R2_BUCKET", "site-assets");
 }
 afterEach(() => vi.unstubAllEnvs());
@@ -36,10 +36,10 @@ describe("Private R2 upload authorization", () => {
 	});
 	it("refuses the existing public bucket and missing credentials", async () => {
 		configure();
-		vi.stubEnv("JOURNAL_R2_BUCKET", "site-assets");
+		vi.stubEnv("PRIVATE_R2_BUCKET", "site-assets");
 		await expect(photoUploadUrl(photo)).rejects.toMatchObject({ status: 503 });
 		configure();
-		vi.stubEnv("JOURNAL_R2_SECRET_ACCESS_KEY", "");
+		vi.stubEnv("PRIVATE_R2_SECRET_ACCESS_KEY", "");
 		await expect(photoUploadUrl(photo)).rejects.toMatchObject({ status: 503 });
 	});
 });

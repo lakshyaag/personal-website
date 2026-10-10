@@ -11,16 +11,16 @@
 		"dev": "next dev --webpack",
 		"build": "next build --webpack",
 		"start": "next start",
-		"lint": "biome check auth.ts proxy.ts shared lib/migration components/admin/journal app/api/migration app/api/auth app/admin/page.tsx app/admin/login/page.tsx app/admin/journal/page.tsx cloudflare/src cloudflare/test cloudflare/vitest.config.ts tests scripts/migrate-journal.ts scripts/rehearse-journal.ts vitest.config.ts playwright.config.ts",
+		"lint": "biome check auth.ts proxy.ts shared lib/migration components/admin/journal app/api/migration app/api/auth app/admin/page.tsx app/admin/login/page.tsx app/admin/journal/page.tsx cloudflare/src cloudflare/test cloudflare/vitest.config.ts tests vitest.config.ts playwright.config.ts",
 		"typecheck": "tsc --noEmit && tsc -p cloudflare/tsconfig.json",
 		"test": "vitest run",
 		"test:worker": "vitest run --config cloudflare/vitest.config.ts",
 		"test:e2e": "playwright test",
-		"worker:dev": "wrangler dev --config cloudflare/wrangler.jsonc --env='' --port 8787 --test-scheduled",
-		"worker:migrate": "wrangler d1 migrations apply personal-journal-local --local --config cloudflare/wrangler.jsonc --env=''",
-		"worker:check": "wrangler deploy --config cloudflare/wrangler.jsonc --env='' --dry-run",
-		"migration:journal": "bun scripts/migrate-journal.ts",
-		"migration:rehearse": "bun scripts/rehearse-journal.ts"
+		"worker:dev": "bun run --cwd cloudflare dev",
+		"worker:migrate": "bun run --cwd cloudflare migrate:local",
+		"worker:check": "bun run --cwd cloudflare check",
+		"worker:deploy": "bun run --cwd cloudflare deploy",
+		"worker:migrate:production": "bun run --cwd cloudflare migrate:production"
 	},
 	"dependencies": {
 		"@ai-sdk/openai-compatible": "^1.0.29",
@@ -79,10 +79,10 @@
 		"@types/pluralize": "^0.0.33",
 		"@types/react": "^19",
 		"@types/react-dom": "^19",
+		"miniflare": "4.20260310.0",
 		"postcss": "^8",
 		"tailwindcss": "^4.0.0",
 		"typescript": "^5",
-		"vitest": "^3.2.0",
-		"wrangler": "^4.147.0"
+		"vitest": "^3.2.0"
 	}
 }

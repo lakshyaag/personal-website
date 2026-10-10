@@ -20,7 +20,7 @@ export default defineConfig({
 	projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
 	webServer: [
 		{
-			command: `bunx wrangler d1 migrations apply personal-journal-local --local --config cloudflare/test/wrangler.jsonc --persist-to .wrangler/e2e && bunx wrangler dev --config cloudflare/test/wrangler.jsonc --persist-to .wrangler/e2e --port 8788 --inspector-port 9231 --var WORKER_API_SECRET:${WORKER_SECRET}`,
+			command: "bun tests/e2e/worker.ts",
 			url: "http://localhost:8788/v1/health",
 			ignoreHTTPSErrors: false,
 			reuseExistingServer: false,

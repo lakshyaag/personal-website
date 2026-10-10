@@ -2,7 +2,7 @@
   "rules": [
     {
       "allowed": {
-        "origins": ["https://REPLACE_WITH_YOUR_EXACT_STAGING_HOST"],
+        "origins": ["http://localhost:3000", "https://REPLACE_WITH_EXACT_VERCEL_ORIGIN"],
         "methods": ["PUT"],
         "headers": ["Content-Type", "If-None-Match"]
       },

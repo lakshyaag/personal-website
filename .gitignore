@@ -53,3 +53,8 @@ next-env.d.ts
 playwright-report/
 test-results/
 migration-artifacts/
+
+# cf build output, nested Worker dependencies, and deployment secrets
+node_modules/
+.cloudflare/
+.secrets*.json
