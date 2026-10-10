@@ -1,4 +1,5 @@
 import "server-only";
+import { unstable_rethrow } from "next/navigation";
 import { validSecret } from "./config";
 
 export class BackendError extends Error {
@@ -50,7 +51,9 @@ export async function workerRequest(
 			signal: init.signal ?? AbortSignal.timeout(30_000),
 			...(init.body instanceof ReadableStream ? { duplex: "half" } : {}),
 		});
-	} catch {
+	} catch (error) {
+		// Next.js signals (e.g. a static render going dynamic) must pass through.
+		unstable_rethrow(error);
 		throw new BackendError(
 			502,
 			"Cloudflare is unavailable. Retry shortly.",

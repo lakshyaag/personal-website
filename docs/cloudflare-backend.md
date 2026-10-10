@@ -42,7 +42,9 @@ One library for every feature. `photos` holds the file plus library metadata; `p
 
 - **Uploads:** the browser (`components/admin/photo-variants.ts`) decodes the image, makes a 2048 px display and a 480 px thumbnail (WebP, or JPEG where the browser can't encode WebP), and reads capture time/GPS/camera with `shared/exif.ts`. It PUTs original + variants straight to R2 via presigned URLs, then `POST /photos/:id/complete` records the metadata after the Worker checks all three objects exist. Canvas encoding writes no EXIF, so GPS never reaches a served image.
 - **Serving:** private variants only through the authenticated admin API. Public photos at `GET {worker}/public/photos/:id/:generation/(display|thumb)`, unauthenticated and cached forever. The URL contains the generation and only works while the photo is public.
-- **Lifecycle:** private, unfeatured photos removed from their entry are deleted. Public or featured photos are library content and stay. Uploads abandoned for 24 hours are cleaned up by the 10-minute cron.
+- **Visibility follows use** (migration `0006`): a photo is public when it is in the gallery (`featured`) or on an airport visit (unless `map_hidden`), private otherwise. It is never set directly; `syncVisibility` runs after every link change and photo edit.
+- **Lifecycle:** a photo removed from its entry is deleted unless another entry or the gallery uses it. Uploads abandoned for 24 hours are cleaned up by the 10-minute cron.
+- **Library:** `GET /v1/photos` lists newest *taken* first (undated last), filters by `context`, `featured` or `unused` (no entry, not in the gallery), and each link carries the entry's date and a short label.
 - **Location:** GPS is stored privately. The public gallery only exposes it when a photo's "show location" is on.
 
 ## Tooling: `cf` only
@@ -101,7 +103,7 @@ Photos (2026-10-10): 82 Supabase photos imported with `scripts/migrate/photos.ts
 
 The journal's one-off scripts were removed after its migration; `scripts/migrate/` is deleted the same way once every feature has moved. Backups and the import snapshot are in gitignored `migration-artifacts/`.
 
-Food, workouts, visits, books (2026-10-10): `scripts/migrate/records.ts plan|apply|verify` copied 73 food entries, 23 workouts, 101 visits and 18 books (0 recommendations); verify checks every column of every row against Supabase. It also **rebuilt the food/workout/visit photo links**: Supabase's `photo_attachments` are keyed by upload folder (a date or airport code), not entry, so the photo import had linked them to nothing. Links now come from each entry's own `photos` refs (67 links). Photos referenced by no entry stay in the library as unused. The import is idempotent, so re-run `apply` + `verify` right before cutover to pick up anything written on the live site since. Pre-change D1 bookmark: `000003f1-00000000-00005100-02ad51510cbac6977e50890d779815f8` (0005).
+Food, workouts, visits, books (2026-10-10): `scripts/migrate/records.ts plan|apply|verify` copied 73 food entries, 23 workouts, 101 visits and 18 books (0 recommendations); verify checks every column of every row against Supabase. It also **rebuilt the food/workout/visit photo links**: Supabase's `photo_attachments` are keyed by upload folder (a date or airport code), not entry, so the photo import had linked them to nothing. Links now come from each entry's own `photos` refs (67 links). Photos referenced by no entry stay in the library as unused. The import is idempotent, so re-run `apply` + `verify` right before cutover to pick up anything written on the live site since. Pre-change D1 bookmarks: `000003f1-00000000-00005100-02ad51510cbac6977e50890d779815f8` (0005), `00000430-00000000-00005100-71186db42591db8b1492e01cef597d1f` (0006; it made the one unused public photo private).
 
 ## Remaining
 

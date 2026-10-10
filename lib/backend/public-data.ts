@@ -13,6 +13,8 @@ import {
 } from "@/shared/photos";
 import { visitListSchema } from "@/shared/visits";
 import { revalidateTag } from "next/cache";
+import { unstable_rethrow } from "next/navigation";
+import type { z } from "zod";
 import { workerJson } from "./worker";
 
 /**
@@ -22,12 +24,24 @@ import { workerJson } from "./worker";
 const PUBLIC_TAG = "public";
 export const refreshPublicData = () => revalidateTag(PUBLIC_TAG, { expire: 0 });
 
-async function publicJson<T>(path: string, fallback: T): Promise<T> {
+async function publicJson<T>(
+	path: string,
+	schema: z.ZodType<T>,
+	fallback: T,
+): Promise<T> {
 	try {
-		return await workerJson<T>(path, {
-			next: { revalidate: 3600, tags: [PUBLIC_TAG] },
-		});
+		return schema.parse(
+			await workerJson(path, {
+				// Vercel's data cache outlives deploys; keying it by deployment means a new build
+				// never reads a response shaped for older code.
+				headers: {
+					"X-Deployment": process.env.VERCEL_DEPLOYMENT_ID ?? "local",
+				},
+				next: { revalidate: 3600, tags: [PUBLIC_TAG] },
+			}),
+		);
 	} catch (error) {
+		unstable_rethrow(error);
 		// A Worker outage leaves a section empty rather than breaking the whole page.
 		console.error(
 			JSON.stringify({
@@ -74,9 +88,10 @@ export async function publicGallery() {
 			limit: "200",
 		});
 		if (cursor) query.set("cursor", cursor);
-		const page = photoListSchema.parse(
-			await publicJson(`/v1/photos?${query}`, { photos: [], nextCursor: null }),
-		);
+		const page = await publicJson(`/v1/photos?${query}`, photoListSchema, {
+			photos: [],
+			nextCursor: null,
+		});
 		photos.push(...page.photos);
 		cursor = page.nextCursor;
 	} while (cursor);
@@ -84,9 +99,9 @@ export async function publicGallery() {
 }
 
 export async function publicVisits(): Promise<PublicVisit[]> {
-	const { visits } = visitListSchema.parse(
-		await publicJson("/v1/visits", { visits: [] }),
-	);
+	const { visits } = await publicJson("/v1/visits", visitListSchema, {
+		visits: [],
+	});
 	return visits.map((visit) => {
 		// Only public photos appear on the public map.
 		const photos = visit.photos
@@ -108,12 +123,13 @@ export async function publicVisits(): Promise<PublicVisit[]> {
 	});
 }
 export async function publicBooks() {
-	return bookListSchema.parse(await publicJson("/v1/books", { books: [] }))
-		.books;
+	return (await publicJson("/v1/books", bookListSchema, { books: [] })).books;
 }
 export async function publicRecommendations() {
-	return recommendationListSchema.parse(
-		await publicJson("/v1/recommendations", { recommendations: [] }),
+	return (
+		await publicJson("/v1/recommendations", recommendationListSchema, {
+			recommendations: [],
+		})
 	).recommendations;
 }
 export async function submitRecommendation(input: CreateRecommendationInput) {

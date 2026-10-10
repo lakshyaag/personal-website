@@ -353,7 +353,7 @@ describe("Photo library", () => {
 		expect(
 			(
 				await request(`/v1/photos/${data.id}`, "PATCH", {
-					visibility: "public",
+					featured: true,
 				})
 			).status,
 		).toBe(200);
@@ -371,8 +371,95 @@ describe("Photo library", () => {
 				)
 			).status,
 		).toBe(404);
-		await request(`/v1/photos/${data.id}`, "PATCH", { visibility: "private" });
+		await request(`/v1/photos/${data.id}`, "PATCH", { featured: false });
 		expect((await anonymous()).status).toBe(404);
+	});
+	it("derives visibility from use and lists a timeline with what each photo is in", async () => {
+		const status = async (photoId: string) =>
+			(
+				(await (await request(`/v1/photos/${photoId}`)).json()) as {
+					visibility: string;
+				}
+			).visibility;
+		// Visibility can't be set directly any more.
+		const [onVisit, inJournal] = [await readyPhoto(), await readyPhoto()];
+		expect(
+			(
+				await request(`/v1/photos/${onVisit.id}`, "PATCH", {
+					visibility: "public",
+				})
+			).status,
+		).toBe(400);
+		const visitId = id();
+		const visit = (photoIds: string[]) =>
+			request(`/v1/visits/${visitId}`, "PUT", {
+				airportIdent: "KAUS",
+				date: "2026-04-21",
+				flightNumbers: [],
+				isLayover: false,
+				notes: "",
+				photoIds,
+			});
+		await visit([onVisit.id]);
+		expect(await status(onVisit.id)).toBe("public");
+		await request(`/v1/photos/${onVisit.id}`, "PATCH", { hiddenFromMap: true });
+		expect(await status(onVisit.id)).toBe("private");
+		await request(`/v1/photos/${onVisit.id}`, "PATCH", {
+			hiddenFromMap: false,
+		});
+		const entry = input(id(), {
+			photoIds: [inJournal.id],
+			content: "Lunch by the lake",
+		});
+		await request("/v1/journal", "POST", entry);
+		expect(await status(inJournal.id)).toBe("private");
+
+		// Newest taken first, undated last; links say which entry they are.
+		await bindings.DB.prepare("UPDATE photos SET taken_at=? WHERE id=?")
+			.bind("2030-01-01T00:00:00.000Z", inJournal.id)
+			.run();
+		await bindings.DB.prepare("UPDATE photos SET taken_at=NULL WHERE id=?")
+			.bind(onVisit.id)
+			.run();
+		const pages: {
+			id: string;
+			links: { label: string | null; date: string | null }[];
+		}[] = [];
+		let cursor: string | null = null;
+		do {
+			const page = (await (
+				await request(`/v1/photos?limit=2${cursor ? `&cursor=${cursor}` : ""}`)
+			).json()) as { photos: typeof pages; nextCursor: string | null };
+			pages.push(...page.photos);
+			cursor = page.nextCursor;
+		} while (cursor);
+		expect(pages[0].id).toBe(inJournal.id);
+		expect(pages[0].links).toEqual([
+			expect.objectContaining({
+				context: "journal",
+				label: "Lunch by the lake",
+				date: entry.date,
+			}),
+		]);
+		expect(new Set(pages.map((p) => p.id)).size).toBe(pages.length);
+		const undated = pages.findIndex((p) => p.id === onVisit.id);
+		expect(pages[undated].links).toEqual([
+			expect.objectContaining({
+				context: "visit",
+				label: "KAUS",
+				date: "2026-04-21",
+			}),
+		]);
+
+		// Dropped from its visit, the photo goes with it.
+		await visit([]);
+		expect(
+			(
+				(await (await request(`/v1/photos/${onVisit.id}`)).json()) as {
+					state: string;
+				}
+			).state,
+		).toBe("deleting");
 	});
 	it("edits metadata, rejects unknown fields, and lists with links and filters", async () => {
 		const data = await readyPhoto();
@@ -398,7 +485,7 @@ describe("Photo library", () => {
 			await request("/v1/photos?featured=true&limit=200")
 		).json()) as { photos: { id: string; links: unknown[] }[] };
 		expect(featured.photos.find((p) => p.id === data.id)?.links).toEqual([
-			{ context: "journal", contextId: entry.id },
+			expect.objectContaining({ context: "journal", contextId: entry.id }),
 		]);
 		const unused = (await (
 			await request("/v1/photos?unused=true&limit=200")

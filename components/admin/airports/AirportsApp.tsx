@@ -260,17 +260,7 @@ function VisitEditor({
 		if (!form.airport) return;
 		setSaving(true);
 		try {
-			// Visit photos appear on the public airports map.
-			await Promise.all(
-				photos
-					.filter((item) => !item.existing)
-					.map((item) =>
-						adminRequest(`photos/${item.id}`, {
-							method: "PATCH",
-							body: JSON.stringify({ visibility: "public" }),
-						}),
-					),
-			);
+			// The Worker makes visit photos public on the airports map.
 			await adminRequest(`visits/${visit?.id ?? crypto.randomUUID()}`, {
 				method: "PUT",
 				body: JSON.stringify({

@@ -44,6 +44,7 @@ export interface PhotoRow {
 	latitude: number | null;
 	longitude: number | null;
 	show_location: number;
+	map_hidden: number;
 	camera: string | null;
 	created_at: string;
 	updated_at: string;
@@ -81,6 +82,7 @@ export const photoDto = (row: PhotoRow): Photo => ({
 	latitude: row.latitude,
 	longitude: row.longitude,
 	showLocation: row.show_location === 1,
+	hiddenFromMap: row.map_hidden === 1,
 	camera: parseCamera(row.camera),
 	createdAt: row.created_at,
 });
@@ -128,10 +130,21 @@ export async function linkedPhotos(
 	return byContext;
 }
 
+/** Who can see a photo follows where it is used: the gallery or a visit (unless hidden from the map). */
+const PUBLIC_BY_USE = `featured = 1 OR (map_hidden = 0 AND EXISTS(
+	SELECT 1 FROM photo_links WHERE photo_id = photos.id AND context = 'visit'))`;
+export function syncVisibility(env: Env) {
+	return statement(
+		env,
+		`UPDATE photos SET visibility = CASE WHEN ${PUBLIC_BY_USE} THEN 'public' ELSE 'private' END
+		WHERE visibility != CASE WHEN ${PUBLIC_BY_USE} THEN 'public' ELSE 'private' END`,
+	);
+}
+
 /**
  * Statements that replace a context's photo links inside the caller's batch. The batch fails
- * unless every photo is ready. Private, unfeatured photos dropped from the context and used
- * nowhere else are deleted: they belonged to that entry. Library (public or featured) photos stay.
+ * unless every photo is ready. Photos dropped from the context that are used nowhere else and
+ * not in the gallery are deleted: they belonged to that entry. Gallery photos stay.
  */
 export async function replaceLinks(
 	env: Env,
@@ -186,11 +199,12 @@ export async function replaceLinks(
 			statement(
 				env,
 				`UPDATE photos SET state='deleting',updated_at=? WHERE id IN (${placeholders(previous.length)})
-				AND visibility='private' AND featured=0 AND NOT EXISTS(SELECT 1 FROM photo_links WHERE photo_id=photos.id)`,
+				AND featured=0 AND NOT EXISTS(SELECT 1 FROM photo_links WHERE photo_id=photos.id)`,
 				now(),
 				...previous,
 			),
 		);
+	statements.push(syncVisibility(env));
 	return statements;
 }
 
@@ -234,7 +248,7 @@ export async function listPhotos(env: Env, url: URL) {
 			[...url.searchParams].filter(([key]) => key !== "cursor"),
 		),
 	);
-	const cursor = decodeCursor(url.searchParams.get("cursor"), 2);
+	const cursor = decodeCursor(url.searchParams.get("cursor"), 3);
 	const where = ["state = 'ready'"];
 	const params: SqlValue[] = [];
 	if (filter.visibility) {
@@ -254,12 +268,12 @@ export async function listPhotos(env: Env, url: URL) {
 			"featured = 0 AND NOT EXISTS(SELECT 1 FROM photo_links WHERE photo_id = photos.id)",
 		);
 	if (cursor) {
-		where.push("(created_at, id) < (?, ?)");
+		where.push("(COALESCE(taken_at, ''), created_at, id) < (?, ?, ?)");
 		params.push(...cursor);
 	}
 	const { results } = await statement(
 		env,
-		`SELECT * FROM photos WHERE ${where.join(" AND ")} ORDER BY created_at DESC, id DESC LIMIT ?`,
+		`SELECT * FROM photos WHERE ${where.join(" AND ")} ORDER BY COALESCE(taken_at, '') DESC, created_at DESC, id DESC LIMIT ?`,
 		...params,
 		filter.limit + 1,
 	).all<PhotoRow>();
@@ -269,17 +283,32 @@ export async function listPhotos(env: Env, url: URL) {
 		const rows = await allInChunks(
 			page.map((row) => row.id),
 			async (chunk) => {
+				// What each link points at, so the library can say "Food · Jul 9 · Oatmeal".
 				const { results } = await statement(
 					env,
-					`SELECT * FROM photo_links WHERE photo_id IN (${placeholders(chunk.length)}) ORDER BY context, context_id`,
+					`SELECT l.photo_id, l.context, l.context_id,
+						COALESCE(j.entry_date, f.entry_date, w.log_date, v.visit_date) AS date,
+						COALESCE(substr(j.content, 1, 60), f.ai_food_name, substr(f.description, 1, 60),
+							w.ai_session_type, substr(w.content, 1, 60), v.airport_ident) AS label
+					FROM photo_links l
+					LEFT JOIN journal_entries j ON l.context = 'journal' AND j.id = l.context_id
+					LEFT JOIN food_entries f ON l.context = 'food' AND f.id = l.context_id
+					LEFT JOIN workout_logs w ON l.context = 'workout' AND w.id = l.context_id
+					LEFT JOIN visits v ON l.context = 'visit' AND v.id = l.context_id
+					WHERE l.photo_id IN (${placeholders(chunk.length)}) ORDER BY l.context, l.context_id`,
 					...chunk,
-				).all<LinkRow>();
+				).all<LinkRow & { date: string | null; label: string | null }>();
 				return results;
 			},
 		);
 		for (const row of rows) {
 			const list = links.get(row.photo_id) ?? [];
-			list.push({ context: row.context, contextId: row.context_id });
+			list.push({
+				context: row.context,
+				contextId: row.context_id,
+				date: row.date,
+				label: row.label?.trim() || null,
+			});
 			links.set(row.photo_id, list);
 		}
 	}
@@ -291,7 +320,7 @@ export async function listPhotos(env: Env, url: URL) {
 		})),
 		nextCursor:
 			results.length > filter.limit && last
-				? encodeCursor([last.created_at, last.id])
+				? encodeCursor([last.taken_at ?? "", last.created_at, last.id])
 				: null,
 	};
 }
@@ -302,8 +331,8 @@ export async function updatePhoto(
 	input: UpdatePhotoInput,
 ) {
 	const columns: Record<keyof UpdatePhotoInput, string> = {
-		visibility: "visibility",
 		featured: "featured",
+		hiddenFromMap: "map_hidden",
 		title: "title",
 		caption: "caption",
 		location: "location",
@@ -323,13 +352,16 @@ export async function updatePhoto(
 	if (row.state === "deleting")
 		throw new ApiError(404, "NOT_FOUND", "Photo not found");
 	if (sets.length)
-		await statement(
-			env,
-			`UPDATE photos SET ${sets.join(", ")}, updated_at = ? WHERE id = ? AND state != 'deleting'`,
-			...values,
-			now(),
-			id,
-		).run();
+		await env.DB.batch([
+			statement(
+				env,
+				`UPDATE photos SET ${sets.join(", ")}, updated_at = ? WHERE id = ? AND state != 'deleting'`,
+				...values,
+				now(),
+				id,
+			),
+			syncVisibility(env),
+		]);
 	return photoDto(await photoRow(env, id));
 }
 

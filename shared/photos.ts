@@ -41,6 +41,8 @@ export const photoSchema = z.object({
 	latitude: z.number().nullable(),
 	longitude: z.number().nullable(),
 	showLocation: z.boolean(),
+	/** Visit photos are public on the airports map unless hidden from it. */
+	hiddenFromMap: z.boolean(),
 	camera: cameraSchema.nullable(),
 	createdAt: z.iso.datetime(),
 });
@@ -49,6 +51,9 @@ export type Photo = z.infer<typeof photoSchema>;
 export const photoLinkSchema = z.object({
 	context: z.enum(photoContexts),
 	contextId: z.string(),
+	/** The entry's date and a short label (food name, airport, first words), when it exists. */
+	date: z.string().nullable().optional(),
+	label: z.string().nullable().optional(),
 });
 export const libraryPhotoSchema = photoSchema.extend({
 	links: z.array(photoLinkSchema),
@@ -98,8 +103,9 @@ const optionalText = (max: number) =>
 		.nullable();
 export const updatePhotoSchema = z
 	.object({
-		visibility: z.enum(["private", "public"]),
+		// Visibility is not set directly: it follows the gallery and visit use.
 		featured: z.boolean(),
+		hiddenFromMap: z.boolean(),
 		title: optionalText(200),
 		caption: optionalText(2000),
 		location: optionalText(200),
