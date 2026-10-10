@@ -22,7 +22,6 @@ export interface Env {
 interface EntryRow {
 	id: string;
 	entry_date: string;
-	time_zone: string;
 	content: string;
 	version: number;
 	created_at: string;
@@ -90,7 +89,6 @@ async function entryDto(env: Env, row: EntryRow): Promise<JournalEntry> {
 	return {
 		id: row.id,
 		date: row.entry_date,
-		timeZone: row.time_zone,
 		content: row.content,
 		version: row.version,
 		createdAt: row.created_at,
@@ -237,13 +235,12 @@ export async function saveEntry(env: Env, input: SaveJournalInput) {
 	const statements = [
 		statement(
 			env,
-			`INSERT INTO journal_entries (id,entry_date,time_zone,content,version,created_at,updated_at,last_mutation)
-			SELECT ?,?,?,?,1,?,?,? WHERE ? = 0 OR EXISTS(SELECT 1 FROM journal_entries WHERE id = ? AND version = ?)
-			ON CONFLICT(id) DO UPDATE SET entry_date=excluded.entry_date,time_zone=excluded.time_zone,content=excluded.content,
+			`INSERT INTO journal_entries (id,entry_date,content,version,created_at,updated_at,last_mutation)
+			SELECT ?,?,?,1,?,?,? WHERE ? = 0 OR EXISTS(SELECT 1 FROM journal_entries WHERE id = ? AND version = ?)
+			ON CONFLICT(id) DO UPDATE SET entry_date=excluded.entry_date,content=excluded.content,
 			version=journal_entries.version+1,updated_at=excluded.updated_at,last_mutation=excluded.last_mutation WHERE journal_entries.version = ?`,
 			input.id,
 			input.date,
-			input.timeZone,
 			input.content,
 			timestamp,
 			timestamp,

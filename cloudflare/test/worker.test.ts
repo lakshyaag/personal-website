@@ -18,7 +18,6 @@ function input(entryId = id(), overrides = {}) {
 	return {
 		id: entryId,
 		date: "2026-04-16",
-		timeZone: "America/Los_Angeles",
 		content: "A private thought",
 		expectedVersion: 0,
 		photoIds: [],
@@ -124,10 +123,9 @@ describe("Worker boundary", () => {
 		expect(response.status).toBe(200);
 		expect(response.headers.get("cache-control")).toBe("private, no-store");
 	});
-	it("validates real dates, zones, size limits, and unknown fields", async () => {
+	it("validates real dates, size limits, and unknown fields", async () => {
 		for (const overrides of [
 			{ date: "2026-02-30" },
-			{ timeZone: "Mars/Olympus" },
 			{ content: "" },
 			{ content: "a".repeat(100001) },
 			{ sql: "DROP TABLE photos" },

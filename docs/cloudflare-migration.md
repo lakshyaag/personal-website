@@ -63,7 +63,9 @@ To work fully offline instead, run `bun run worker:migrate && bun run worker:dev
 
 ## Journal migration (done)
 
-28 entries and 4 photos were copied from Supabase. On 2026-10-10 they were re-verified against live Supabase: every ID, date, content body and photo link matched, and all 8 R2 objects (original + display per photo) exist. Imported entries were stamped with time zone `Asia/Kolkata`. Supabase was never modified.
+28 entries and 4 photos were copied from Supabase. On 2026-10-10 they were re-verified against live Supabase: every ID, date, content body and photo link matched, and all 8 R2 objects (original + display per photo) exist. Supabase was never modified.
+
+Entries have no stored time zone (migration `0002`). `date` is the calendar day the entry is about. `createdAt`/`updatedAt` are UTC instants, displayed in the viewer's local zone. The pre-change D1 time-travel bookmark is `000003db-00000000-00005100-65352c34d5a4cd97da21458b4778728e`.
 
 The one-off export/import scripts were removed after the migration. Backups and the import snapshot are in gitignored `migration-artifacts/`.
 

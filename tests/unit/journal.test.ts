@@ -10,7 +10,6 @@ import {
 	dateSchema,
 	localDate,
 	saveJournalSchema,
-	timeZoneSchema,
 } from "../../shared/journal";
 
 describe("Journal contracts", () => {
@@ -19,8 +18,6 @@ describe("Journal contracts", () => {
 		expect(dateSchema.safeParse("2024-02-29").success).toBe(true);
 		expect(dateSchema.safeParse("2025-02-29").success).toBe(false);
 		expect(localDate(new Date(2026, 3, 16, 0, 5))).toBe("2026-04-16");
-		expect(timeZoneSchema.safeParse("America/Los_Angeles").success).toBe(true);
-		expect(timeZoneSchema.safeParse("invalid").success).toBe(false);
 	});
 	it("separates editable fields and requires distinct photos", () => {
 		const id = crypto.randomUUID();
@@ -28,7 +25,6 @@ describe("Journal contracts", () => {
 		const input = {
 			id,
 			date: "2026-04-16",
-			timeZone: "UTC",
 			content: "Thoughts",
 			expectedVersion: 0,
 			photoIds: [],

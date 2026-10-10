@@ -12,17 +12,6 @@ export const dateSchema = z
 			!Number.isNaN(date.valueOf()) && date.toISOString().slice(0, 10) === value
 		);
 	}, "Use a real calendar date");
-export const timeZoneSchema = z
-	.string()
-	.max(100)
-	.refine((value) => {
-		try {
-			new Intl.DateTimeFormat("en", { timeZone: value });
-			return true;
-		} catch {
-			return false;
-		}
-	}, "Use an IANA time zone");
 export const photoSchema = z.object({
 	id: idSchema,
 	entryId: idSchema,
@@ -45,7 +34,6 @@ export type JournalPhoto = z.infer<typeof photoSchema>;
 export const entrySchema = z.object({
 	id: idSchema,
 	date: dateSchema,
-	timeZone: timeZoneSchema,
 	content: z.string(),
 	version: z.number().int().positive(),
 	createdAt: z.iso.datetime(),
@@ -57,7 +45,6 @@ export const saveJournalSchema = z
 	.object({
 		id: idSchema,
 		date: dateSchema,
-		timeZone: timeZoneSchema,
 		content: z.string().max(100_000),
 		expectedVersion: z.number().int().min(0),
 		photoIds: z

@@ -37,6 +37,7 @@ for (const file of (await readdir(migrations))
 	.filter((f) => f.endsWith(".sql"))
 	.sort()) {
 	const statements = (await readFile(path.join(migrations, file), "utf8"))
+		.replace(/^--.*$/gm, "")
 		.split(";")
 		.map((sql) => sql.trim())
 		.filter(Boolean);

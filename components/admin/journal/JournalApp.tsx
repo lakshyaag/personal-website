@@ -21,7 +21,6 @@ const buttonClass =
 interface Draft {
 	id: string;
 	date: string;
-	timeZone: string;
 	content: string;
 	version: number;
 }
@@ -29,7 +28,6 @@ function newDraft(): Draft {
 	return {
 		id: crypto.randomUUID(),
 		date: localDate(),
-		timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
 		content: "",
 		version: 0,
 	};
@@ -76,7 +74,6 @@ export default function JournalApp({ editId }: { editId?: string }) {
 			? {
 					id: entry.id,
 					date: entry.date,
-					timeZone: entry.timeZone,
 					content: entry.content,
 					version: entry.version,
 				}
@@ -294,7 +291,6 @@ export default function JournalApp({ editId }: { editId?: string }) {
 			const input = saveJournalSchema.parse({
 				id: draft.id,
 				date: draft.date,
-				timeZone: draft.timeZone,
 				content: draft.content,
 				expectedVersion: draft.version,
 				photoIds: photos.map((item) => item.id),
@@ -532,9 +528,6 @@ export default function JournalApp({ editId }: { editId?: string }) {
 								<h3 className="font-medium">
 									<time dateTime={entry.date}>{entry.date}</time>
 								</h3>
-								<p className="text-sm text-zinc-500">
-									{entry.timeZone} · version {entry.version}
-								</p>
 							</div>
 							<div className="flex gap-3">
 								<button

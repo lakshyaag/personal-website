@@ -80,7 +80,6 @@ test("creates, edits, filters and deletes a journal entry", async ({
 	const updated = page
 		.getByTestId("journal-entry")
 		.filter({ hasText: "Browser test: updated thought" });
-	await expect(updated).toContainText("version 2");
 	await page.getByLabel("Filter entries").selectOption("date");
 	await page.getByLabel("Filter date").fill("2026-04-17");
 	await expect(updated).not.toBeVisible();
