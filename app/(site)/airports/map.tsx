@@ -1,0 +1,76 @@
+"use client";
+
+import airports from "@/data/airports.min.json";
+import type { Airport, PublicVisit as Visit } from "@/lib/public-types";
+import type { LatLngExpression } from "leaflet";
+import { useTheme } from "next-themes";
+import { useMemo } from "react";
+import { CircleMarker, MapContainer, TileLayer } from "react-leaflet";
+
+interface MapProps {
+	visits: Visit[];
+}
+
+export default function AirportMap({ visits }: MapProps) {
+	const { resolvedTheme } = useTheme();
+
+	// CARTO tiles need a key; it's public by design and restricted to this site's domains.
+	const tileUrl = useMemo(() => {
+		const style = resolvedTheme === "dark" ? "dark_all" : "light_all";
+		return `https://basemaps.cartocdn.com/rastertiles/${style}/{z}/{x}/{y}{r}.png?key=${process.env.NEXT_PUBLIC_CARTO_KEY}`;
+	}, [resolvedTheme]);
+
+	const airportsByIdent = useMemo(
+		() => Object.fromEntries((airports as Airport[]).map((a) => [a.ident, a])),
+		[],
+	);
+
+	const markers = useMemo(() => {
+		return visits
+			.map((visit) => {
+				const airport = airportsByIdent[visit.airportIdent];
+				if (!airport) return null;
+
+				return {
+					position: [airport.lat, airport.lon] as LatLngExpression,
+					airport,
+					visit,
+				};
+			})
+			.filter((m) => m !== null);
+	}, [visits, airportsByIdent]);
+
+	const isDark = resolvedTheme === "dark";
+
+	return (
+		<MapContainer
+			center={[20, 0]}
+			zoom={2}
+			scrollWheelZoom
+			worldCopyJump
+			className="h-[480px] w-full rounded-xl border border-zinc-200 dark:border-zinc-800"
+		>
+			<TileLayer
+				attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
+				url={tileUrl}
+				maxZoom={19}
+			/>
+			{markers.map(
+				(marker, idx) =>
+					marker && (
+						<CircleMarker
+							key={idx}
+							center={marker.position}
+							radius={6}
+							pathOptions={{
+								fillColor: isDark ? "#fafafa" : "#18181b",
+								fillOpacity: 0.8,
+								color: isDark ? "#fafafa" : "#18181b",
+								weight: 2,
+							}}
+						/>
+					),
+			)}
+		</MapContainer>
+	);
+}

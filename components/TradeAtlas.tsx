@@ -1,8 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useTheme } from "next-themes";
 import { assetUrl } from "@/lib/assets";
+import { useTheme } from "next-themes";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 type PlotlyTrace = Record<string, unknown>;
 type PlotlyLayout = Record<string, unknown>;

@@ -1,0 +1,18 @@
+import { handlers } from "@/auth";
+import { authConfigured } from "@/lib/backend/config";
+import type { NextRequest } from "next/server";
+
+export const runtime = "nodejs";
+function unavailable() {
+	return Response.json(
+		{
+			error:
+				"GitHub sign-in is not configured. See docs/cloudflare-backend.md.",
+		},
+		{ status: 503, headers: { "Cache-Control": "no-store" } },
+	);
+}
+export const GET = (request: NextRequest) =>
+	authConfigured() ? handlers.GET(request) : unavailable();
+export const POST = (request: NextRequest) =>
+	authConfigured() ? handlers.POST(request) : unavailable();

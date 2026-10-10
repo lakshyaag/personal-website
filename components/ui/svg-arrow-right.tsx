@@ -1,6 +1,9 @@
 import { cn } from "@/lib/utils";
 
-export function SvgArrowRight({ link, className }: { link: string; className?: string }) {
+export function SvgArrowRight({
+	link,
+	className,
+}: { link: string; className?: string }) {
 	return (
 		<svg
 			width="15"

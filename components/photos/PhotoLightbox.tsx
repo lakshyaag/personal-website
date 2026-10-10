@@ -1,9 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { createPortal } from "react-dom";
 import { ChevronLeft, ChevronRight, X } from "lucide-react";
-import { usePhotoUrls } from "@/hooks/usePhotoUrl";
+import { type ReactNode, useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 
 export interface PhotoViewerItem {
 	ref: string;
@@ -38,41 +37,16 @@ export function PhotoLightbox({
 	onIndexChange,
 }: PhotoLightboxProps) {
 	const items = useMemo(() => photos.map(normalizePhoto), [photos]);
-	const refs = useMemo(() => {
-		if (index === null) return [];
-		const nearby = new Set<number>([index]);
-		if (items.length > 1) {
-			nearby.add((index - 1 + items.length) % items.length);
-			nearby.add((index + 1) % items.length);
-		}
-		const resolved: string[] = [];
-		for (const i of nearby) {
-			const item = items[i];
-			if (!item) continue;
-			resolved.push(item.ref);
-			if (item.thumbnailRef) resolved.push(item.thumbnailRef);
-		}
-		return Array.from(new Set(resolved));
-	}, [index, items]);
-	const photoUrlMap = usePhotoUrls(refs);
 	const [mounted, setMounted] = useState(false);
-	const [urlFallback, setUrlFallback] = useState<string | null>(null);
 
 	useEffect(() => {
 		setMounted(true);
 	}, []);
 
-	useEffect(() => {
-		setUrlFallback(null);
-	}, [index]);
-
 	const selectedItem = index === null ? null : (items[index] ?? null);
-	const selectedUrl = selectedItem
-		? (photoUrlMap.get(selectedItem.ref) ?? urlFallback)
-		: null;
+	const selectedUrl = selectedItem?.ref ?? null;
 
 	const goTo = (nextIndex: number) => {
-		setUrlFallback(null);
 		onIndexChange?.(nextIndex);
 	};
 
@@ -99,11 +73,9 @@ export function PhotoLightbox({
 			}
 			if (items.length <= 1) return;
 			if (event.key === "ArrowLeft") {
-				setUrlFallback(null);
 				onIndexChange?.((index - 1 + items.length) % items.length);
 			}
 			if (event.key === "ArrowRight") {
-				setUrlFallback(null);
 				onIndexChange?.((index + 1) % items.length);
 			}
 		};

@@ -44,3 +44,22 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 .env*.local
+
+# Cloudflare local resources and migration artifacts
+.wrangler/
+.dev.vars*
+!.dev.vars.example
+!.env.example
+.next-e2e/
+playwright-report/
+test-results/
+migration-artifacts/
+
+# cf build output, nested Worker dependencies, and deployment secrets
+node_modules/
+.cloudflare/
+.secrets*.json
+.next-build/
+
+# Throwaway local scripts
+zz-*

@@ -1,12 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import { Header } from "./header";
-import { Footer } from "./footer";
 import { ThemeProvider } from "next-themes";
-import { SpeedInsights } from "@vercel/speed-insights/next";
-import { Analytics } from "@vercel/analytics/react";
-import Script from "next/script";
 import { Toaster } from "sonner";
 
 export const viewport: Viewport = {
@@ -69,21 +64,8 @@ export default function RootLayout({
 					storageKey="theme"
 					defaultTheme="system"
 				>
-					<div className="flex min-h-screen w-screen flex-col font-sans">
-						<div className="relative mx-auto w-full max-w-screen-lg flex-1 px-4 pt-20">
-							<Header />
-							{children}
-							<Footer />
-						</div>
-					</div>
-					<Analytics />
-					<SpeedInsights />
-					<Toaster />
-					<Script
-						data-goatcounter="https://lakshyaag.goatcounter.com/count"
-						src="https://gc.zgo.at/count.js"
-						strategy="afterInteractive"
-					/>
+					{children}
+					<Toaster position="top-center" />
 				</ThemeProvider>
 			</body>
 		</html>

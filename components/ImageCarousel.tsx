@@ -1,7 +1,7 @@
 "use client";
 
-import * as React from "react";
 import { assetUrl } from "@/lib/assets";
+import * as React from "react";
 
 interface ImageCarouselProps {
 	images: { src: string; alt: string; caption?: string }[];

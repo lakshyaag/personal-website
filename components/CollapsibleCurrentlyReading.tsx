@@ -1,35 +1,18 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { motion } from "motion/react";
-import type { BookEntry } from "@/lib/models";
-import BookCard from "./BookCard";
-import Link from "next/link";
 import { SvgArrowRight } from "@/components/ui/svg-arrow-right";
+import type { Book } from "@/shared/books";
+import { motion } from "motion/react";
+import Link from "next/link";
+import { useState } from "react";
+import BookCard from "./BookCard";
 
-export default function CollapsibleCurrentlyReading() {
-	const [book, setBook] = useState<BookEntry | null>(null);
-	const [loading, setLoading] = useState(true);
+export default function CollapsibleCurrentlyReading({
+	book,
+}: { book: Book | null }) {
 	const [isOpen, setIsOpen] = useState(false);
 
-	useEffect(() => {
-		async function loadBook() {
-			try {
-				const res = await fetch("/api/books");
-				const books = await res.json();
-				const currentBook = books.find((b: any) => b.isCurrent) || null;
-				setBook(currentBook);
-			} catch (error) {
-				console.error("Failed to load book:", error);
-			} finally {
-				setLoading(false);
-			}
-		}
-
-		loadBook();
-	}, []);
-
-	if (loading || !book) {
+	if (!book) {
 		return null;
 	}
 
@@ -57,6 +40,7 @@ export default function CollapsibleCurrentlyReading() {
 				className="overflow-hidden rounded-lg border border-zinc-300 bg-white dark:border-zinc-700 dark:bg-zinc-900/50"
 			>
 				<button
+					type="button"
 					onClick={() => setIsOpen(!isOpen)}
 					className="w-full text-left p-4 transition-colors hover:bg-zinc-50 dark:hover:bg-zinc-900"
 				>
@@ -73,6 +57,7 @@ export default function CollapsibleCurrentlyReading() {
 							</p>
 						</div>
 						<motion.svg
+							aria-hidden="true"
 							animate={{ rotate: isOpen ? 180 : 0 }}
 							transition={{ duration: 0.2 }}
 							className="flex-shrink-0 w-4 h-4 text-zinc-600 dark:text-zinc-400"

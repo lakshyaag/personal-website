@@ -1,11 +1,11 @@
-import { Tweet } from "react-tweet";
+import type { MDXComponents } from "mdx/types";
 import ReactMarkdown from "react-markdown";
+import type { Components } from "react-markdown";
+import { Tweet } from "react-tweet";
+import rehypeHighlight from "rehype-highlight";
+import rehypeKatex from "rehype-katex";
 import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
-import rehypeKatex from "rehype-katex";
-import rehypeHighlight from "rehype-highlight";
-import type { MDXComponents } from "mdx/types";
-import type { Components } from "react-markdown";
 import { HHIExplainer } from "./components/HHIExplainer";
 import { ImageCarousel } from "./components/ImageCarousel";
 import { PlotlyChart } from "./components/PlotlyChart";
@@ -160,6 +160,7 @@ export function useMDXComponents(components: MDXComponents): MDXComponents {
 					{caption && (
 						<figcaption
 							className="mt-2 text-center text-sm text-zinc-500 dark:text-zinc-400"
+							// biome-ignore lint/security/noDangerouslySetInnerHtml: captions are site-authored MDX; only [text](url) links are expanded
 							dangerouslySetInnerHTML={{
 								__html: caption.replace(
 									/\[([^\]]+)\]\(([^)]+)\)/g,
@@ -171,7 +172,11 @@ export function useMDXComponents(components: MDXComponents): MDXComponents {
 				</figure>
 			);
 		},
-		img: ({ src, alt, ...props }: React.ImgHTMLAttributes<HTMLImageElement>) => (
+		img: ({
+			src,
+			alt,
+			...props
+		}: React.ImgHTMLAttributes<HTMLImageElement>) => (
 			<img
 				{...props}
 				src={assetUrl(src) ?? undefined}
@@ -224,8 +229,9 @@ export function useMDXComponents(components: MDXComponents): MDXComponents {
 				src={assetUrl(src) ?? undefined}
 				poster={assetUrl(poster) ?? undefined}
 				preload={preload ?? "metadata"}
-				children={children}
-			/>
+			>
+				{children}
+			</video>
 		),
 		source: ({
 			src,

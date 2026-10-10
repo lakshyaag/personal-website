@@ -1,6 +1,6 @@
-import type { ReactNode } from "react";
-import type { ResolvedPhotoAsset } from "@/lib/photo-assets-db";
 import type { PhotoViewerItem } from "@/components/photos/PhotoLightbox";
+import type { PublicPhoto } from "@/lib/public-types";
+import type { ReactNode } from "react";
 
 export function formatPhotoDate(
 	value: string | null | undefined,
@@ -17,28 +17,6 @@ export function formatPhotoDate(
 	);
 }
 
-export function formatPhotoDimensions(
-	width: number | null | undefined,
-	height: number | null | undefined,
-): string | null {
-	if (!width || !height) return null;
-	return `${width} × ${height}`;
-}
-
-export function cameraLabel(
-	safeExif: Record<string, unknown> | null | undefined,
-): string | null {
-	if (!safeExif) return null;
-	const make = typeof safeExif.make === "string" ? safeExif.make : null;
-	const model = typeof safeExif.model === "string" ? safeExif.model : null;
-	if (make && model) {
-		return model.toLowerCase().includes(make.toLowerCase())
-			? model
-			: `${make} ${model}`;
-	}
-	return model ?? make;
-}
-
 /**
  * Standard lightbox caption stack:
  * 1. title (if set)
@@ -50,18 +28,12 @@ export function cameraLabel(
  */
 export function buildPhotoViewerItem(options: {
 	ref: string;
-	photo?: ResolvedPhotoAsset | null;
+	photo?: PublicPhoto | null;
 	index?: number;
 	fallbackAlt?: string;
 	fallbackCaption?: ReactNode;
 }): PhotoViewerItem {
-	const {
-		ref,
-		photo,
-		index = 0,
-		fallbackAlt,
-		fallbackCaption,
-	} = options;
+	const { ref, photo, index = 0, fallbackAlt, fallbackCaption } = options;
 
 	if (!photo) {
 		return {

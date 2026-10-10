@@ -1,5 +1,5 @@
+import { GoogleBooksError, getGoogleBooksVolume } from "@/lib/google-books";
 import { NextResponse } from "next/server";
-import { getGoogleBooksVolume, GoogleBooksError } from "@/lib/google-books";
 
 export async function GET(
 	_req: Request,
@@ -19,7 +19,10 @@ export async function GET(
 		return NextResponse.json(data);
 	} catch (error) {
 		if (error instanceof GoogleBooksError) {
-			return NextResponse.json({ error: error.message }, { status: error.status });
+			return NextResponse.json(
+				{ error: error.message },
+				{ status: error.status },
+			);
 		}
 
 		console.error("Error in GET /api/books/volumes/[id]:", error);
