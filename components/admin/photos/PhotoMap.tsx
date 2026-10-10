@@ -4,10 +4,7 @@ import "leaflet/dist/leaflet.css";
 import { useTheme } from "next-themes";
 import { CircleMarker, MapContainer, TileLayer } from "react-leaflet";
 
-/**
- * Where a photo was taken, on OpenStreetMap's standard tiles (free with attribution; CARTO's
- * now need an API key). Dark mode inverts the tiles rather than needing a second style.
- */
+/** Where a photo was taken, on the same CARTO tiles as the public airports map. */
 export default function PhotoMap({ lat, lon }: { lat: number; lon: number }) {
 	const { resolvedTheme } = useTheme();
 	return (
@@ -15,11 +12,11 @@ export default function PhotoMap({ lat, lon }: { lat: number; lon: number }) {
 			center={[lat, lon]}
 			zoom={13}
 			scrollWheelZoom={false}
-			className={`h-44 w-full rounded-xl ${resolvedTheme === "dark" ? "[&_.leaflet-tile-pane]:[filter:invert(1)_hue-rotate(180deg)_brightness(0.9)]" : ""}`}
+			className="h-44 w-full rounded-xl"
 		>
 			<TileLayer
-				url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
-				attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+				url={`https://basemaps.cartocdn.com/rastertiles/${resolvedTheme === "dark" ? "dark_all" : "light_all"}/{z}/{x}/{y}{r}.png?key=${process.env.NEXT_PUBLIC_CARTO_KEY}`}
+				attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
 				maxZoom={19}
 			/>
 			<CircleMarker

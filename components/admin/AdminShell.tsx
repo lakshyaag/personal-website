@@ -4,6 +4,7 @@ import {
 	BookOpen,
 	Dumbbell,
 	Ellipsis,
+	House,
 	Images,
 	LogOut,
 	NotebookPen,
@@ -56,7 +57,13 @@ export function AdminShell({
 							{item.label}
 						</Link>
 					))}
-					<form action={signOut} className="ml-auto">
+					<Link
+						href="/"
+						className="ml-auto rounded-lg px-3 py-2 text-sm text-zinc-600 dark:text-zinc-400"
+					>
+						View site
+					</Link>
+					<form action={signOut}>
 						<button
 							type="submit"
 							className="rounded-lg px-3 py-2 text-sm text-zinc-600 dark:text-zinc-400"
@@ -118,6 +125,16 @@ export function AdminShell({
 							</Link>
 						</li>
 					))}
+					<li>
+						<Link
+							href="/"
+							onClick={() => setMore(false)}
+							className="flex items-center gap-3 rounded-lg px-3 py-3 text-base"
+						>
+							<House className="h-5 w-5" />
+							View site
+						</Link>
+					</li>
 					<li>
 						<form action={signOut}>
 							<button

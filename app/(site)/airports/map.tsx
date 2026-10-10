@@ -14,11 +14,10 @@ interface MapProps {
 export default function AirportMap({ visits }: MapProps) {
 	const { resolvedTheme } = useTheme();
 
+	// CARTO tiles need a key; it's public by design and restricted to this site's domains.
 	const tileUrl = useMemo(() => {
-		const isDark = resolvedTheme === "dark";
-		return isDark
-			? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-			: "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png";
+		const style = resolvedTheme === "dark" ? "dark_all" : "light_all";
+		return `https://basemaps.cartocdn.com/rastertiles/${style}/{z}/{x}/{y}{r}.png?key=${process.env.NEXT_PUBLIC_CARTO_KEY}`;
 	}, [resolvedTheme]);
 
 	const airportsByIdent = useMemo(
