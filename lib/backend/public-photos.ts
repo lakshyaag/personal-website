@@ -12,7 +12,7 @@ export function publicPhotoUrl(
 	variant: PhotoVariant,
 ) {
 	const base = process.env.CLOUDFLARE_WORKER_URL ?? "";
-	return `${base.replace(/\/$/, "")}/public/photos/${photo.id}/${photo.generation}/${variant}.webp`;
+	return `${base.replace(/\/$/, "")}/public/photos/${photo.id}/${photo.generation}/${variant}`;
 }
 
 /** Featured public photos in the shape the gallery components already render. */

@@ -23,6 +23,15 @@ test("uploads to the library, publishes to the gallery, and serves it publicly o
 		create: { width: 40, height: 30, channels: 3, background: "#3a7bd5" },
 	})
 		.jpeg()
+		.withExif({
+			IFD0: { Make: "Canon", Model: "EOS R6" },
+			IFD3: {
+				GPSLatitudeRef: "S",
+				GPSLatitude: "33/1 51/1 0/1",
+				GPSLongitudeRef: "E",
+				GPSLongitude: "151/1 12/1 36/1",
+			},
+		})
 		.toBuffer();
 	await page
 		.getByLabel("Add photos", { exact: true })
@@ -49,10 +58,12 @@ test("uploads to the library, publishes to the gallery, and serves it publicly o
 		await anonymous.request.get(`${BASE_URL}/api/photos`)
 	).json()) as { id: string; title: string; displayRef: string }[];
 	const item = gallery.find((photo) => photo.title === "Library browser test");
-	expect(item?.displayRef).toMatch(/\/public\/photos\/.+\/display\.webp$/);
+	expect(item?.displayRef).toMatch(/\/public\/photos\/.+\/display$/);
 	const served = await anonymous.request.get(item?.displayRef ?? "");
 	expect(served.status()).toBe(200);
 	expect(served.headers()["cache-control"]).toContain("immutable");
+	// Browser-made variants never carry the original's EXIF/GPS.
+	expect((await served.body()).includes("Exif")).toBe(false);
 
 	await published.click();
 	await page.getByLabel("Visibility").selectOption("private");

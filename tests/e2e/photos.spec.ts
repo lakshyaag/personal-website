@@ -20,12 +20,15 @@ test("retains a successful upload when another file fails, then saves only the r
 	await page.goto("/admin/journal");
 	await page.getByLabel("Your thoughts").fill("Browser test: partial upload");
 	let uploads = 0;
-	await page.route(/\/api\/admin\/photos\/[^/]+\/upload$/, async (route) => {
-		uploads++;
-		if (uploads === 2)
-			await route.fulfill({ status: 503, body: "Simulated upload failure" });
-		else await route.continue();
-	});
+	await page.route(
+		/\/api\/admin\/photos\/[^/]+\/upload-original$/,
+		async (route) => {
+			uploads++;
+			if (uploads === 2)
+				await route.fulfill({ status: 503, body: "Simulated upload failure" });
+			else await route.continue();
+		},
+	);
 	const image = await sharp({
 		create: { width: 30, height: 20, channels: 3, background: "#ebc27a" },
 	})

@@ -1,8 +1,20 @@
 "use client";
 
-import { MAX_PHOTOS, MAX_PHOTO_BYTES, type Photo } from "@/shared/photos";
+import {
+	MAX_PHOTOS,
+	MAX_PHOTO_BYTES,
+	type Photo,
+	type PhotoVariant,
+} from "@/shared/photos";
 import { useEffect, useRef } from "react";
 import { adminRequest } from "./client";
+import { preparePhoto } from "./photo-variants";
+
+type UploadFile = "original" | PhotoVariant;
+interface PreparedUpload {
+	photo: Photo;
+	uploads: Record<UploadFile, { url: string; headers: Record<string, string> }>;
+}
 
 export interface DraftPhoto {
 	id: string;
@@ -26,8 +38,6 @@ export default function PhotoField({ photos, onChange, disabled }: Props) {
 	const uploads = useRef(new Map<string, XMLHttpRequest>());
 	const previews = useRef(new Set<string>());
 	const mounted = useRef(true);
-	const photosRef = useRef(photos);
-	photosRef.current = photos;
 	useEffect(() => {
 		mounted.current = true;
 		return () => {
@@ -51,164 +61,95 @@ export default function PhotoField({ photos, onChange, disabled }: Props) {
 				items.map((item) => (item.id === id ? { ...item, ...patch } : item)),
 			);
 	}
-	useEffect(() => {
-		const controller = new AbortController();
-		let active = true;
-		async function poll() {
-			const pending = photosRef.current.filter(
-				(item) =>
-					item.photo && ["queued", "processing"].includes(item.photo.state),
-			);
-			await Promise.all(
-				pending.map(async (item) => {
-					try {
-						const photo = await adminRequest<Photo>(`photos/${item.id}`, {
-							signal: controller.signal,
-						});
-						if (active)
-							onChange((items) =>
-								items.map((current) =>
-									current.id === item.id
-										? {
-												...current,
-												photo,
-												error:
-													photo.state === "failed"
-														? (photo.error ?? "Processing failed")
-														: undefined,
-											}
-										: current,
-								),
-							);
-					} catch (error) {
-						if (
-							active &&
-							!(error instanceof DOMException && error.name === "AbortError")
-						)
-							onChange((items) =>
-								items.map((current) =>
-									current.id === item.id
-										? {
-												...current,
-												error: "Could not check processing. Retry.",
-											}
-										: current,
-								),
-							);
-					}
-				}),
-			);
-		}
-		const timer = window.setInterval(() => void poll(), 2000);
-		return () => {
-			active = false;
-			controller.abort();
-			window.clearInterval(timer);
-		};
-	}, [onChange]);
+	function put(
+		id: string,
+		target: PreparedUpload["uploads"][UploadFile],
+		body: Blob,
+		onProgress: (loaded: number) => void,
+	) {
+		return new Promise<void>((resolve, reject) => {
+			const xhr = new XMLHttpRequest();
+			uploads.current.set(id, xhr);
+			xhr.open("PUT", target.url);
+			xhr.timeout = 120_000;
+			for (const [key, value] of Object.entries(target.headers))
+				xhr.setRequestHeader(key, value);
+			xhr.upload.onprogress = (event) => onProgress(event.loaded);
+			const done = (error?: Error) => {
+				uploads.current.delete(id);
+				if (error) reject(error);
+				else resolve();
+			};
+			// 412: an earlier attempt already stored this exact file.
+			xhr.onload = () =>
+				done(
+					(xhr.status >= 200 && xhr.status < 300) || xhr.status === 412
+						? undefined
+						: new Error(
+								`Upload failed (${xhr.status}). Check R2 CORS and retry.`,
+							),
+				);
+			xhr.onerror = () =>
+				done(new Error("Upload failed. Check your connection and R2 CORS."));
+			xhr.ontimeout = () => done(new Error("Upload timed out. Retry."));
+			xhr.onabort = () => done(new Error("Upload canceled"));
+			xhr.send(body);
+		});
+	}
 	async function upload(item: DraftPhoto) {
-		if (!item.file) return;
+		const file = item.file;
+		if (!file) return;
 		update(item.id, { uploading: true, error: undefined, progress: 0 });
 		try {
-			const prepared = await adminRequest<{
-				photo: Photo;
-				uploadUrl: string | null;
-				headers: Record<string, string>;
-			}>("photos", {
+			const prepared = await preparePhoto(file);
+			const prepare = await adminRequest<PreparedUpload>("photos", {
 				method: "POST",
 				body: JSON.stringify({
 					id: item.id,
-					fileName: item.file.name,
-					mimeType: item.file.type,
-					byteSize: item.file.size,
+					fileName: file.name,
+					mimeType: file.type,
+					byteSize: file.size,
+					display: {
+						type: prepared.variants.display.type,
+						size: prepared.variants.display.size,
+					},
+					thumb: {
+						type: prepared.variants.thumb.type,
+						size: prepared.variants.thumb.size,
+					},
 				}),
 			});
 			if (!mounted.current) return;
-			update(item.id, { photo: prepared.photo });
-			const uploadUrl = prepared.uploadUrl;
-			if (uploadUrl)
-				await new Promise<void>((resolve, reject) => {
-					const xhr = new XMLHttpRequest();
-					uploads.current.set(item.id, xhr);
-					xhr.open("PUT", uploadUrl);
-					xhr.timeout = 120_000;
-					for (const [key, value] of Object.entries(prepared.headers))
-						xhr.setRequestHeader(key, value);
-					xhr.upload.onprogress = (event) => {
-						if (event.lengthComputable)
-							update(item.id, {
-								progress: Math.round((event.loaded / event.total) * 100),
-							});
-					};
-					xhr.onload = () => {
-						uploads.current.delete(item.id);
-						if ((xhr.status >= 200 && xhr.status < 300) || xhr.status === 412)
-							resolve();
-						else
-							reject(
-								new Error(
-									`Upload failed (${xhr.status}). Check R2 CORS and retry.`,
-								),
-							);
-					};
-					xhr.onerror = () => {
-						uploads.current.delete(item.id);
-						reject(
-							new Error("Upload failed. Check your connection and R2 CORS."),
-						);
-					};
-					xhr.ontimeout = () => {
-						uploads.current.delete(item.id);
-						reject(new Error("Upload timed out. Retry."));
-					};
-					xhr.onabort = () => {
-						uploads.current.delete(item.id);
-						reject(new Error("Upload canceled"));
-					};
-					xhr.send(item.file);
-				});
-			if (!mounted.current) return;
+			update(item.id, { photo: prepare.photo });
+			const bodies: [UploadFile, Blob][] = [
+				["original", file],
+				["display", prepared.variants.display],
+				["thumb", prepared.variants.thumb],
+			];
+			const total = bodies.reduce((sum, [, body]) => sum + body.size, 0);
+			let finished = 0;
+			for (const [name, body] of bodies) {
+				await put(item.id, prepare.uploads[name], body, (loaded) =>
+					update(item.id, {
+						progress: Math.round(((finished + loaded) / total) * 100),
+					}),
+				);
+				finished += body.size;
+				if (!mounted.current) return;
+			}
 			const photo = await adminRequest<Photo>(`photos/${item.id}/complete`, {
 				method: "POST",
+				body: JSON.stringify({
+					width: prepared.width,
+					height: prepared.height,
+					...prepared.metadata,
+				}),
 			});
-			update(item.id, {
-				photo,
-				uploading: false,
-				progress: 100,
-				error:
-					photo.state === "failed"
-						? (photo.error ?? "Processing failed")
-						: undefined,
-			});
+			update(item.id, { photo, uploading: false, progress: 100 });
 		} catch (error) {
 			update(item.id, {
 				uploading: false,
 				error: error instanceof Error ? error.message : "Upload failed",
-			});
-		}
-	}
-	async function retry(item: DraftPhoto) {
-		if (!item.photo || item.photo.state === "pending") {
-			await upload(item);
-			return;
-		}
-		update(item.id, { uploading: true, error: undefined });
-		try {
-			const photo = await adminRequest<Photo>(`photos/${item.id}/retry`, {
-				method: "POST",
-			});
-			update(item.id, {
-				photo,
-				uploading: false,
-				error:
-					photo.state === "failed"
-						? (photo.error ?? "Processing failed")
-						: undefined,
-			});
-		} catch (error) {
-			update(item.id, {
-				uploading: false,
-				error: error instanceof Error ? error.message : "Retry failed",
 			});
 		}
 	}
@@ -321,7 +262,7 @@ export default function PhotoField({ photos, onChange, disabled }: Props) {
 										type="button"
 										className="underline"
 										disabled={disabled || item.uploading}
-										onClick={() => void retry(item)}
+										onClick={() => void upload(item)}
 									>
 										Retry photo
 									</button>

@@ -1,8 +1,8 @@
-import exifr from "exifr";
 import { z } from "zod";
 import { idSchema } from "../../shared/common";
 import {
 	type Camera,
+	type CompletePhotoInput,
 	type LibraryPhoto,
 	type Photo,
 	type PhotoContext,
@@ -13,6 +13,8 @@ import {
 	originalKey,
 	photoContexts,
 	variantKey,
+	variantPrefix,
+	variantTypes,
 } from "../../shared/photos";
 import {
 	ApiError,
@@ -32,10 +34,7 @@ export interface PhotoRow {
 	state: Photo["state"];
 	width: number | null;
 	height: number | null;
-	error: string | null;
 	generation: string | null;
-	attempts: number;
-	lease_until: string | null;
 	visibility: Photo["visibility"];
 	featured: number;
 	title: string | null;
@@ -72,8 +71,7 @@ export const photoDto = (row: PhotoRow): Photo => ({
 	byteSize: row.byte_size,
 	width: row.width,
 	height: row.height,
-	error: row.error,
-	generation: row.state === "ready" ? row.generation : null,
+	generation: row.generation,
 	visibility: row.visibility,
 	featured: row.featured === 1,
 	title: row.title,
@@ -190,11 +188,12 @@ export async function createPhoto(
 	const timestamp = now();
 	await statement(
 		env,
-		"INSERT INTO photos(id,file_name,mime_type,byte_size,state,created_at,updated_at) VALUES (?,?,?,?,'pending',?,?) ON CONFLICT(id) DO NOTHING",
+		"INSERT INTO photos(id,file_name,mime_type,byte_size,state,generation,created_at,updated_at) VALUES (?,?,?,?,'pending',?,?,?) ON CONFLICT(id) DO NOTHING",
 		data.id,
 		data.fileName,
 		data.mimeType,
 		data.byteSize,
+		crypto.randomUUID(),
 		timestamp,
 		timestamp,
 	).run();
@@ -331,318 +330,82 @@ export async function deletePhoto(env: Env, id: string) {
 		);
 }
 
-async function dispatchPhoto(env: Env, id: string) {
-	// D1 state is the durable outbox. Scheduled recovery retries failed sends.
-	try {
-		await env.PHOTO_QUEUE.send({ id });
-	} catch {
-		console.error(
-			JSON.stringify({ code: "PHOTO_DISPATCH_FAILED", photoId: id }),
-		);
-	}
-}
-export async function completePhoto(env: Env, id: string, retry = false) {
+/**
+ * The browser uploads the original plus display/thumb variants it resized itself (canvas
+ * encoding drops EXIF/GPS). Completing checks all three objects and records the metadata it read.
+ */
+export async function completePhoto(
+	env: Env,
+	id: string,
+	input: CompletePhotoInput,
+) {
 	const row = await photoRow(env, id);
-	if (["ready", "processing", "queued"].includes(row.state))
-		return photoDto(row);
-	if (row.state === "deleting")
+	if (row.state === "ready") return photoDto(row);
+	if (row.state === "deleting" || !row.generation)
 		throw new ApiError(409, "CONFLICT", "Photo is being removed");
-	if (row.state === "failed" && !retry) return photoDto(row);
-	const object = await env.PHOTOS.head(originalKey(id));
-	if (!object)
+	const [original, ...variants] = await Promise.all([
+		env.PHOTOS.head(originalKey(id)),
+		env.PHOTOS.head(variantKey(id, row.generation, "display")),
+		env.PHOTOS.head(variantKey(id, row.generation, "thumb")),
+	]);
+	if (!original || variants.some((object) => !object))
 		throw new ApiError(
 			409,
 			"UPLOAD_MISSING",
 			"Upload is not complete. Retry the file upload.",
 		);
 	if (
-		object.size !== row.byte_size ||
-		object.httpMetadata?.contentType !== row.mime_type
+		original.size !== row.byte_size ||
+		original.httpMetadata?.contentType !== row.mime_type ||
+		!variants.every((object) =>
+			(variantTypes as readonly string[]).includes(
+				object?.httpMetadata?.contentType ?? "",
+			),
+		)
 	)
 		throw new ApiError(
 			400,
 			"INVALID_UPLOAD",
-			"Stored file does not match the declared file",
+			"Stored files do not match the declared files",
 		);
 	await statement(
 		env,
-		"UPDATE photos SET state='queued',error=NULL,attempts=0,updated_at=? WHERE id=? AND state IN ('pending','failed')",
+		`UPDATE photos SET state='ready',width=?,height=?,taken_at=?,latitude=?,longitude=?,camera=?,updated_at=?
+		WHERE id=? AND state='pending'`,
+		input.width,
+		input.height,
+		input.takenAt,
+		input.latitude,
+		input.longitude,
+		input.camera ? JSON.stringify(input.camera) : null,
 		now(),
 		id,
 	).run();
-	await dispatchPhoto(env, id);
 	return photoDto(await photoRow(env, id));
 }
 
-export function assertSafeWebp(bytes: Uint8Array) {
-	const text = (start: number, end: number) =>
-		new TextDecoder().decode(bytes.slice(start, end));
-	if (
-		text(0, 4) !== "RIFF" ||
-		text(8, 12) !== "WEBP" ||
-		bytes.length > 30 * 1024 * 1024
-	)
-		throw new Error("Invalid display image");
-	const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
-	if (view.getUint32(4, true) + 8 !== bytes.length)
-		throw new Error("Invalid WebP length");
-	let offset = 12;
-	while (offset < bytes.length) {
-		if (offset + 8 > bytes.length) throw new Error("Invalid WebP chunk");
-		const type = text(offset, offset + 4);
-		if (type === "EXIF" || type === "XMP ")
-			throw new Error("Image metadata was not removed");
-		const length = view.getUint32(offset + 4, true);
-		offset += 8 + length + (length % 2);
-		if (offset > bytes.length) throw new Error("Invalid WebP chunk length");
-	}
-}
-
-export interface ExtractedMetadata {
-	takenAt: string | null;
-	latitude: number | null;
-	longitude: number | null;
-	camera: Camera | null;
-}
-/** "2025:12:03 20:13:59" + optional "-05:00" -> ISO instant. Without an offset, wall-clock time is kept as UTC. */
-export function exifDate(value: unknown, offset: unknown) {
-	if (typeof value !== "string") return null;
-	const match = value.match(
-		/^(\d{4}):(\d{2}):(\d{2})[ T](\d{2}):(\d{2}):(\d{2})/,
-	);
-	if (!match) return null;
-	const zone =
-		typeof offset === "string" && /^[+-]\d{2}:\d{2}$/.test(offset)
-			? offset
-			: "Z";
-	const date = new Date(
-		`${match[1]}-${match[2]}-${match[3]}T${match[4]}:${match[5]}:${match[6]}${zone}`,
-	);
-	return Number.isNaN(date.valueOf()) ? null : date.toISOString();
-}
-function gpsDecimal(value: unknown, ref: unknown) {
-	const parts = Array.isArray(value) ? value : [value];
-	if (
-		!parts.length ||
-		!parts.every((part) => typeof part === "number" && Number.isFinite(part))
-	)
-		return null;
-	const [degrees, minutes = 0, seconds = 0] = parts as number[];
-	const decimal = degrees + minutes / 60 + seconds / 3600;
-	return ref === "S" || ref === "W" ? -decimal : decimal;
-}
-/** Reads capture time, GPS and camera from the original before variants strip all metadata. */
-export async function extractMetadata(
-	bytes: ArrayBuffer,
-): Promise<ExtractedMetadata> {
-	const empty = {
-		takenAt: null,
-		latitude: null,
-		longitude: null,
-		camera: null,
-	};
-	const start = new Uint8Array(bytes, 0, Math.min(bytes.byteLength, 2));
-	// Camera EXIF is JPEG; exifr leaks unhandled rejections on formats it can't read.
-	if (start[0] !== 0xff || start[1] !== 0xd8) return empty;
-	let exif: Record<string, unknown> | undefined;
-	try {
-		// Raw values: revived dates would depend on the runtime's time zone.
-		exif = await exifr.parse(bytes, {
-			reviveValues: false,
-			pick: [
-				"DateTimeOriginal",
-				"OffsetTimeOriginal",
-				"CreateDate",
-				"Make",
-				"Model",
-				"LensModel",
-				"FNumber",
-				"ExposureTime",
-				"ISO",
-				"GPSLatitude",
-				"GPSLongitude",
-				"GPSLatitudeRef",
-				"GPSLongitudeRef",
-			],
-		});
-	} catch {
-		return empty;
-	}
-	if (!exif) return empty;
-	const number = (value: unknown) =>
-		typeof value === "number" && Number.isFinite(value) ? value : null;
-	const text = (value: unknown) =>
-		typeof value === "string" && value.trim()
-			? value.trim().slice(0, 100)
-			: null;
-	const latitude = gpsDecimal(exif.GPSLatitude, exif.GPSLatitudeRef);
-	const longitude = gpsDecimal(exif.GPSLongitude, exif.GPSLongitudeRef);
-	const hasGps =
-		latitude !== null &&
-		longitude !== null &&
-		Math.abs(latitude) <= 90 &&
-		Math.abs(longitude) <= 180;
-	const camera = {
-		make: text(exif.Make),
-		model: text(exif.Model),
-		lens: text(exif.LensModel),
-		fNumber: number(exif.FNumber),
-		exposureTime: number(exif.ExposureTime),
-		iso: number(exif.ISO),
-	};
-	return {
-		takenAt:
-			exifDate(exif.DateTimeOriginal, exif.OffsetTimeOriginal) ??
-			exifDate(exif.CreateDate, null),
-		latitude: hasGps ? latitude : null,
-		longitude: hasGps ? longitude : null,
-		camera: Object.values(camera).some((value) => value !== null)
-			? camera
-			: null,
-	};
-}
-
-const variantSpecs: Record<PhotoVariant, { size: number; quality: number }> = {
-	display: { size: 2048, quality: 85 },
-	thumb: { size: 480, quality: 78 },
-};
-export async function processPhoto(env: Env, id: string) {
-	const generation = crypto.randomUUID();
-	const timestamp = now();
-	const leaseUntil = new Date(Date.now() + 5 * 60_000).toISOString();
-	const claimed = await statement(
-		env,
-		`UPDATE photos SET state='processing',generation=?,lease_until=?,attempts=attempts+1,updated_at=?
-		WHERE id=? AND attempts<5 AND (state='queued' OR (state='processing' AND lease_until < ?)) RETURNING *`,
-		generation,
-		leaseUntil,
-		timestamp,
-		id,
-		timestamp,
-	).first<PhotoRow>();
-	if (!claimed) return;
-	const keys = {
-		display: variantKey(id, generation, "display"),
-		thumb: variantKey(id, generation, "thumb"),
-	};
-	const original = async () => {
-		const object = await env.PHOTOS.get(originalKey(id));
-		if (!object || object.size !== claimed.byte_size)
-			throw new Error("Original missing or incorrect size");
-		return object;
-	};
-	try {
-		const info = await env.IMAGES.info((await original()).body);
-		if (
-			!("width" in info) ||
-			!info.width ||
-			!info.height ||
-			info.width * info.height > 40_000_000
-		)
-			throw new Error("Unsupported image or image exceeds 40 megapixels");
-		const formats: Record<string, string> = {
-			jpeg: "image/jpeg",
-			jpg: "image/jpeg",
-			png: "image/png",
-			webp: "image/webp",
-			avif: "image/avif",
-		};
-		const detectedType = info.format.startsWith("image/")
-			? info.format.toLowerCase()
-			: formats[info.format.toLowerCase()];
-		if (detectedType !== claimed.mime_type)
-			throw new Error("Image content does not match its type");
-		// EXIF lives in the first segments of the file; avoid reading large originals twice.
-		const head = await env.PHOTOS.get(originalKey(id), {
-			range: { offset: 0, length: 512 * 1024 },
-		});
-		const metadata = head
-			? await extractMetadata(await head.arrayBuffer())
-			: await extractMetadata(new ArrayBuffer(0));
-		for (const variant of ["display", "thumb"] as const) {
-			const { size, quality } = variantSpecs[variant];
-			const output = await env.IMAGES.input((await original()).body)
-				.transform({ width: size, height: size, fit: "scale-down" })
-				.output({ format: "image/webp", quality, anim: false });
-			const bytes = new Uint8Array(await output.response().arrayBuffer());
-			assertSafeWebp(bytes);
-			await env.PHOTOS.put(keys[variant], bytes, {
-				httpMetadata: { contentType: "image/webp" },
-			});
-		}
-		// Existing values win: imported or edited metadata is never overwritten by EXIF.
-		const changed = await statement(
-			env,
-			`UPDATE photos SET state='ready',width=?,height=?,error=NULL,lease_until=NULL,updated_at=?,
-			taken_at=COALESCE(taken_at,?),latitude=COALESCE(latitude,?),longitude=COALESCE(longitude,?),camera=COALESCE(camera,?)
-			WHERE id=? AND generation=? AND state='processing'`,
-			info.width,
-			info.height,
-			now(),
-			metadata.takenAt,
-			metadata.latitude,
-			metadata.longitude,
-			metadata.camera ? JSON.stringify(metadata.camera) : null,
-			id,
-			generation,
-		).run();
-		if (!changed.meta.changes) {
-			await env.PHOTOS.delete(Object.values(keys));
-			return;
-		}
-		await deleteVariants(env, id, generation);
-	} catch {
-		await env.PHOTOS.delete(Object.values(keys));
-		await statement(
-			env,
-			"UPDATE photos SET state=?,error=?,lease_until=NULL,updated_at=? WHERE id=? AND generation=? AND state='processing'",
-			claimed.attempts >= 5 ? "failed" : "queued",
-			"Image processing failed. Retry or choose a JPEG, PNG, WebP, or AVIF image under 40 megapixels.",
-			now(),
-			id,
-			generation,
-		).run();
-		throw new Error(`Photo processing failed: ${id}`);
-	}
-}
-
-/** Deletes every variant of a photo except the given generation's. Returns false if more remain. */
-async function deleteVariants(env: Env, id: string, keep?: string) {
-	const listed = await env.PHOTOS.list({ prefix: `display/${id}/` });
-	const stale = listed.objects
-		.map((object) => object.key)
-		.filter((key) => !keep || !key.startsWith(`display/${id}/${keep}`));
-	if (stale.length) await env.PHOTOS.delete(stale);
+/** Deletes every variant of a photo. Returns false if more remain. */
+async function deleteVariants(env: Env, id: string) {
+	const listed = await env.PHOTOS.list({ prefix: variantPrefix(id) });
+	const keys = listed.objects.map((object) => object.key);
+	if (keys.length) await env.PHOTOS.delete(keys);
 	return !listed.truncated;
 }
 
-export async function recoverPhotos(env: Env) {
+export async function cleanupPhotos(env: Env) {
 	const timestamp = now();
-	// Exhausted leases become visible failures, not permanently spinning jobs.
-	await statement(
-		env,
-		"UPDATE photos SET state='failed',error='Processing interrupted. Retry this photo.',lease_until=NULL,updated_at=? WHERE state='processing' AND lease_until<? AND attempts>=5",
-		timestamp,
-		timestamp,
-	).run();
-	const recover = await statement(
-		env,
-		"SELECT id FROM photos WHERE state='queued' OR (state='processing' AND lease_until<?) ORDER BY updated_at LIMIT 100",
-		timestamp,
-	).all<{ id: string }>();
-	for (const row of recover.results) await dispatchPhoto(env, row.id);
 	// Abandoned uploads only. Ready photos stay in the library until deleted there or unlinked.
 	const cutoff = new Date(Date.now() - 24 * 60 * 60_000).toISOString();
 	await statement(
 		env,
-		"UPDATE photos SET state='deleting',updated_at=? WHERE updated_at<? AND state IN ('pending','failed') AND NOT EXISTS(SELECT 1 FROM photo_links WHERE photo_id=photos.id)",
+		"UPDATE photos SET state='deleting',updated_at=? WHERE updated_at<? AND state='pending' AND NOT EXISTS(SELECT 1 FROM photo_links WHERE photo_id=photos.id)",
 		timestamp,
 		cutoff,
 	).run();
 	const deleting = await statement(
 		env,
-		"SELECT * FROM photos WHERE state='deleting' ORDER BY updated_at LIMIT 100",
-	).all<PhotoRow>();
+		"SELECT id, updated_at FROM photos WHERE state='deleting' ORDER BY updated_at LIMIT 50",
+	).all<{ id: string; updated_at: string }>();
 	for (const row of deleting.results) {
 		// Keep the tombstone until all object deletions succeed; uploads can finish late.
 		await env.PHOTOS.delete(originalKey(row.id));
@@ -676,12 +439,12 @@ export async function privateVariant(
 ) {
 	const object = await variantObject(env, await photoRow(env, id), variant);
 	return new Response(object.body, {
-		headers: { "Content-Type": "image/webp" },
+		headers: { "Content-Type": object.httpMetadata?.contentType ?? "" },
 	});
 }
 
 const publicPath =
-	/^\/public\/photos\/([^/]+)\/([0-9a-f-]{36})\/(display|thumb)\.webp$/;
+	/^\/public\/photos\/([^/]+)\/([0-9a-f-]{36})\/(display|thumb)$/;
 /** Unauthenticated, immutable variants of public photos. The generation in the URL busts caches. */
 export async function publicVariant(env: Env, path: string) {
 	const match = path.match(publicPath);
@@ -704,7 +467,7 @@ export async function publicVariant(env: Env, path: string) {
 	if (!object) return notFound();
 	return new Response(object.body, {
 		headers: {
-			"Content-Type": "image/webp",
+			"Content-Type": object.httpMetadata?.contentType ?? "",
 			"Cache-Control": "public, max-age=31536000, immutable",
 			"X-Content-Type-Options": "nosniff",
 		},

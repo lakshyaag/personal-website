@@ -3,6 +3,8 @@ import { idSchema } from "./common";
 
 export const MAX_PHOTO_BYTES = 20 * 1024 * 1024;
 export const MAX_PHOTOS = 20;
+export const MAX_VARIANT_BYTES = 8 * 1024 * 1024;
+export const variantSizes = { display: 2048, thumb: 480 } as const;
 export const photoContexts = ["journal", "food", "workout", "visit"] as const;
 export type PhotoContext = (typeof photoContexts)[number];
 export const photoVariants = ["display", "thumb"] as const;
@@ -22,20 +24,12 @@ export type Camera = z.infer<typeof cameraSchema>;
 
 export const photoSchema = z.object({
 	id: idSchema,
-	state: z.enum([
-		"pending",
-		"queued",
-		"processing",
-		"ready",
-		"failed",
-		"deleting",
-	]),
+	state: z.enum(["pending", "ready", "deleting"]),
 	fileName: z.string(),
 	mimeType: z.string(),
 	byteSize: z.number().int(),
 	width: z.number().nullable(),
 	height: z.number().nullable(),
-	error: z.string().nullable(),
 	// Changes whenever variants are regenerated; part of public URLs so they can be cached forever.
 	generation: z.string().nullable(),
 	visibility: z.enum(["private", "public"]),
@@ -74,6 +68,27 @@ export const createPhotoSchema = z
 		byteSize: z.number().int().positive().max(MAX_PHOTO_BYTES),
 	})
 	.strict();
+/** Variants are resized in the browser; canvas encoding never writes EXIF/GPS. */
+export const variantTypes = ["image/webp", "image/jpeg"] as const;
+const variantFileSchema = z.object({
+	type: z.enum(variantTypes),
+	size: z.number().int().positive().max(MAX_VARIANT_BYTES),
+});
+export const uploadPhotoSchema = createPhotoSchema
+	.extend({ display: variantFileSchema, thumb: variantFileSchema })
+	.strict();
+export type UploadPhotoInput = z.infer<typeof uploadPhotoSchema>;
+export const completePhotoSchema = z
+	.object({
+		width: z.number().int().positive().max(20_000),
+		height: z.number().int().positive().max(20_000),
+		takenAt: z.iso.datetime().nullable(),
+		latitude: z.number().min(-90).max(90).nullable(),
+		longitude: z.number().min(-180).max(180).nullable(),
+		camera: cameraSchema.nullable(),
+	})
+	.strict();
+export type CompletePhotoInput = z.infer<typeof completePhotoSchema>;
 const optionalText = (max: number) =>
 	z
 		.string()
@@ -99,8 +114,9 @@ export const photoIdsSchema = z
 	.refine((ids) => new Set(ids).size === ids.length, "Duplicate photos");
 
 export const originalKey = (id: string) => `originals/${id}`;
+export const variantPrefix = (id: string) => `variants/${id}/`;
 export const variantKey = (
 	id: string,
 	generation: string,
 	variant: PhotoVariant,
-) => `display/${id}/${generation}${variant === "thumb" ? "-thumb" : ""}.webp`;
+) => `${variantPrefix(id)}${generation}/${variant}`;

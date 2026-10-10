@@ -11,7 +11,7 @@
 		"dev": "next dev --webpack",
 		"build": "next build --webpack",
 		"start": "next start",
-		"lint": "biome check auth.ts proxy.ts shared lib/backend components/admin/journal components/admin/photos/PhotoLibrary.tsx components/admin/PhotoField.tsx components/admin/client.ts components/admin/styles.ts app/admin/photos/page.tsx app/api/admin app/api/auth app/admin/page.tsx app/admin/login/page.tsx app/admin/journal/page.tsx cloudflare/src cloudflare/test cloudflare/vitest.config.ts tests vitest.config.ts playwright.config.ts",
+		"lint": "biome check auth.ts proxy.ts shared lib/backend components/admin/journal components/admin/photos/PhotoLibrary.tsx components/admin/PhotoField.tsx components/admin/photo-variants.ts scripts/migrate components/admin/client.ts components/admin/styles.ts app/admin/photos/page.tsx app/api/admin app/api/auth app/admin/page.tsx app/admin/login/page.tsx app/admin/journal/page.tsx cloudflare/src cloudflare/test cloudflare/vitest.config.ts tests vitest.config.ts playwright.config.ts",
 		"typecheck": "tsc --noEmit && tsc -p cloudflare/tsconfig.json",
 		"test": "vitest run",
 		"test:worker": "vitest run --config cloudflare/vitest.config.ts",

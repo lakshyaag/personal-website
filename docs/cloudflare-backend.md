@@ -2,7 +2,7 @@
 
 ## Current state
 
-The admin backend is moving from Supabase to Cloudflare. **Journal is migrated**; food, workouts, books, visits and the rest still run on Supabase. The local Next.js app talks to the production Cloudflare backend. Vercel hosting, Supabase, and the public `site-assets` bucket are unchanged.
+The admin backend is moving from Supabase to Cloudflare, ending with Supabase retired entirely (public pages included). **Migrated: journal and the photo library** (all 86 photos, public gallery). Food, workouts, visits/airports and books still run on Supabase; Fits, AI request logs and the AI config page will be dropped rather than migrated. The local Next.js app talks to the production Cloudflare backend. Vercel hosting, Supabase, and the public `site-assets` bucket are unchanged.
 
 **One shared backend for the entire application**: one Worker, one D1 database, one private photo bucket. New features add tables (numbered SQL migrations) and routes to it — never a separate database or bucket.
 
@@ -23,7 +23,17 @@ The admin backend is moving from Supabase to Cloudflare. **Journal is migrated**
 | API | `https://personal-website-backend.lakshyaag1202.workers.dev` |
 | D1 | `personal-website-production` (`6302f028-7188-46d5-8077-8a7fbfd0cc95`) |
 | Private photo bucket | `personal-website-production-private` |
-| Photo queue / dead-letter queue | `personal-website-production-photos` / `-photos-dlq` |
+
+**Workers Free plan.** Each request gets ~10–50 ms of CPU, so the Worker must never process images or other heavy payloads. It only does D1 queries, R2 metadata checks and streaming. There is no queue.
+
+## Photos
+
+One library for every feature. `photos` holds the file plus library metadata; `photo_links(context, context_id, position)` attaches photos to journal, food, workout and visit records.
+
+- **Uploads:** the browser (`components/admin/photo-variants.ts`) decodes the image, makes a 2048 px display and a 480 px thumbnail (WebP, or JPEG where the browser can't encode WebP), and reads capture time/GPS/camera with `shared/exif.ts`. It PUTs original + variants straight to R2 via presigned URLs, then `POST /photos/:id/complete` records the metadata after the Worker checks all three objects exist. Canvas encoding writes no EXIF, so GPS never reaches a served image.
+- **Serving:** private variants only through the authenticated admin API. Public photos at `GET {worker}/public/photos/:id/:generation/(display|thumb)`, unauthenticated and cached forever. The URL contains the generation and only works while the photo is public.
+- **Lifecycle:** private, unfeatured photos removed from their entry are deleted. Public or featured photos are library content and stay. Uploads abandoned for 24 hours are cleaned up by the 10-minute cron.
+- **Location:** GPS is stored privately. The public gallery only exposes it when a photo's "show location" is on.
 
 ## Tooling: `cf` only
 
@@ -72,18 +82,20 @@ The private bucket has public access disabled. Upload CORS currently allows only
 
 To work fully offline instead, run `bun run worker:migrate && bun run worker:dev`. Then point `CLOUDFLARE_WORKER_URL` at `http://localhost:8787` and set `LOCAL_WORKER_UPLOADS=true`.
 
-## Journal migration (done)
+## Migrations (done)
 
 28 entries and 4 photos were copied from Supabase. On 2026-10-10 they were re-verified against live Supabase: every ID, date, content body and photo link matched, and all 8 R2 objects (original + display per photo) exist. Supabase was never modified.
 
 Entries have no stored time zone (migration `0002`). `date` is the calendar day the entry is about. `createdAt`/`updatedAt` are UTC instants, displayed in the viewer's local zone. The pre-change D1 time-travel bookmark is `000003db-00000000-00005100-65352c34d5a4cd97da21458b4778728e`.
 
-The one-off export/import scripts were removed after the migration. Backups and the import snapshot are in gitignored `migration-artifacts/`.
+Photos (2026-10-10): 82 Supabase photos imported with `scripts/migrate/photos.ts` (journal photos were already migrated). Every row, link and original checksum was verified against Supabase. Variants were regenerated locally with sharp. Gallery photos became `featured`, `gps_public` became `show_location`, and the single Fits photo stays in the library unlinked. Pre-change D1 bookmarks: `000003e5-…372d` (0003), `000003e9-…88a9` (0004).
+
+The journal's one-off scripts were removed after its migration; `scripts/migrate/` is deleted the same way once every feature has moved. Backups and the import snapshot are in gitignored `migration-artifacts/`.
 
 ## Remaining
 
 1. Hosted site: set the Worker URL/secret and private R2 keys on Vercel, register a production GitHub OAuth app, and add the Vercel origin to R2 CORS.
-2. Migrate the other admin features into the same backend, one at a time.
+2. Migrate food (+ AI analysis), workouts (+ AI), visits/airports and books into the same backend, one at a time, then cut the public pages over and retire Supabase.
 3. UI/copy polish for the admin pages.
 
 ## Tests

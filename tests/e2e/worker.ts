@@ -28,11 +28,6 @@ const mf = new Miniflare({
 	port: 8788,
 	d1Databases: { DB: "personal-website-e2e" },
 	r2Buckets: { PHOTOS: "personal-website-e2e-private" },
-	images: { binding: "IMAGES" },
-	queueProducers: { PHOTO_QUEUE: "personal-website-e2e-photos" },
-	queueConsumers: {
-		"personal-website-e2e-photos": { maxBatchSize: 5, maxRetries: 5 },
-	},
 	bindings: { WORKER_API_SECRET: WORKER_SECRET, LOCAL_UPLOADS: "true" },
 });
 

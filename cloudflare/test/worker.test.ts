@@ -1,21 +1,7 @@
 import { applyD1Migrations, env } from "cloudflare:test";
 import { beforeAll, describe, expect, it, vi } from "vitest";
-import { originalKey } from "../../shared/photos";
-import worker, {
-	assertSafeWebp,
-	processPhoto,
-	recoverPhotos,
-	type Env,
-} from "../src/index";
-import { extractMetadata } from "../src/photos";
-
-// Synthetic 8x6 JPEG: Canon EOS R6, 2024-06-01 18:30 +02:00, Sydney GPS. No real photo data.
-const exifJpeg = Uint8Array.from(
-	atob(
-		"/9j/4QGcRXhpZgAASUkqAAgAAAAJAA8BAgAGAAAAkgAAABABAgAHAAAAigAAABIBAwABAAAAAQAAABoBBQABAAAAegAAABsBBQABAAAAggAAACgBAwABAAAAAgAAABMCAwABAAAAAQAAAGmHBAABAAAAmAAAACWIBAABAAAALgEAAAAAAAA4YwAA6AMAADhjAADoAwAARU9TIFI2AABDYW5vbgAJAACQBwAEAAAAMDIxMAOQAgAUAAAAGgEAABGQAgAHAAAAEgEAAAGRBwAEAAAAAQIDAACgBwAEAAAAMDEwMAGgAwABAAAA//8AAAKgBAABAAAACAAAAAOgBAABAAAABgAAADSkAgAIAAAACgEAAAAAAABSRiAzNW1tACswMjowMAAAMjAyNDowNjowMSAxODozMDowMAAEAAEAAgACAAAAUwAAAAIABQADAAAAfAEAAAMAAgACAAAARQAAAAQABQADAAAAZAEAAAAAAACXAAAAAQAAAAwAAAABAAAAJAAAAAEAAAAhAAAAAQAAADMAAAABAAAAAAAAAAEAAAD/2wBDABQODxIPDRQSEBIXFRQYHjIhHhwcHj0sLiQySUBMS0dARkVQWnNiUFVtVkVGZIhlbXd7gYKBTmCNl4x9lnN+gXz/2wBDARUXFx4aHjshITt8U0ZTfHx8fHx8fHx8fHx8fHx8fHx8fHx8fHx8fHx8fHx8fHx8fHx8fHx8fHx8fHx8fHx8fHz/wAARCAAGAAgDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAT/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFQEBAQAAAAAAAAAAAAAAAAAABAX/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIRAxEAPwCMAVdf/9k=",
-	),
-	(c) => c.charCodeAt(0),
-);
+import { originalKey, variantKey } from "../../shared/photos";
+import worker, { cleanupPhotos, type Env } from "../src/index";
 
 const bindings = env as unknown as Env & {
 	TEST_MIGRATIONS: Parameters<typeof applyD1Migrations>[1];
@@ -78,31 +64,31 @@ async function readyPhoto() {
 		.run();
 	return data;
 }
-function minimalWebp() {
-	const bytes = new Uint8Array(22);
-	bytes.set(new TextEncoder().encode("RIFF"), 0);
-	bytes.set(new TextEncoder().encode("WEBPVP8 "), 8);
-	const view = new DataView(bytes.buffer);
-	view.setUint32(4, 14, true);
-	view.setUint32(16, 2, true);
-	return bytes;
-}
-function fakeImages(format = "png") {
-	return {
-		info: vi.fn(async (stream: ReadableStream) => {
-			await new Response(stream).arrayBuffer();
-			return { format, width: 20, height: 10, fileSize: 4 };
-		}),
-		input: vi.fn((stream: ReadableStream) => {
-			const chain = { transform: vi.fn(), output: vi.fn() };
-			chain.transform.mockReturnValue(chain);
-			chain.output.mockImplementation(async () => {
-				await new Response(stream).arrayBuffer();
-				return { response: () => new Response(minimalWebp()) };
-			});
-			return chain;
-		}),
-	} as unknown as ImagesBinding;
+const metadata = {
+	width: 20,
+	height: 10,
+	takenAt: "2024-06-01T16:30:00.000Z",
+	latitude: -33.85,
+	longitude: 151.21,
+	camera: { make: "Canon", model: "EOS R6" },
+};
+async function storeUpload(
+	photoId: string,
+	{ size = 4, type = "image/png", variant = "image/webp" } = {},
+) {
+	const row = (await (await request(`/v1/photos/${photoId}`)).json()) as {
+		generation: string;
+	};
+	await bindings.PHOTOS.put(originalKey(photoId), new Uint8Array(size), {
+		httpMetadata: { contentType: type },
+	});
+	for (const name of ["display", "thumb"] as const)
+		await bindings.PHOTOS.put(
+			variantKey(photoId, row.generation, name),
+			new Uint8Array(2),
+			{ httpMetadata: { contentType: variant } },
+		);
+	return row.generation;
 }
 beforeAll(async () => {
 	await applyD1Migrations(bindings.DB, bindings.TEST_MIGRATIONS);
@@ -275,71 +261,49 @@ describe("Journal transactions", () => {
 	});
 });
 describe("Private photo lifecycle", () => {
-	it("rejects missing/incorrect uploads and records an outbox even when queue dispatch fails", async () => {
+	it("completes only when the original and both variants match the declaration", async () => {
 		const data = await photo();
-		expect(
-			(await request(`/v1/photos/${data.id}/complete`, "POST")).status,
-		).toBe(409);
-		await bindings.PHOTOS.put(originalKey(data.id), new Uint8Array(3), {
-			httpMetadata: { contentType: "image/png" },
-		});
-		expect(
-			(await request(`/v1/photos/${data.id}/complete`, "POST")).status,
-		).toBe(400);
-		await bindings.PHOTOS.put(originalKey(data.id), new Uint8Array(4), {
-			httpMetadata: { contentType: "image/png" },
-		});
-		const broken = {
-			...bindings,
-			PHOTO_QUEUE: {
-				send: vi.fn().mockRejectedValue(new Error("offline")),
-			} as unknown as Env["PHOTO_QUEUE"],
+		const complete = () =>
+			request(`/v1/photos/${data.id}/complete`, "POST", metadata);
+		expect((await complete()).status).toBe(409);
+		await storeUpload(data.id, { size: 3 });
+		expect((await complete()).status).toBe(400);
+		await bindings.PHOTOS.delete(originalKey(data.id));
+		await storeUpload(data.id, { variant: "image/png" });
+		expect((await complete()).status).toBe(400);
+		await storeUpload(data.id, { variant: "image/jpeg" });
+		const done = (await (await complete()).json()) as {
+			state: string;
+			takenAt: string;
+			camera: { make: string };
 		};
+		expect(done).toMatchObject({
+			state: "ready",
+			takenAt: metadata.takenAt,
+			camera: { make: "Canon" },
+		});
+		expect((await complete()).status).toBe(200);
 		expect(
 			(
-				await request(
-					`/v1/photos/${data.id}/complete`,
-					"POST",
-					undefined,
-					token,
-					broken,
-				)
+				await request(`/v1/photos/${data.id}/complete`, "POST", {
+					...metadata,
+					latitude: 120,
+				})
 			).status,
-		).toBe(200);
-		const queued = (await (await request(`/v1/photos/${data.id}`)).json()) as {
-			state: string;
-		};
-		expect(queued.state).toBe("queued");
-		const send = vi.fn().mockResolvedValue(undefined);
-		await recoverPhotos({
-			...bindings,
-			PHOTO_QUEUE: { send } as unknown as Env["PHOTO_QUEUE"],
-		});
-		expect(send).toHaveBeenCalledWith({ id: data.id });
+		).toBe(400);
 	});
-	it("processes once, serves only a private variant, attaches, and deletes durably", async () => {
+	it("serves private variants with their stored type, attaches, and deletes durably", async () => {
 		const entry = input();
 		const data = await photo();
-		await bindings.PHOTOS.put(originalKey(data.id), new Uint8Array(4), {
-			httpMetadata: { contentType: "image/png" },
-		});
-		await bindings.DB.prepare("UPDATE photos SET state='queued' WHERE id=?")
-			.bind(data.id)
-			.run();
-		const images = fakeImages();
-		const processingEnv = { ...bindings, IMAGES: images };
-		await processPhoto(processingEnv, data.id);
-		await processPhoto(processingEnv, data.id);
-		expect(images.info).toHaveBeenCalledTimes(1);
-		expect(images.input).toHaveBeenCalledTimes(2);
-		const thumb = await request(`/v1/photos/${data.id}/thumb`);
-		expect(thumb.status).toBe(200);
-		await thumb.arrayBuffer();
-		const display = await request(`/v1/photos/${data.id}/display`);
-		expect(display.status).toBe(200);
-		expect(display.headers.get("cache-control")).toBe("private, no-store");
-		expect(display.headers.get("content-type")).toBe("image/webp");
-		await display.arrayBuffer();
+		await storeUpload(data.id, { variant: "image/jpeg" });
+		await request(`/v1/photos/${data.id}/complete`, "POST", metadata);
+		for (const variant of ["display", "thumb"]) {
+			const response = await request(`/v1/photos/${data.id}/${variant}`);
+			expect(response.status).toBe(200);
+			expect(response.headers.get("cache-control")).toBe("private, no-store");
+			expect(response.headers.get("content-type")).toBe("image/jpeg");
+			await response.arrayBuffer();
+		}
 		expect(
 			(await request("/v1/journal", "POST", { ...entry, photoIds: [data.id] }))
 				.status,
@@ -350,88 +314,40 @@ describe("Private photo lifecycle", () => {
 				.status,
 		).toBe(204);
 		expect((await request(`/v1/photos/${data.id}/display`)).status).toBe(409);
-		await recoverPhotos(bindings);
-		expect(await bindings.PHOTOS.head(originalKey(data.id))).toBeNull();
-	});
-	it("checks content type and dimensions, supports manual retry, and prevents deleted-job resurrection", async () => {
-		const data = await photo();
-		await bindings.PHOTOS.put(originalKey(data.id), new Uint8Array(4), {
-			httpMetadata: { contentType: "image/png" },
-		});
 		await bindings.DB.prepare(
-			"UPDATE photos SET state='queued',attempts=4 WHERE id=?",
+			"UPDATE photos SET updated_at='2020-01-01T00:00:00.000Z' WHERE id=?",
 		)
 			.bind(data.id)
 			.run();
-		const images = fakeImages("image/svg+xml");
-		await expect(
-			processPhoto({ ...bindings, IMAGES: images }, data.id),
-		).rejects.toThrow();
-		expect(
-			(
-				(await (await request(`/v1/photos/${data.id}`)).json()) as {
-					state: string;
-				}
-			).state,
-		).toBe("failed");
-		expect((await request(`/v1/photos/${data.id}/retry`, "POST")).status).toBe(
-			200,
-		);
-		await request(`/v1/photos/${data.id}`, "DELETE");
-		await processPhoto({ ...bindings, IMAGES: fakeImages() }, data.id);
-		expect(
-			(
-				(await (await request(`/v1/photos/${data.id}`)).json()) as {
-					state: string;
-				}
-			).state,
-		).toBe("deleting");
+		await cleanupPhotos(bindings);
+		expect(await bindings.PHOTOS.head(originalKey(data.id))).toBeNull();
+		expect((await request(`/v1/photos/${data.id}`)).status).toBe(404);
 	});
 	it("cleans abandoned uploads but keeps ready library photos", async () => {
 		const abandoned = await photo();
-		const library = await photo();
+		const library = await readyPhoto();
 		await bindings.DB.prepare(
 			"UPDATE photos SET updated_at='2020-01-01T00:00:00.000Z' WHERE id IN (?,?)",
 		)
 			.bind(abandoned.id, library.id)
 			.run();
-		await bindings.DB.prepare("UPDATE photos SET state='ready' WHERE id=?")
-			.bind(library.id)
-			.run();
-		await recoverPhotos(bindings);
+		await cleanupPhotos(bindings);
 		expect(await state(abandoned.id)).toBe("deleting");
 		expect(await state(library.id)).toBe("ready");
 	});
-	it("blocks metadata in generated WebP variants", () => {
-		expect(() => assertSafeWebp(minimalWebp())).not.toThrow();
-		const bytes = minimalWebp();
-		bytes.set(new TextEncoder().encode("EXIF"), 12);
-		expect(() => assertSafeWebp(bytes)).toThrow("metadata");
-		expect(() => assertSafeWebp(new Uint8Array(4))).toThrow();
-	});
 });
 describe("Photo library", () => {
-	it("extracts capture time, GPS and camera inside the Workers runtime", async () => {
-		const metadata = await extractMetadata(exifJpeg.buffer);
-		expect(metadata.takenAt).toBe("2024-06-01T16:30:00.000Z");
-		expect(metadata.latitude).toBeCloseTo(-33.85);
-		expect(metadata.longitude).toBeCloseTo(151.21);
-		expect(metadata.camera).toMatchObject({ make: "Canon", model: "EOS R6" });
-		expect(await extractMetadata(new Uint8Array(4).buffer)).toEqual({
-			takenAt: null,
-			latitude: null,
-			longitude: null,
-			camera: null,
-		});
-	});
 	it("serves public variants without auth only while public and at the current generation", async () => {
 		const data = await readyPhoto();
 		const row = (await (await request(`/v1/photos/${data.id}`)).json()) as {
 			generation: string;
 		};
-		const key = `display/${data.id}/${row.generation}.webp`;
-		await bindings.PHOTOS.put(key, minimalWebp());
-		const url = `/public/photos/${data.id}/${row.generation}/display.webp`;
+		await bindings.PHOTOS.put(
+			variantKey(data.id, row.generation, "display"),
+			new Uint8Array(2),
+			{ httpMetadata: { contentType: "image/webp" } },
+		);
+		const url = `/public/photos/${data.id}/${row.generation}/display`;
 		const anonymous = () => request(url, "GET", undefined, {} as typeof token);
 		expect((await anonymous()).status).toBe(404);
 		expect(
@@ -448,7 +364,7 @@ describe("Photo library", () => {
 		expect(
 			(
 				await request(
-					`/public/photos/${data.id}/${crypto.randomUUID()}/display.webp`,
+					`/public/photos/${data.id}/${crypto.randomUUID()}/display`,
 					"GET",
 					undefined,
 					{} as typeof token,

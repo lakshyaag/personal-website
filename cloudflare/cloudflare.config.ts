@@ -27,21 +27,10 @@ export default defineConfig((ctx) => {
 						: "2a0807fc-e848-424d-af30-e028e831ac8d",
 				}),
 				PHOTOS: bindings.r2({ name: `${prefix}-private` }),
-				PHOTO_QUEUE: bindings.queue<{ id: string }>({
-					name: `${prefix}-photos`,
-				}),
-				IMAGES: bindings.images({}),
 				WORKER_API_SECRET: bindings.secret(),
 				LOCAL_UPLOADS: bindings.text(production ? "false" : "true"),
 			},
 			triggers: [
-				triggers.queue({
-					name: `${prefix}-photos`,
-					deadLetterQueue: `${prefix}-photos-dlq`,
-					maxBatchSize: 5,
-					maxBatchTimeout: 1,
-					maxRetries: 5,
-				}),
 				triggers.scheduled({ schedule: "*/10 * * * *" }),
 			],
 		},

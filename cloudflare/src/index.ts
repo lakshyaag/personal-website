@@ -2,13 +2,16 @@ import { z } from "zod";
 import { idSchema } from "../../shared/common";
 import { saveJournalSchema } from "../../shared/journal";
 import {
+	completePhotoSchema,
 	createPhotoSchema,
 	originalKey,
 	updatePhotoSchema,
+	variantKey,
 } from "../../shared/photos";
 import { ApiError, type Env, authorized, jsonBody, responseJson } from "./http";
 import { deleteEntry, getEntry, listEntries, saveEntry } from "./journal";
 import {
+	cleanupPhotos,
 	completePhoto,
 	createPhoto,
 	deletePhoto,
@@ -16,16 +19,14 @@ import {
 	photoDto,
 	photoRow,
 	privateVariant,
-	processPhoto,
 	publicVariant,
-	recoverPhotos,
 	updatePhoto,
 } from "./photos";
 
 export type { Env } from "./http";
 export { authorized } from "./http";
 export { saveEntry } from "./journal";
-export { assertSafeWebp, processPhoto, recoverPhotos } from "./photos";
+export { cleanupPhotos } from "./photos";
 
 const expectedVersion = (url: URL) =>
 	z.coerce
@@ -70,7 +71,7 @@ async function route(request: Request, env: Env): Promise<Response> {
 			);
 	}
 	const photo = path.match(
-		/^\/v1\/photos\/([^/]+)(?:\/(complete|retry|display|thumb|upload))?$/,
+		/^\/v1\/photos\/([^/]+)(?:\/(complete|display|thumb|upload\/original|upload\/display|upload\/thumb))?$/,
 	);
 	if (photo) {
 		const id = idSchema.parse(photo[1]);
@@ -89,31 +90,52 @@ async function route(request: Request, env: Env): Promise<Response> {
 			await deletePhoto(env, id);
 			return new Response(null, { status: 204 });
 		}
-		if ((action === "complete" || action === "retry") && method === "POST")
-			return responseJson(await completePhoto(env, id, action === "retry"));
+		if (action === "complete" && method === "POST")
+			return responseJson(
+				await completePhoto(
+					env,
+					id,
+					completePhotoSchema.parse(await jsonBody(request)),
+				),
+			);
 		if ((action === "display" || action === "thumb") && method === "GET")
 			return privateVariant(env, id, action);
-		if (action === "upload" && method === "PUT" && env.LOCAL_UPLOADS === "true")
-			return localUpload(request, env, id);
+		if (
+			action?.startsWith("upload/") &&
+			method === "PUT" &&
+			env.LOCAL_UPLOADS === "true"
+		)
+			return localUpload(request, env, id, action.slice("upload/".length));
 	}
 	throw new ApiError(404, "NOT_FOUND", "Route not found");
 }
 
 /** Local development only: Next.js proxies uploads here instead of presigned R2 URLs. */
-async function localUpload(request: Request, env: Env, id: string) {
+async function localUpload(
+	request: Request,
+	env: Env,
+	id: string,
+	file: string,
+) {
 	const row = await photoRow(env, id);
-	if (row.state !== "pending")
+	if (row.state !== "pending" || !row.generation)
 		throw new ApiError(409, "CONFLICT", "Upload already completed");
+	const contentType = request.headers.get("content-type") ?? "";
 	const length = Number(request.headers.get("content-length"));
+	const original = file === "original";
 	if (
-		length !== row.byte_size ||
-		request.headers.get("content-type") !== row.mime_type
+		original
+			? length !== row.byte_size || contentType !== row.mime_type
+			: !["image/webp", "image/jpeg"].includes(contentType) || !length
 	)
 		throw new ApiError(400, "INVALID_UPLOAD", "File size or type mismatch");
 	if (!request.body) throw new ApiError(400, "INVALID_UPLOAD", "Missing file");
-	const result = await env.PHOTOS.put(originalKey(id), request.body, {
+	const key = original
+		? originalKey(id)
+		: variantKey(id, row.generation, file === "thumb" ? "thumb" : "display");
+	const result = await env.PHOTOS.put(key, request.body, {
 		onlyIf: { etagDoesNotMatch: "*" },
-		httpMetadata: { contentType: row.mime_type },
+		httpMetadata: { contentType },
 	});
 	if (!result) return new Response(null, { status: 412 });
 	return new Response(null, { status: 204 });
@@ -122,7 +144,10 @@ async function localUpload(request: Request, env: Env, id: string) {
 export default {
 	async fetch(request: Request, env: Env): Promise<Response> {
 		const path = new URL(request.url).pathname;
-		if (path.startsWith("/public/") && request.method === "GET")
+		if (
+			path.startsWith("/public/") &&
+			(request.method === "GET" || request.method === "HEAD")
+		)
 			return publicVariant(env, path);
 		const requestId = crypto.randomUUID();
 		let response: Response;
@@ -162,21 +187,11 @@ export default {
 		response.headers.set("X-Request-Id", requestId);
 		return response;
 	},
-	async queue(batch: MessageBatch<{ id: string }>, env: Env) {
-		for (const message of batch.messages) {
-			try {
-				await processPhoto(env, idSchema.parse(message.body.id));
-				message.ack();
-			} catch {
-				message.retry({ delaySeconds: 30 });
-			}
-		}
-	},
 	async scheduled(
 		_event: ScheduledController,
 		env: Env,
 		ctx: ExecutionContext,
 	) {
-		ctx.waitUntil(recoverPhotos(env));
+		ctx.waitUntil(cleanupPhotos(env));
 	},
-} satisfies ExportedHandler<Env, { id: string }>;
+} satisfies ExportedHandler<Env>;

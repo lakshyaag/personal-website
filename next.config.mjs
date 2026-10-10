@@ -8,6 +8,8 @@ import rehypeSlug from "rehype-slug";
 /** @type {import('next').NextConfig} */
 const nextConfig = {
 	reactStrictMode: true,
+	// Browser tests use their own build dir so they can run beside `bun run dev`.
+	distDir: process.env.NEXT_DIST_DIR ?? ".next",
 	pageExtensions: ["js", "jsx", "ts", "tsx", "md", "mdx"],
 	images: {
 		remotePatterns: [

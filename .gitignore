@@ -50,6 +50,7 @@ next-env.d.ts
 .dev.vars*
 !.dev.vars.example
 !.env.example
+.next-e2e/
 playwright-report/
 test-results/
 migration-artifacts/

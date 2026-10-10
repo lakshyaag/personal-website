@@ -1,8 +1,6 @@
 export interface Env {
 	DB: D1Database;
 	PHOTOS: R2Bucket;
-	IMAGES: ImagesBinding;
-	PHOTO_QUEUE: Queue<{ id: string }>;
 	WORKER_API_SECRET: string;
 	LOCAL_UPLOADS?: string;
 }

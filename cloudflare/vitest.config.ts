@@ -16,14 +16,6 @@ export default defineWorkersConfig(async () => ({
 					compatibilityFlags: ["nodejs_compat"],
 					d1Databases: { DB: "personal-website-test" },
 					r2Buckets: { PHOTOS: "personal-website-test-private" },
-					images: { binding: "IMAGES" },
-					queueProducers: { PHOTO_QUEUE: "personal-website-test-photos" },
-					queueConsumers: {
-						"personal-website-test-photos": {
-							maxBatchSize: 5,
-							maxRetries: 5,
-						},
-					},
 					bindings: {
 						WORKER_API_SECRET:
 							"local-worker-test-secret-at-least-32-characters",

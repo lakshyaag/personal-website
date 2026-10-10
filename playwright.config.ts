@@ -32,6 +32,7 @@ export default defineConfig({
 			reuseExistingServer: false,
 			timeout: 120_000,
 			env: {
+				NEXT_DIST_DIR: ".next-e2e",
 				ADMIN_BACKEND: "cloudflare",
 				AUTH_SECRET,
 				ADMIN_GITHUB_ID: OWNER_ID,

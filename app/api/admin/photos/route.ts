@@ -1,11 +1,11 @@
 import { privateJson, privateRoute, readJson } from "@/lib/backend/api";
 import { localWorkerUploads } from "@/lib/backend/config";
-import { photoUploadUrl } from "@/lib/backend/r2";
-import { workerJson } from "@/lib/backend/worker";
+import { photoUploadUrls } from "@/lib/backend/r2";
+import { BackendError, workerJson } from "@/lib/backend/worker";
 import {
-	createPhotoSchema,
 	photoListSchema,
 	photoSchema,
+	uploadPhotoSchema,
 } from "@/shared/photos";
 
 export const runtime = "nodejs";
@@ -33,26 +33,33 @@ export function GET(request: Request) {
 }
 export function POST(request: Request) {
 	return privateRoute(request, async () => {
-		const input = createPhotoSchema.parse(await readJson(request));
+		const input = uploadPhotoSchema.parse(await readJson(request));
+		const { display, thumb, ...original } = input;
 		const photo = photoSchema.parse(
 			await workerJson("/v1/photos", {
 				method: "POST",
-				body: JSON.stringify(input),
+				body: JSON.stringify(original),
 			}),
 		);
-		const uploadUrl =
-			photo.state === "pending"
-				? localWorkerUploads()
-					? `/api/admin/photos/${photo.id}/upload`
-					: await photoUploadUrl(photo)
-				: null;
-		return privateJson(
-			{
-				photo,
-				uploadUrl,
-				headers: { "Content-Type": photo.mimeType, "If-None-Match": "*" },
-			},
-			201,
-		);
+		if (photo.state !== "pending")
+			throw new BackendError(409, "Photo already uploaded", "CONFLICT");
+		const uploads = localWorkerUploads()
+			? Object.fromEntries(
+					(
+						[
+							["original", photo.mimeType],
+							["display", display.type],
+							["thumb", thumb.type],
+						] as const
+					).map(([name, type]) => [
+						name,
+						{
+							url: `/api/admin/photos/${photo.id}/upload-${name}`,
+							headers: { "Content-Type": type },
+						},
+					]),
+				)
+			: await photoUploadUrls(photo, input);
+		return privateJson({ photo, uploads }, 201);
 	});
 }
