@@ -1,6 +1,6 @@
-import { supabaseAdmin } from "@/lib/supabase-client";
 import { normalizeExerciseName } from "@/lib/exercises";
-import type { WorkoutLogDbRow, WorkoutExercise } from "@/lib/models";
+import type { WorkoutExercise, WorkoutLogDbRow } from "@/lib/models";
+import { supabaseAdmin } from "@/lib/supabase-client";
 import type { NextRequest } from "next/server";
 
 export async function GET(

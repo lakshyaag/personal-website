@@ -1,12 +1,12 @@
 "use client";
 
-import { Suspense } from "react";
-import { motion } from "motion/react";
 import {
+	TRANSITION_SECTION,
 	VARIANTS_CONTAINER,
 	VARIANTS_SECTION,
-	TRANSITION_SECTION,
 } from "@/lib/utils";
+import { motion } from "motion/react";
+import { Suspense } from "react";
 
 interface AdminPageWrapperProps {
 	children: React.ReactNode;
@@ -77,4 +77,3 @@ export function AdminPageWithSuspense({
 		</Suspense>
 	);
 }
-

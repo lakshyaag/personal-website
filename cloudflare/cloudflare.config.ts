@@ -30,9 +30,7 @@ export default defineConfig((ctx) => {
 				WORKER_API_SECRET: bindings.secret(),
 				LOCAL_UPLOADS: bindings.text(production ? "false" : "true"),
 			},
-			triggers: [
-				triggers.scheduled({ schedule: "*/10 * * * *" }),
-			],
+			triggers: [triggers.scheduled({ schedule: "*/10 * * * *" })],
 		},
 	};
 });

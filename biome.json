@@ -1,13 +1,19 @@
 {
 	"$schema": "https://biomejs.dev/schemas/1.9.4/schema.json",
 	"vcs": {
-		"enabled": false,
+		"enabled": true,
 		"clientKind": "git",
-		"useIgnoreFile": false
+		"useIgnoreFile": true
 	},
 	"files": {
 		"ignoreUnknown": false,
-		"ignore": ["**/.wrangler", "**/.cloudflare"]
+		"ignore": [
+			"**/.wrangler",
+			"**/.cloudflare",
+			"data/**",
+			"public/**",
+			"**/*.min.json"
+		]
 	},
 	"formatter": {
 		"enabled": true,
@@ -19,7 +25,22 @@
 	"linter": {
 		"enabled": true,
 		"rules": {
-			"recommended": true
+			"recommended": true,
+			"suspicious": {
+				"noExplicitAny": "warn",
+				"noArrayIndexKey": "warn"
+			},
+			"style": {
+				"noNonNullAssertion": "warn"
+			},
+			"correctness": {
+				"useExhaustiveDependencies": "warn"
+			},
+			"a11y": {
+				"noLabelWithoutControl": "warn",
+				"useKeyWithClickEvents": "warn",
+				"useSemanticElements": "warn"
+			}
 		}
 	},
 	"javascript": {

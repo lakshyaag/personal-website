@@ -1,17 +1,17 @@
 "use client";
 
-import { useMemo } from "react";
-import { MapContainer, TileLayer, CircleMarker } from "react-leaflet";
-import { useTheme } from "next-themes";
 import airports from "@/data/airports.min.json";
-import type { Visit, Airport } from "@/lib/models";
+import type { Airport, Visit } from "@/lib/models";
 import type { LatLngExpression } from "leaflet";
+import { useTheme } from "next-themes";
+import { useMemo } from "react";
+import { CircleMarker, MapContainer, TileLayer } from "react-leaflet";
 
 interface MapProps {
 	visits: Visit[];
 }
 
-export default function Map({ visits }: MapProps) {
+export default function AirportMap({ visits }: MapProps) {
 	const { resolvedTheme } = useTheme();
 
 	const tileUrl = useMemo(() => {
@@ -22,8 +22,7 @@ export default function Map({ visits }: MapProps) {
 	}, [resolvedTheme]);
 
 	const airportsByIdent = useMemo(
-		() =>
-			Object.fromEntries((airports as Airport[]).map((a) => [a.ident, a])),
+		() => Object.fromEntries((airports as Airport[]).map((a) => [a.ident, a])),
 		[],
 	);
 

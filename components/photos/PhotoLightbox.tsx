@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { createPortal } from "react-dom";
-import { ChevronLeft, ChevronRight, X } from "lucide-react";
 import { usePhotoUrls } from "@/hooks/usePhotoUrl";
+import { ChevronLeft, ChevronRight, X } from "lucide-react";
+import { type ReactNode, useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 
 export interface PhotoViewerItem {
 	ref: string;

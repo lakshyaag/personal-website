@@ -86,7 +86,9 @@ async function generateAirportsData() {
 	await fs.writeFile(outputPath, JSON.stringify(filtered, null, 0));
 
 	console.log(`✅ Generated ${outputPath}`);
-	console.log(`📊 File size: ${((await fs.stat(outputPath)).size / 1024).toFixed(2)} KB`);
+	console.log(
+		`📊 File size: ${((await fs.stat(outputPath)).size / 1024).toFixed(2)} KB`,
+	);
 }
 
 generateAirportsData().catch(console.error);

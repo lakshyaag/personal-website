@@ -3,13 +3,13 @@
  */
 
 import { createDbOperations } from "./base-db";
-import { supabaseAdmin } from "./supabase-client";
 import {
 	type Visit,
 	type VisitDbRow,
 	transformVisitFromDb,
 	transformVisitToDb,
 } from "./models";
+import { supabaseAdmin } from "./supabase-client";
 
 const visitOps = createDbOperations<Visit, VisitDbRow>({
 	table: "visits",
@@ -32,7 +32,9 @@ export const getVisitsGroupedByDate = visitOps.getGroupedByDate;
  * Get visits for a specific airport
  * @param airportIdent - Airport identifier (e.g., "KJFK")
  */
-export async function getVisitsByAirport(airportIdent: string): Promise<Visit[]> {
+export async function getVisitsByAirport(
+	airportIdent: string,
+): Promise<Visit[]> {
 	const { data, error } = await supabaseAdmin
 		.from("visits")
 		.select("*")

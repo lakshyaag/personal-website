@@ -1,10 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { Images } from "lucide-react";
-import type { PhotoAssetListItem } from "@/lib/photo-assets-db";
-import type { PhotoContextType, UploadFolder } from "@/lib/photos";
 import { PhotoThumbnail } from "@/components/admin/PhotoDisplay";
+import { CONTEXT_LABELS, contextLabel } from "@/components/admin/photos/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -15,10 +12,10 @@ import {
 	SheetHeader,
 	SheetTitle,
 } from "@/components/ui/sheet";
-import {
-	CONTEXT_LABELS,
-	contextLabel,
-} from "@/components/admin/photos/types";
+import type { PhotoAssetListItem } from "@/lib/photo-assets-db";
+import type { PhotoContextType, UploadFolder } from "@/lib/photos";
+import { Images } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 interface PhotoLibraryPickerProps {
 	open: boolean;
@@ -159,7 +156,9 @@ export function PhotoLibraryPicker({
 		if (contextFilter === "unassigned") {
 			return filteredPhotos.filter((photo) => !photo.contextType);
 		}
-		return filteredPhotos.filter((photo) => photo.contextType === contextFilter);
+		return filteredPhotos.filter(
+			(photo) => photo.contextType === contextFilter,
+		);
 	}, [filteredPhotos, contextFilter]);
 
 	return (
@@ -231,9 +230,7 @@ export function PhotoLibraryPicker({
 					{!loading && visiblePhotos.length > 0 && (
 						<div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
 							{visiblePhotos.map((photo) => {
-								const alreadyInEntry = alreadySelectedSet.has(
-									photo.displayRef,
-								);
+								const alreadyInEntry = alreadySelectedSet.has(photo.displayRef);
 								const isSelected = selectedIds.has(photo.id);
 								return (
 									<button

@@ -1,6 +1,6 @@
 "use client";
 
-import { searchExercises, type ExerciseDefinition } from "@/lib/exercises";
+import { type ExerciseDefinition, searchExercises } from "@/lib/exercises";
 import { Search, X } from "lucide-react";
 import { useState } from "react";
 
@@ -14,7 +14,7 @@ export function ExerciseSearch({
 	placeholder = "Search exercises...",
 }: ExerciseSearchProps) {
 	const [query, setQuery] = useState("");
-	
+
 	const showDropdown = query.length > 1;
 	const results = showDropdown ? searchExercises(query) : [];
 

@@ -1,20 +1,20 @@
 "use client";
 
 import {
+	type PhotoInput,
+	PhotoLightbox,
+	type PhotoViewerItem,
+	normalizePhoto,
+} from "@/components/photos/PhotoLightbox";
+import { usePhotoUrls } from "@/hooks/usePhotoUrl";
+import { cn } from "@/lib/utils";
+import {
+	type CSSProperties,
 	useEffect,
 	useMemo,
 	useRef,
 	useState,
-	type CSSProperties,
 } from "react";
-import { usePhotoUrls } from "@/hooks/usePhotoUrl";
-import { cn } from "@/lib/utils";
-import {
-	PhotoLightbox,
-	normalizePhoto,
-	type PhotoInput,
-	type PhotoViewerItem,
-} from "@/components/photos/PhotoLightbox";
 
 interface PhotoJustifiedGalleryProps {
 	photos: PhotoInput[];
@@ -131,8 +131,7 @@ export function PhotoJustifiedGallery({
 			: targetRowHeight;
 
 	const rows = useMemo(
-		() =>
-			computeJustifiedRows(items, containerWidth, responsiveTarget, gap),
+		() => computeJustifiedRows(items, containerWidth, responsiveTarget, gap),
 		[items, containerWidth, responsiveTarget, gap],
 	);
 

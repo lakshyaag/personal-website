@@ -3,13 +3,13 @@
  * Replaces lib/recommendations-storage.ts
  */
 
-import { supabaseAdmin } from "./supabase-client";
 import {
 	type Recommendation,
 	type RecommendationDbRow,
 	transformRecommendationFromDb,
 	transformRecommendationToDb,
 } from "./models";
+import { supabaseAdmin } from "./supabase-client";
 
 /**
  * Get all recommendations, ordered by creation date (most recent first)
@@ -34,7 +34,7 @@ export async function getRecommendations(): Promise<Recommendation[]> {
  * @returns The ID of the saved recommendation
  */
 export async function saveRecommendation(
-	recommendation: Omit<Recommendation, "id" | "timestamp">
+	recommendation: Omit<Recommendation, "id" | "timestamp">,
 ): Promise<string> {
 	const dbRec = transformRecommendationToDb(recommendation);
 

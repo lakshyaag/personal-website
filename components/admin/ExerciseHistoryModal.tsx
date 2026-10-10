@@ -1,9 +1,9 @@
 "use client";
 
-import { X, Calendar, Activity } from "lucide-react";
-import { useEffect, useState } from "react";
 import { formatDate } from "@/lib/date-utils";
 import type { WorkoutExercise } from "@/lib/models";
+import { Activity, Calendar, X } from "lucide-react";
+import { useEffect, useState } from "react";
 
 interface HistoryEntry {
 	date: string;

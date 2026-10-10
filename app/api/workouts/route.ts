@@ -1,13 +1,13 @@
+import { randomUUID } from "node:crypto";
 import { createCrudHandlers } from "@/lib/api-helpers";
+import type { WorkoutLog } from "@/lib/models";
 import {
-	getWorkoutLogs,
-	saveWorkoutLog,
 	deleteWorkoutLog,
+	getWorkoutLogs,
 	getWorkoutLogsByDate,
 	getWorkoutLogsGroupedByDate,
+	saveWorkoutLog,
 } from "@/lib/workouts-db";
-import type { WorkoutLog } from "@/lib/models";
-import { randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
 
 // Use the generic handler for GET and DELETE

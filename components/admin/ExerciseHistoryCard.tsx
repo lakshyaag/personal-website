@@ -1,8 +1,8 @@
 "use client";
 
+import { formatDate } from "@/lib/date-utils";
 import type { WorkoutExercise } from "@/lib/models";
 import { Clock, History, Info, X } from "lucide-react";
-import { formatDate } from "@/lib/date-utils";
 
 interface ExerciseHistoryCardProps {
 	exerciseName: string;

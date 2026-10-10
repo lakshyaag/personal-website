@@ -1,28 +1,28 @@
 "use client";
 
-import Link from "next/link";
 import { motion } from "motion/react";
+import Link from "next/link";
 
-import ReactMarkdown from "react-markdown";
-import { Spotlight } from "@/components/ui/spotlight";
-import { AnimatedBackground } from "@/components/ui/animated-background";
-import { SOCIAL_LINKS } from "@/lib/data/social";
-import { PROJECTS } from "@/lib/data/projects";
-import { WORK_EXPERIENCE } from "@/lib/data/jobs";
-import { EMAIL } from "@/lib/data/email";
-import { BLOG_POSTS } from "@/lib/data/blogs";
-import ProjectItem from "@/components/ProjectItem";
-import MagneticSocialLink from "@/components/MagneticSocialLink";
 import CollapsibleCurrentlyReading from "@/components/CollapsibleCurrentlyReading";
+import MagneticSocialLink from "@/components/MagneticSocialLink";
 import { PhotoTeaser } from "@/components/PhotoTeaser";
+import ProjectItem from "@/components/ProjectItem";
+import { AnimatedBackground } from "@/components/ui/animated-background";
+import { Spotlight } from "@/components/ui/spotlight";
+import { SvgArrowRight } from "@/components/ui/svg-arrow-right";
 import { LANDING_INTRO } from "@/lib/constants";
-import remarkGfm from "remark-gfm";
+import { BLOG_POSTS } from "@/lib/data/blogs";
+import { EMAIL } from "@/lib/data/email";
+import { WORK_EXPERIENCE } from "@/lib/data/jobs";
+import { PROJECTS } from "@/lib/data/projects";
+import { SOCIAL_LINKS } from "@/lib/data/social";
 import {
+	TRANSITION_SECTION,
 	VARIANTS_CONTAINER,
 	VARIANTS_SECTION,
-	TRANSITION_SECTION,
 } from "@/lib/utils";
-import { SvgArrowRight } from "@/components/ui/svg-arrow-right";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 export default function Personal() {
 	return (
@@ -138,7 +138,6 @@ export default function Personal() {
 				</div>
 			</motion.section>
 
-
 			<motion.section
 				variants={VARIANTS_SECTION}
 				transition={TRANSITION_SECTION}
@@ -164,7 +163,8 @@ export default function Personal() {
 						)
 						.map((project) => (
 							<ProjectItem key={project.name} project={project} />
-						)).slice(0, 6)}
+						))
+						.slice(0, 6)}
 				</div>
 			</motion.section>
 
@@ -211,7 +211,6 @@ export default function Personal() {
 				</div>
 			</motion.section>
 
-
 			<motion.section
 				variants={VARIANTS_SECTION}
 				transition={TRANSITION_SECTION}
@@ -231,6 +230,6 @@ export default function Personal() {
 					))}
 				</div>
 			</motion.section>
-		</motion.main >
+		</motion.main>
 	);
 }

@@ -1,4 +1,3 @@
-import { NextResponse } from "next/server";
 import {
 	MAX_PHOTO_UPLOAD_BYTES,
 	createPhotoUploadTarget,
@@ -6,6 +5,7 @@ import {
 } from "@/lib/photo-upload-pipeline";
 import type { UploadFolder } from "@/lib/photos";
 import { createServerSupabaseClient } from "@/lib/supabase-server";
+import { NextResponse } from "next/server";
 
 export const runtime = "nodejs";
 
@@ -113,9 +113,6 @@ export async function POST(req: Request) {
 		return invalidRequest("Invalid upload action");
 	} catch (error) {
 		console.error("Unified photo upload failed:", error);
-		return NextResponse.json(
-			{ error: "Upload failed" },
-			{ status: 500 },
-		);
+		return NextResponse.json({ error: "Upload failed" }, { status: 500 });
 	}
 }

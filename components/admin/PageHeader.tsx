@@ -1,9 +1,9 @@
 "use client";
 
+import { TRANSITION_SECTION, VARIANTS_SECTION } from "@/lib/utils";
+import { motion } from "motion/react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { motion } from "motion/react";
-import { VARIANTS_SECTION, TRANSITION_SECTION } from "@/lib/utils";
 
 interface PageHeaderProps {
 	title: string;

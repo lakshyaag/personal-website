@@ -74,7 +74,8 @@ export function Footer() {
 					<TextLoop className="text-xs text-zinc-500" interval={10}>
 						<span>© {new Date().getFullYear()} Lakshya Agarwal.</span>
 						<span>
-							Built with <a href="https://github.com/ibelick/nim">Nim</a> on Next.js
+							Built with <a href="https://github.com/ibelick/nim">Nim</a> on
+							Next.js
 						</span>
 					</TextLoop>
 				</a>

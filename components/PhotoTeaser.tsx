@@ -1,11 +1,11 @@
 "use client";
 
-import Link from "next/link";
-import { useEffect, useState } from "react";
 import { PhotoLightboxGrid } from "@/components/photos/PhotoLightboxGrid";
 import { buildPhotoViewerItem } from "@/components/photos/buildPhotoViewerItem";
 import { SvgArrowRight } from "@/components/ui/svg-arrow-right";
 import type { ResolvedPhotoAsset } from "@/lib/photo-assets-db";
+import Link from "next/link";
+import { useEffect, useState } from "react";
 
 interface TeaserPhoto {
 	id: string;

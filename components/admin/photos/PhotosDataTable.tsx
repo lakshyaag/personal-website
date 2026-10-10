@@ -1,19 +1,9 @@
 "use client";
 
-import { useMemo, useState } from "react";
 import {
-	flexRender,
-	getCoreRowModel,
-	getFilteredRowModel,
-	getPaginationRowModel,
-	getSortedRowModel,
-	useReactTable,
-	type ColumnDef,
-	type ColumnFiltersState,
-	type SortingState,
-	type VisibilityState,
-} from "@tanstack/react-table";
-import { ArrowUpDown, Columns3, MoreHorizontal, PlusCircle, X } from "lucide-react";
+	PhotoLightbox,
+	type PhotoViewerItem,
+} from "@/components/photos/PhotoLightbox";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -37,9 +27,25 @@ import {
 	TableRow,
 } from "@/components/ui/table";
 import {
-	PhotoLightbox,
-	type PhotoViewerItem,
-} from "@/components/photos/PhotoLightbox";
+	type ColumnDef,
+	type ColumnFiltersState,
+	type SortingState,
+	type VisibilityState,
+	flexRender,
+	getCoreRowModel,
+	getFilteredRowModel,
+	getPaginationRowModel,
+	getSortedRowModel,
+	useReactTable,
+} from "@tanstack/react-table";
+import {
+	ArrowUpDown,
+	Columns3,
+	MoreHorizontal,
+	PlusCircle,
+	X,
+} from "lucide-react";
+import { useMemo, useState } from "react";
 import { PhotoThumbnailCell } from "./PhotoThumbnailCell";
 import {
 	type AdminPhotoItem,
@@ -163,10 +169,7 @@ export function PhotosDataTable({
 	const [globalFilter, setGlobalFilter] = useState("");
 	const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
 
-	const lightboxPhotos = useMemo(
-		() => photos.map(toLightboxItem),
-		[photos],
-	);
+	const lightboxPhotos = useMemo(() => photos.map(toLightboxItem), [photos]);
 
 	const columns = useMemo<ColumnDef<AdminPhotoItem>[]>(
 		() => [
@@ -268,9 +271,7 @@ export function PhotosDataTable({
 			},
 			{
 				accessorKey: "createdAt",
-				header: ({ column }) => (
-					<SortHeader label="Uploaded" column={column} />
-				),
+				header: ({ column }) => <SortHeader label="Uploaded" column={column} />,
 				cell: ({ row }) => (
 					<span className="text-xs text-muted-foreground">
 						{formatTimestamp(row.original.createdAt)}
@@ -395,11 +396,13 @@ export function PhotosDataTable({
 		(table.getColumn("visibility")?.getFilterValue() as string | undefined) ??
 		"";
 	const featuredFilter =
-		(table
-			.getColumn("galleryFeatured")
-			?.getFilterValue() as string | undefined) ?? "";
+		(table.getColumn("galleryFeatured")?.getFilterValue() as
+			| string
+			| undefined) ?? "";
 	const hasActiveFilters =
-		Boolean(visibilityFilter) || Boolean(featuredFilter) || Boolean(globalFilter);
+		Boolean(visibilityFilter) ||
+		Boolean(featuredFilter) ||
+		Boolean(globalFilter);
 
 	return (
 		<div className="space-y-3">

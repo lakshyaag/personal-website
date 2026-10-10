@@ -1,16 +1,16 @@
 "use client";
 
-import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { motion } from "motion/react";
 import { createClient } from "@/lib/supabase-client";
-import { toast } from "sonner";
-import { Settings } from "lucide-react";
 import {
+	TRANSITION_SECTION,
 	VARIANTS_CONTAINER,
 	VARIANTS_SECTION,
-	TRANSITION_SECTION,
 } from "@/lib/utils";
+import { Settings } from "lucide-react";
+import { motion } from "motion/react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 
 export default function AdminPage() {
 	const router = useRouter();

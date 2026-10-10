@@ -1,16 +1,16 @@
 import { randomUUID } from "node:crypto";
-import sharp from "sharp";
 import { parse as parseExif } from "exifr";
-import { supabaseAdmin } from "./supabase-client";
+import sharp from "sharp";
+import { encodeSupabaseRef } from "./photo-refs";
 import {
+	type PhotoVisibility,
+	type UploadFolder,
 	contextTypeForFolder,
 	derivePreferredPhotoRef,
 	sanitizeIdentifier,
-	type PhotoVisibility,
 	visibilityForFolder,
-	type UploadFolder,
 } from "./photos";
-import { encodeSupabaseRef } from "./photo-refs";
+import { supabaseAdmin } from "./supabase-client";
 
 interface UploadPhotoParams {
 	photoId: string;
@@ -102,10 +102,12 @@ async function uploadObject(
 	buffer: Buffer,
 	contentType: string,
 ) {
-	const { error } = await supabaseAdmin.storage.from(bucket).upload(path, buffer, {
-		contentType,
-		upsert: false,
-	});
+	const { error } = await supabaseAdmin.storage
+		.from(bucket)
+		.upload(path, buffer, {
+			contentType,
+			upsert: false,
+		});
 	if (error) {
 		throw new Error(`Upload failed for ${bucket}/${path}: ${error.message}`);
 	}
@@ -233,14 +235,24 @@ export async function finalizePhotoUpload(
 
 	const fullBuffer = await image
 		.clone()
-		.resize({ width: 2048, height: 2048, fit: "inside", withoutEnlargement: true })
+		.resize({
+			width: 2048,
+			height: 2048,
+			fit: "inside",
+			withoutEnlargement: true,
+		})
 		.jpeg({ quality: 84, mozjpeg: true })
 		.toBuffer();
 	const fullMeta = await sharp(fullBuffer).metadata();
 
 	const thumbBuffer = await image
 		.clone()
-		.resize({ width: 480, height: 480, fit: "inside", withoutEnlargement: true })
+		.resize({
+			width: 480,
+			height: 480,
+			fit: "inside",
+			withoutEnlargement: true,
+		})
 		.jpeg({ quality: 78, mozjpeg: true })
 		.toBuffer();
 	const thumbMeta = await sharp(thumbBuffer).metadata();
@@ -251,7 +263,12 @@ export async function finalizePhotoUpload(
 
 	const derivatives: StoredDerivative[] = [];
 
-	await uploadObject("photo-private-display", privateDisplayPath, fullBuffer, "image/jpeg");
+	await uploadObject(
+		"photo-private-display",
+		privateDisplayPath,
+		fullBuffer,
+		"image/jpeg",
+	);
 	derivatives.push({
 		kind: "private_full",
 		bucket: "photo-private-display",
@@ -262,7 +279,12 @@ export async function finalizePhotoUpload(
 		format: "jpeg",
 	});
 
-	await uploadObject("photo-private-display", thumbPath, thumbBuffer, "image/jpeg");
+	await uploadObject(
+		"photo-private-display",
+		thumbPath,
+		thumbBuffer,
+		"image/jpeg",
+	);
 	derivatives.push({
 		kind: "thumb",
 		bucket: "photo-private-display",
@@ -274,7 +296,12 @@ export async function finalizePhotoUpload(
 	});
 
 	if (visibility === "public") {
-		await uploadObject("photo-public", publicDisplayPath, fullBuffer, "image/jpeg");
+		await uploadObject(
+			"photo-public",
+			publicDisplayPath,
+			fullBuffer,
+			"image/jpeg",
+		);
 		derivatives.push({
 			kind: "full",
 			bucket: "photo-public",
@@ -288,28 +315,29 @@ export async function finalizePhotoUpload(
 
 	const safeExif = toSafeExif(exif);
 	const takenAtRaw = exif?.DateTimeOriginal ?? exif?.CreateDate ?? null;
-	const takenAt =
-		takenAtRaw instanceof Date ? takenAtRaw.toISOString() : null;
+	const takenAt = takenAtRaw instanceof Date ? takenAtRaw.toISOString() : null;
 	const gpsLatitude =
 		exif?.latitude ?? gpsCoordinate(exif?.GPSLatitude, exif?.GPSLatitudeRef);
 	const gpsLongitude =
 		exif?.longitude ?? gpsCoordinate(exif?.GPSLongitude, exif?.GPSLongitudeRef);
 	const gpsAltitude = exif?.GPSAltitude ?? null;
 
-	const { error: assetError } = await supabaseAdmin.from("photo_assets").insert({
-		id: photoId,
-		original_private_ref: encodeSupabaseRef(ORIGINALS_BUCKET, originalPath),
-		width: metadata.width ?? null,
-		height: metadata.height ?? null,
-		taken_at: takenAt,
-		safe_exif: safeExif,
-		gps_latitude: gpsLatitude,
-		gps_longitude: gpsLongitude,
-		gps_altitude: gpsAltitude,
-		gps_public: false,
-		visibility,
-		gallery_featured: false,
-	});
+	const { error: assetError } = await supabaseAdmin
+		.from("photo_assets")
+		.insert({
+			id: photoId,
+			original_private_ref: encodeSupabaseRef(ORIGINALS_BUCKET, originalPath),
+			width: metadata.width ?? null,
+			height: metadata.height ?? null,
+			taken_at: takenAt,
+			safe_exif: safeExif,
+			gps_latitude: gpsLatitude,
+			gps_longitude: gpsLongitude,
+			gps_altitude: gpsAltitude,
+			gps_public: false,
+			visibility,
+			gallery_featured: false,
+		});
 	if (assetError) {
 		throw new Error(`Failed to save photo asset: ${assetError.message}`);
 	}
@@ -330,7 +358,9 @@ export async function finalizePhotoUpload(
 			})),
 		);
 	if (derivativeError) {
-		throw new Error(`Failed to save photo derivatives: ${derivativeError.message}`);
+		throw new Error(
+			`Failed to save photo derivatives: ${derivativeError.message}`,
+		);
 	}
 
 	const { error: attachmentError } = await supabaseAdmin
@@ -342,7 +372,9 @@ export async function finalizePhotoUpload(
 			sort_order: 0,
 		});
 	if (attachmentError) {
-		throw new Error(`Failed to save photo attachment: ${attachmentError.message}`);
+		throw new Error(
+			`Failed to save photo attachment: ${attachmentError.message}`,
+		);
 	}
 
 	const photoRef = derivePreferredPhotoRef(visibility, {

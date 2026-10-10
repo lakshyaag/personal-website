@@ -1,9 +1,9 @@
 "use client";
 
-import { useMemo, type ReactNode } from "react";
 import { PhotoLightboxGrid } from "@/components/photos/PhotoLightboxGrid";
 import { buildPhotoViewerItem } from "@/components/photos/buildPhotoViewerItem";
 import { useResolvedPhotos } from "@/hooks/useResolvedPhotos";
+import { type ReactNode, useMemo } from "react";
 
 interface ResolvedPhotoLightboxGridProps {
 	refs: string[];

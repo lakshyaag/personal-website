@@ -1,10 +1,10 @@
 {
-  "plugins": {
-    "supabase": {
-      "enabled": true
-    },
-    "tavily": {
-      "enabled": true
-    }
-  }
+	"plugins": {
+		"supabase": {
+			"enabled": true
+		},
+		"tavily": {
+			"enabled": true
+		}
+	}
 }

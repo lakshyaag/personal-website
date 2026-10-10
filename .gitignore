@@ -59,3 +59,4 @@ migration-artifacts/
 node_modules/
 .cloudflare/
 .secrets*.json
+.next-build/

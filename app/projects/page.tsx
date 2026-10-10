@@ -1,13 +1,13 @@
 "use client";
 
-import { motion } from "framer-motion";
 import ProjectItem from "@/components/ProjectItem";
 import { PROJECTS } from "@/lib/data/projects";
 import {
+	TRANSITION_SECTION,
 	VARIANTS_CONTAINER,
 	VARIANTS_SECTION,
-	TRANSITION_SECTION,
 } from "@/lib/utils";
+import { motion } from "framer-motion";
 
 export default function Projects() {
 	return (

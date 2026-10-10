@@ -1,7 +1,5 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import { toast } from "sonner";
 import PhotoUploader from "@/components/admin/PhotoUploader";
 import { PhotoEditSheet } from "@/components/admin/photos/PhotoEditSheet";
 import { PhotosDataTable } from "@/components/admin/photos/PhotosDataTable";
@@ -16,6 +14,8 @@ import {
 	AlertDialogHeader,
 	AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { useCallback, useEffect, useState } from "react";
+import { toast } from "sonner";
 
 export default function SupabasePhotos() {
 	const [photos, setPhotos] = useState<AdminPhotoItem[]>([]);

@@ -1,11 +1,11 @@
 import { createCrudHandlers } from "@/lib/api-helpers";
 import {
-	getFoodEntries,
-	getFoodEntryById,
-	saveFoodEntry,
 	deleteFoodEntry,
 	getEntriesByDate,
 	getEntriesGroupedByDate,
+	getFoodEntries,
+	getFoodEntryById,
+	saveFoodEntry,
 } from "@/lib/food-db";
 
 export const { GET, POST, DELETE } = createCrudHandlers(

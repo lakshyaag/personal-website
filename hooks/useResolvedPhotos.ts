@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
 import type { ResolvedPhotoAsset } from "@/lib/photo-assets-db";
+import { useEffect, useMemo, useState } from "react";
 
 const resolveCache = new Map<string, ResolvedPhotoAsset>();
 const missingCache = new Set<string>();
@@ -103,4 +103,3 @@ export function useResolvedPhotos(refs: string[]): {
 
 	return { photos, loading };
 }
-

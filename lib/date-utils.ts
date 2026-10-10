@@ -42,4 +42,3 @@ export function formatTime(
 	if (Number.isNaN(date.getTime())) return "";
 	return date.toLocaleTimeString("en-US", options);
 }
-

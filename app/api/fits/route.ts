@@ -1,11 +1,11 @@
 import { createCrudHandlers } from "@/lib/api-helpers";
 import {
-	getFitsEntries,
-	getFitsEntryById,
-	saveFitsEntry,
 	deleteFitsEntry,
 	getEntriesByDate,
 	getEntriesGroupedByDate,
+	getFitsEntries,
+	getFitsEntryById,
+	saveFitsEntry,
 } from "@/lib/fits-db";
 
 export const { GET, POST, DELETE } = createCrudHandlers(
@@ -25,4 +25,3 @@ export const { GET, POST, DELETE } = createCrudHandlers(
 		supportsIdLookup: true,
 	},
 );
-

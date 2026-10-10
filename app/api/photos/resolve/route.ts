@@ -1,8 +1,8 @@
-import { NextResponse } from "next/server";
 import {
-	resolvePhotoAssetsByDisplayRefs,
 	type ResolvedPhotoAsset,
+	resolvePhotoAssetsByDisplayRefs,
 } from "@/lib/photo-assets-db";
+import { NextResponse } from "next/server";
 
 const MAX_REFS = 200;
 
@@ -29,7 +29,10 @@ export async function POST(req: Request) {
 
 		const resolved = await resolvePhotoAssetsByDisplayRefs(refs);
 		return NextResponse.json({
-			photos: Object.fromEntries(resolved) as Record<string, ResolvedPhotoAsset>,
+			photos: Object.fromEntries(resolved) as Record<
+				string,
+				ResolvedPhotoAsset
+			>,
 		});
 	} catch (error) {
 		console.error("Error in POST /api/photos/resolve:", error);

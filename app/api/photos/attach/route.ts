@@ -1,11 +1,11 @@
-import { NextResponse } from "next/server";
 import { attachPhotoAsset } from "@/lib/photo-assets-db";
 import {
 	type PhotoContextType,
-	contextTypeForFolder,
 	type UploadFolder,
+	contextTypeForFolder,
 } from "@/lib/photos";
 import { createServerSupabaseClient } from "@/lib/supabase-server";
+import { NextResponse } from "next/server";
 
 const CONTEXT_TYPES = new Set<PhotoContextType>([
 	"airport_visit",
@@ -55,23 +55,20 @@ export async function POST(req: Request) {
 				)
 			: [];
 		if (photoIds.length === 0) {
-			return NextResponse.json(
-				{ error: "Missing photoIds" },
-				{ status: 400 },
-			);
+			return NextResponse.json({ error: "Missing photoIds" }, { status: 400 });
 		}
 
 		const contextId =
 			typeof body.contextId === "string" ? body.contextId.trim() : "";
 		if (!contextId) {
-			return NextResponse.json(
-				{ error: "Missing contextId" },
-				{ status: 400 },
-			);
+			return NextResponse.json({ error: "Missing contextId" }, { status: 400 });
 		}
 
 		let contextType: PhotoContextType | null = null;
-		if (typeof body.contextType === "string" && isContextType(body.contextType)) {
+		if (
+			typeof body.contextType === "string" &&
+			isContextType(body.contextType)
+		) {
 			contextType = body.contextType;
 		} else if (typeof body.folder === "string" && isUploadFolder(body.folder)) {
 			contextType = contextTypeForFolder(body.folder);

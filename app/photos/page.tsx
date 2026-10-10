@@ -1,17 +1,15 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { motion } from "motion/react";
 import { PhotoJustifiedGallery } from "@/components/photos/PhotoJustifiedGallery";
-import {
-	buildPhotoViewerItem,
-} from "@/components/photos/buildPhotoViewerItem";
+import { buildPhotoViewerItem } from "@/components/photos/buildPhotoViewerItem";
 import type { ResolvedPhotoAsset } from "@/lib/photo-assets-db";
 import {
 	TRANSITION_SECTION,
 	VARIANTS_CONTAINER,
 	VARIANTS_SECTION,
 } from "@/lib/utils";
+import { motion } from "motion/react";
+import { useEffect, useMemo, useState } from "react";
 
 interface PublicPhoto {
 	id: string;

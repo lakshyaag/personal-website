@@ -1,8 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useTheme } from "next-themes";
 import { assetUrl } from "@/lib/assets";
+import { useTheme } from "next-themes";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 // ─────────────────────────────────────────────────────────────
 // Types
@@ -186,7 +186,8 @@ function buildThemedLayout(
 	layout = applyAxisThemeOverrides(layout, overrides);
 	layout = patchAnnotationTheme(layout, annotationTheme);
 
-	delete layout.width;
+	const { width: _fixedWidth, ...responsive } = layout;
+	layout = responsive;
 	layout.autosize = true;
 	layout.transition = { duration: 300, easing: "cubic-in-out" };
 	layout.paper_bgcolor = "rgba(0,0,0,0)";
@@ -447,6 +448,7 @@ export function PlotlyChart({
 				<div className="flex items-center justify-center" style={{ minHeight }}>
 					<div className="flex items-center gap-2 text-sm text-zinc-400 dark:text-zinc-500">
 						<svg
+							aria-hidden="true"
 							className="h-4 w-4 animate-spin"
 							xmlns="http://www.w3.org/2000/svg"
 							fill="none"

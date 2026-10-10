@@ -1,8 +1,8 @@
 "use client";
 
 import { formatDate } from "@/lib/date-utils";
-import { EntryCardList } from "./EntryCard";
 import { EmptyState } from "./EmptyState";
+import { EntryCardList } from "./EntryCard";
 
 interface GroupedEntriesListProps<T> {
 	groupedEntries: Record<string, T[]>;
@@ -42,4 +42,3 @@ export function GroupedEntriesList<T>({
 		</div>
 	);
 }
-

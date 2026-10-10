@@ -3,8 +3,8 @@
  * Creates consistent GET, POST, DELETE handlers for CRUD operations
  */
 
-import pluralize from "pluralize";
 import { NextResponse } from "next/server";
+import pluralize from "pluralize";
 
 interface DbOperations<T> {
 	getAll: () => Promise<T[]>;
@@ -151,4 +151,3 @@ export function createCrudHandlers<T>(
 function capitalize(str: string): string {
 	return str.charAt(0).toUpperCase() + str.slice(1);
 }
-

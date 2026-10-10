@@ -1,7 +1,7 @@
-import { NextResponse } from "next/server";
-import { getBooks, saveBook, deleteBook } from "@/lib/books-db";
-import type { BookEntry } from "@/lib/models";
 import { randomUUID } from "node:crypto";
+import { deleteBook, getBooks, saveBook } from "@/lib/books-db";
+import type { BookEntry } from "@/lib/models";
+import { NextResponse } from "next/server";
 
 export async function GET() {
 	try {
@@ -41,10 +41,7 @@ export async function POST(req: Request) {
 		return NextResponse.json({ ok: true, id });
 	} catch (error) {
 		console.error("Error in POST /api/books:", error);
-		return NextResponse.json(
-			{ error: "Failed to save book" },
-			{ status: 500 },
-		);
+		return NextResponse.json({ error: "Failed to save book" }, { status: 500 });
 	}
 }
 
@@ -54,10 +51,7 @@ export async function DELETE(req: Request) {
 		const id = searchParams.get("id");
 
 		if (!id) {
-			return NextResponse.json(
-				{ error: "Missing book id" },
-				{ status: 400 },
-			);
+			return NextResponse.json({ error: "Missing book id" }, { status: 400 });
 		}
 
 		await deleteBook(id);

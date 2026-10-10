@@ -1,6 +1,6 @@
+import { createMiddlewareSupabaseClient } from "@/lib/supabase-server";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { createMiddlewareSupabaseClient } from "@/lib/supabase-server";
 
 // Routes that don't require authentication even for POST/PUT/DELETE
 const PUBLIC_API_PREFIXES = ["/api/webhooks/"];

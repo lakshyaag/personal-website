@@ -3,8 +3,8 @@
  * Provides access to the airports reference table
  */
 
-import { supabaseAdmin } from "./supabase-client";
 import type { Airport } from "./models";
+import { supabaseAdmin } from "./supabase-client";
 
 /**
  * Get all airports
@@ -26,7 +26,9 @@ export async function getAirports(): Promise<Airport[]> {
 /**
  * Get airport by identifier (e.g., "KJFK")
  */
-export async function getAirportByIdent(ident: string): Promise<Airport | null> {
+export async function getAirportByIdent(
+	ident: string,
+): Promise<Airport | null> {
 	const { data, error } = await supabaseAdmin
 		.from("airports")
 		.select("*")
@@ -47,7 +49,9 @@ export async function getAirportByIdent(ident: string): Promise<Airport | null> 
 /**
  * Get airport by IATA code (e.g., "JFK")
  */
-export async function getAirportByIata(iataCode: string): Promise<Airport | null> {
+export async function getAirportByIata(
+	iataCode: string,
+): Promise<Airport | null> {
 	const { data, error } = await supabaseAdmin
 		.from("airports")
 		.select("*")
@@ -75,7 +79,7 @@ export async function searchAirports(query: string): Promise<Airport[]> {
 		.from("airports")
 		.select("*")
 		.or(
-			`name.ilike.%${query}%,iata_code.ilike.%${upperQuery}%,ident.ilike.%${upperQuery}%`
+			`name.ilike.%${query}%,iata_code.ilike.%${upperQuery}%,ident.ilike.%${upperQuery}%`,
 		)
 		.order("name", { ascending: true })
 		.limit(50);

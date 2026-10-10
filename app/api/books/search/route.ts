@@ -1,5 +1,5 @@
-import { NextResponse } from "next/server";
 import { GoogleBooksError, searchGoogleBooks } from "@/lib/google-books";
+import { NextResponse } from "next/server";
 
 export async function GET(req: Request) {
 	try {
@@ -19,7 +19,10 @@ export async function GET(req: Request) {
 		return NextResponse.json(data);
 	} catch (error) {
 		if (error instanceof GoogleBooksError) {
-			return NextResponse.json({ error: error.message }, { status: error.status });
+			return NextResponse.json(
+				{ error: error.message },
+				{ status: error.status },
+			);
 		}
 
 		console.error("Error in GET /api/books/search:", error);

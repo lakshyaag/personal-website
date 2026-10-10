@@ -4,21 +4,21 @@
 
 import { createDbOperations } from "./base-db";
 import {
-    type FoodEntry,
-    type FoodEntryDbRow,
-    transformFoodEntryFromDb,
-    transformFoodEntryToDb,
+	type FoodEntry,
+	type FoodEntryDbRow,
+	transformFoodEntryFromDb,
+	transformFoodEntryToDb,
 } from "./models";
 
 const foodOps = createDbOperations<FoodEntry, FoodEntryDbRow>({
-    table: "food_entries",
-    dateColumn: "entry_date",
-    orderBy: [
-        { column: "entry_date", ascending: false },
-        { column: "created_at", ascending: false },
-    ],
-    transformFromDb: transformFoodEntryFromDb,
-    transformToDb: transformFoodEntryToDb,
+	table: "food_entries",
+	dateColumn: "entry_date",
+	orderBy: [
+		{ column: "entry_date", ascending: false },
+		{ column: "created_at", ascending: false },
+	],
+	transformFromDb: transformFoodEntryFromDb,
+	transformToDb: transformFoodEntryToDb,
 });
 
 // Export with original function names for backwards compatibility

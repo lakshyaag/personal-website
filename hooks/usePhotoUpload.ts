@@ -1,13 +1,13 @@
 "use client";
 
+import type { UploadFolder } from "@/lib/photos";
+import { createClient } from "@/lib/supabase-client";
 import {
 	type Dispatch,
 	type SetStateAction,
 	useCallback,
 	useState,
 } from "react";
-import type { UploadFolder } from "@/lib/photos";
-import { createClient } from "@/lib/supabase-client";
 
 export interface UsePhotoUploadOptions {
 	folder: UploadFolder;
@@ -56,9 +56,7 @@ async function parseApiResponse<T>(response: Response): Promise<T> {
 	return payload as T;
 }
 
-function usePhotoUpload(
-	options: UsePhotoUploadOptions,
-): UsePhotoUploadReturn {
+function usePhotoUpload(options: UsePhotoUploadOptions): UsePhotoUploadReturn {
 	const { folder, identifier, onSuccess } = options;
 	const [photos, setPhotos] = useState<string[]>([]);
 	const [uploading, setUploading] = useState(false);

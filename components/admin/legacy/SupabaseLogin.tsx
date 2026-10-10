@@ -1,15 +1,15 @@
 "use client";
 
-import { Suspense, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
-import { motion } from "motion/react";
 import { createClient } from "@/lib/supabase-client";
-import { toast } from "sonner";
 import {
+	TRANSITION_SECTION,
 	VARIANTS_CONTAINER,
 	VARIANTS_SECTION,
-	TRANSITION_SECTION,
 } from "@/lib/utils";
+import { motion } from "motion/react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useState } from "react";
+import { toast } from "sonner";
 
 function LoginForm() {
 	const [email, setEmail] = useState("");
@@ -128,11 +128,13 @@ function LoginForm() {
 
 export default function AdminLogin() {
 	return (
-		<Suspense fallback={
-			<div className="flex min-h-[calc(100vh-12rem)] items-center justify-center">
-				<p className="text-zinc-600 dark:text-zinc-400">Loading...</p>
-			</div>
-		}>
+		<Suspense
+			fallback={
+				<div className="flex min-h-[calc(100vh-12rem)] items-center justify-center">
+					<p className="text-zinc-600 dark:text-zinc-400">Loading...</p>
+				</div>
+			}
+		>
 			<LoginForm />
 		</Suspense>
 	);

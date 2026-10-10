@@ -1,8 +1,8 @@
 "use client";
 
-import { useMemo } from "react";
-import { Sparkles, X, Check, RefreshCw, Loader2 } from "lucide-react";
 import type { FoodEntry } from "@/lib/models";
+import { Check, Loader2, RefreshCw, Sparkles, X } from "lucide-react";
+import { useMemo } from "react";
 
 export interface FoodAnalysisResult {
 	foodName: string;

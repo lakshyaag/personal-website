@@ -1,7 +1,7 @@
 "use client";
 
-import { usePhotoUrl } from "@/hooks/usePhotoUrl";
 import { ResolvedPhotoLightboxGrid } from "@/components/photos/ResolvedPhotoLightboxGrid";
+import { usePhotoUrl } from "@/hooks/usePhotoUrl";
 
 interface PhotoDisplayProps {
 	/** Photo reference (HTTP URL or sb:// ref) */
@@ -38,7 +38,9 @@ export function PhotoThumbnail({
 	};
 
 	return (
-		<div className={`relative aspect-square overflow-hidden rounded ${className}`.trim()}>
+		<div
+			className={`relative aspect-square overflow-hidden rounded ${className}`.trim()}
+		>
 			{displayUrl ? (
 				<>
 					{onClick ? (

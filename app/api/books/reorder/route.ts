@@ -1,15 +1,12 @@
-import { NextResponse } from "next/server";
 import { setCurrentBook } from "@/lib/books-db";
+import { NextResponse } from "next/server";
 
 export async function POST(req: Request) {
 	try {
 		const { bookId } = (await req.json()) as { bookId: string };
 
 		if (!bookId) {
-			return NextResponse.json(
-				{ error: "Missing book id" },
-				{ status: 400 },
-			);
+			return NextResponse.json({ error: "Missing book id" }, { status: 400 });
 		}
 
 		await setCurrentBook(bookId);

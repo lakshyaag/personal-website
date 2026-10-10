@@ -1,6 +1,6 @@
 "use client";
-import { ScrollProgress } from "@/components/ui/scroll-progress";
 import { TableOfContents } from "@/components/TableOfContents";
+import { ScrollProgress } from "@/components/ui/scroll-progress";
 import { BLOG_POSTS } from "@/lib/data/blogs";
 import { formatDate } from "@/lib/date-utils";
 import "katex/dist/katex.min.css";

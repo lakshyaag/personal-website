@@ -238,4 +238,3 @@ export function CheckboxInput({
 		</label>
 	);
 }
-

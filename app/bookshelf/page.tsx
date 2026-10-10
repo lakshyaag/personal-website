@@ -1,17 +1,17 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import type { BookEntry } from "@/lib/models";
-import { motion, AnimatePresence } from "motion/react";
-import { BookOpen, X } from "lucide-react";
-import {
-	VARIANTS_CONTAINER,
-	VARIANTS_SECTION,
-	TRANSITION_SECTION,
-} from "@/lib/utils";
-import Image from "next/image";
 import { RecommendationForm } from "@/components/recommendation-form";
 import { RecommendationList } from "@/components/recommendation-list";
+import type { BookEntry } from "@/lib/models";
+import {
+	TRANSITION_SECTION,
+	VARIANTS_CONTAINER,
+	VARIANTS_SECTION,
+} from "@/lib/utils";
+import { BookOpen, X } from "lucide-react";
+import { AnimatePresence, motion } from "motion/react";
+import Image from "next/image";
+import { useEffect, useState } from "react";
 
 type FilterStatus = "all" | "reading" | "completed" | "want-to-read";
 
@@ -98,6 +98,7 @@ export default function BookshelfPage() {
 							{ key: "want-to-read" as FilterStatus, label: "Want to Read" },
 						].map(({ key, label }) => (
 							<button
+								type="button"
 								key={key}
 								onClick={() => setFilter(key)}
 								className={`px-3 py-1.5 rounded-md font-medium transition-colors ${
@@ -237,6 +238,7 @@ export default function BookshelfPage() {
 							<div className="p-4 sm:p-6 space-y-6">
 								{/* Close Button */}
 								<button
+									type="button"
 									onClick={() => setSelectedBook(null)}
 									className="absolute top-4 right-4 p-2 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
 								>

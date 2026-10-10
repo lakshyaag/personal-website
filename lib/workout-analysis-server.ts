@@ -16,7 +16,11 @@ const flexibleNumberSchema = z
 		// For ranges like "8-10", use the average
 		if (val.includes("-")) {
 			const parts = val.split("-").map((p) => Number.parseFloat(p.trim()));
-			if (parts.length === 2 && !Number.isNaN(parts[0]) && !Number.isNaN(parts[1])) {
+			if (
+				parts.length === 2 &&
+				!Number.isNaN(parts[0]) &&
+				!Number.isNaN(parts[1])
+			) {
 				return Math.round((parts[0] + parts[1]) / 2);
 			}
 		}
@@ -54,8 +58,9 @@ const flexibleDurationSchema = z
 
 const exerciseSetSchema = z.object({
 	weight: flexibleWeightSchema,
-	reps: flexibleNumberSchema
-		.describe("Number of reps, null for cardio/timed exercises"),
+	reps: flexibleNumberSchema.describe(
+		"Number of reps, null for cardio/timed exercises",
+	),
 });
 
 const exerciseSchema = z.object({

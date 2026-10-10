@@ -11,6 +11,9 @@ import {
 	EntryCardActionButton,
 	EntryCardList,
 } from "@/components/admin/EntryCard";
+import { ExerciseHistoryCard } from "@/components/admin/ExerciseHistoryCard";
+import { ExerciseHistoryModal } from "@/components/admin/ExerciseHistoryModal";
+import { ExerciseSearch } from "@/components/admin/ExerciseSearch";
 import { FormActions } from "@/components/admin/FormActions";
 import { NumberInput, TextArea } from "@/components/admin/FormInputs";
 import { GroupedEntriesList } from "@/components/admin/GroupedEntriesList";
@@ -20,9 +23,6 @@ import {
 	type ViewMode,
 	ViewModeToggle,
 } from "@/components/admin/ViewModeToggle";
-import { ExerciseHistoryCard } from "@/components/admin/ExerciseHistoryCard";
-import { ExerciseHistoryModal } from "@/components/admin/ExerciseHistoryModal";
-import { ExerciseSearch } from "@/components/admin/ExerciseSearch";
 import {
 	WorkoutAnalysisModal,
 	type WorkoutAnalysisResult,

@@ -1,15 +1,15 @@
 import {
 	MorphingDialog,
-	MorphingDialogTrigger,
-	MorphingDialogContent,
 	MorphingDialogClose,
 	MorphingDialogContainer,
+	MorphingDialogContent,
+	MorphingDialogTrigger,
 } from "@/components/ui/morphing-dialog";
+import { assetUrl } from "@/lib/assets";
 import { ExternalLink, XIcon } from "lucide-react";
-import MagneticSocialLink from "./MagneticSocialLink";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { assetUrl } from "@/lib/assets";
+import MagneticSocialLink from "./MagneticSocialLink";
 
 type ProjectImageProps = {
 	src?: string;

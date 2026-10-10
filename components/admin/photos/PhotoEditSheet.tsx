@@ -1,21 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { toast } from "sonner";
-import type { PhotoVisibility } from "@/lib/photos";
-import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import {
-	Sheet,
-	SheetContent,
-	SheetDescription,
-	SheetFooter,
-	SheetHeader,
-	SheetTitle,
-} from "@/components/ui/sheet";
+import { PhotoLightbox } from "@/components/photos/PhotoLightbox";
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -26,7 +11,22 @@ import {
 	AlertDialogHeader,
 	AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { PhotoLightbox } from "@/components/photos/PhotoLightbox";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+	Sheet,
+	SheetContent,
+	SheetDescription,
+	SheetFooter,
+	SheetHeader,
+	SheetTitle,
+} from "@/components/ui/sheet";
+import { Textarea } from "@/components/ui/textarea";
+import type { PhotoVisibility } from "@/lib/photos";
+import { useEffect, useMemo, useState } from "react";
+import { toast } from "sonner";
 import { PhotoThumbnailCell } from "./PhotoThumbnailCell";
 import {
 	type AdminPhotoItem,
@@ -245,8 +245,7 @@ export function PhotoEditSheet({
 											current
 												? {
 														...current,
-														visibility: event.target
-															.value as PhotoVisibility,
+														visibility: event.target.value as PhotoVisibility,
 													}
 												: current,
 										)
@@ -297,7 +296,10 @@ export function PhotoEditSheet({
 						<Button variant="outline" onClick={requestClose} disabled={saving}>
 							Cancel
 						</Button>
-						<Button onClick={() => void handleSave()} disabled={!dirty || saving}>
+						<Button
+							onClick={() => void handleSave()}
+							disabled={!dirty || saving}
+						>
 							{saving ? "Saving..." : "Save"}
 						</Button>
 					</SheetFooter>

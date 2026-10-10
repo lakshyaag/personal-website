@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useMemo } from "react";
-import { motion, AnimatePresence } from "motion/react";
-import type { Visit, Airport } from "@/lib/models";
-import { ChevronDown, Plane, Mountain, MapPin } from "lucide-react";
 import { ResolvedPhotoLightboxGrid } from "@/components/photos/ResolvedPhotoLightboxGrid";
+import type { Airport, Visit } from "@/lib/models";
+import { ChevronDown, MapPin, Mountain, Plane } from "lucide-react";
+import { AnimatePresence, motion } from "motion/react";
+import { useMemo, useState } from "react";
 
 interface AirportListProps {
 	visits: Visit[];
@@ -311,21 +311,23 @@ export default function AirportList({
 									{/* Last visit info when not expanded */}
 									{!isExpanded && (
 										<>
-											{lastVisit.flightNumbers && lastVisit.flightNumbers.length > 0 && (
-												<div className="flex items-center gap-2 text-sm">
-													<Plane className="h-4 w-4 text-zinc-500" />
-													<span className="font-medium text-zinc-700 dark:text-zinc-300">
-														{lastVisit.isLayover && lastVisit.flightNumbers.length > 1
-															? `${lastVisit.flightNumbers[0]} → ${lastVisit.flightNumbers[1]}`
-															: lastVisit.flightNumbers.join(", ")}
-													</span>
-													{lastVisit.isLayover && (
-														<span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">
-															Layover
+											{lastVisit.flightNumbers &&
+												lastVisit.flightNumbers.length > 0 && (
+													<div className="flex items-center gap-2 text-sm">
+														<Plane className="h-4 w-4 text-zinc-500" />
+														<span className="font-medium text-zinc-700 dark:text-zinc-300">
+															{lastVisit.isLayover &&
+															lastVisit.flightNumbers.length > 1
+																? `${lastVisit.flightNumbers[0]} → ${lastVisit.flightNumbers[1]}`
+																: lastVisit.flightNumbers.join(", ")}
 														</span>
-													)}
-												</div>
-											)}
+														{lastVisit.isLayover && (
+															<span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">
+																Layover
+															</span>
+														)}
+													</div>
+												)}
 											{lastVisit.notes && (
 												<p className="text-sm italic text-zinc-600 dark:text-zinc-400">
 													{lastVisit.notes}
@@ -368,7 +370,9 @@ export default function AirportList({
 										<button
 											type="button"
 											onClick={() => toggleAirport(airport.ident)}
-											aria-label={isExpanded ? "Collapse visits" : "Expand visits"}
+											aria-label={
+												isExpanded ? "Collapse visits" : "Expand visits"
+											}
 											className="mt-2 flex items-center justify-center rounded-md transition-colors hover:bg-zinc-100 focus:outline-none focus:ring-2 focus:ring-zinc-500/20 dark:hover:bg-zinc-800"
 											style={{ width: 28, height: 28 }}
 										>
@@ -408,21 +412,23 @@ export default function AirportList({
 															<span className="font-medium text-zinc-900 dark:text-zinc-100">
 																{formatDate(visit.date)}
 															</span>
-															{visit.flightNumbers && visit.flightNumbers.length > 0 && (
-																<div className="flex items-center gap-1.5 text-sm text-zinc-600 dark:text-zinc-400">
-																	<Plane className="h-3.5 w-3.5" />
-																	<span>
-																		{visit.isLayover && visit.flightNumbers.length > 1
-																			? `${visit.flightNumbers[0]} → ${visit.flightNumbers[1]}`
-																			: visit.flightNumbers.join(", ")}
-																	</span>
-																	{visit.isLayover && (
-																		<span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">
-																			Layover
+															{visit.flightNumbers &&
+																visit.flightNumbers.length > 0 && (
+																	<div className="flex items-center gap-1.5 text-sm text-zinc-600 dark:text-zinc-400">
+																		<Plane className="h-3.5 w-3.5" />
+																		<span>
+																			{visit.isLayover &&
+																			visit.flightNumbers.length > 1
+																				? `${visit.flightNumbers[0]} → ${visit.flightNumbers[1]}`
+																				: visit.flightNumbers.join(", ")}
 																		</span>
-																	)}
-																</div>
-															)}
+																		{visit.isLayover && (
+																			<span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">
+																				Layover
+																			</span>
+																		)}
+																	</div>
+																)}
 														</div>
 														{visit.notes && (
 															<p className="text-sm italic text-zinc-600 dark:text-zinc-400">

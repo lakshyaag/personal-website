@@ -1,7 +1,7 @@
 "use client";
 
 import pluralize from "pluralize";
-import { useState, useCallback, useMemo } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { toast } from "sonner";
 
 interface UseAdminCrudOptions<T> {
@@ -221,4 +221,3 @@ export function useAdminCrud<T extends { id?: string }>({
 function capitalize(str: string): string {
 	return str.charAt(0).toUpperCase() + str.slice(1);
 }
-

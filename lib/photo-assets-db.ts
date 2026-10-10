@@ -1,10 +1,10 @@
-import { supabaseAdmin } from "./supabase-client";
 import { encodeSupabaseRef, parseSupabaseRef } from "./photo-refs";
 import {
-	sanitizeIdentifier,
 	type PhotoContextType,
 	type PhotoVisibility,
+	sanitizeIdentifier,
 } from "./photos";
+import { supabaseAdmin } from "./supabase-client";
 
 interface PhotoAssetRow {
 	id: string;
@@ -111,7 +111,9 @@ export async function listPhotoAssets(options?: {
 		.select("photo_id,kind,bucket,path,width,height")
 		.in("photo_id", ids);
 	if (derivativeError) {
-		throw new Error(`Failed to fetch photo derivatives: ${derivativeError.message}`);
+		throw new Error(
+			`Failed to fetch photo derivatives: ${derivativeError.message}`,
+		);
 	}
 
 	const derivatives = (derivativeRows ?? []) as PhotoDerivativeRow[];
@@ -127,7 +129,9 @@ export async function listPhotoAssets(options?: {
 		.select("photo_id,context_type,context_id,sort_order,created_at")
 		.in("photo_id", ids);
 	if (attachmentError) {
-		throw new Error(`Failed to fetch photo attachments: ${attachmentError.message}`);
+		throw new Error(
+			`Failed to fetch photo attachments: ${attachmentError.message}`,
+		);
 	}
 
 	const attachments = (attachmentRows ?? []) as PhotoAttachmentRow[];
@@ -141,7 +145,8 @@ export async function listPhotoAssets(options?: {
 		const shouldReplace =
 			row.sort_order < current.sort_order ||
 			(row.sort_order === current.sort_order &&
-				new Date(row.created_at).getTime() < new Date(current.created_at).getTime());
+				new Date(row.created_at).getTime() <
+					new Date(current.created_at).getTime());
 		if (shouldReplace) {
 			primaryAttachmentByPhotoId.set(row.photo_id, row);
 		}
@@ -178,7 +183,9 @@ export async function listPhotoAssets(options?: {
 				gpsAltitude: admin ? asset.gps_altitude : null,
 				gpsPublic: admin ? asset.gps_public : false,
 				displayRef: encodeSupabaseRef(display.bucket, display.path),
-				thumbnailRef: thumb ? encodeSupabaseRef(thumb.bucket, thumb.path) : null,
+				thumbnailRef: thumb
+					? encodeSupabaseRef(thumb.bucket, thumb.path)
+					: null,
 				contextType: primaryAttachment?.context_type ?? null,
 				contextId: primaryAttachment?.context_id ?? null,
 			};
@@ -199,10 +206,7 @@ export async function resolvePhotoAssetsByDisplayRefs(
 	const result = new Map<string, ResolvedPhotoAsset>();
 	if (uniqueRefs.length === 0) return result;
 
-	const parsedByRef = new Map<
-		string,
-		{ bucket: string; path: string }
-	>();
+	const parsedByRef = new Map<string, { bucket: string; path: string }>();
 	for (const ref of uniqueRefs) {
 		const parsed = parseSupabaseRef(ref);
 		if (parsed) parsedByRef.set(ref, parsed);
@@ -285,9 +289,7 @@ export async function resolvePhotoAssetsByDisplayRefs(
 			id: asset.id,
 			visibility: asset.visibility,
 			displayRef: encodeSupabaseRef(display.bucket, display.path),
-			thumbnailRef: thumb
-				? encodeSupabaseRef(thumb.bucket, thumb.path)
-				: null,
+			thumbnailRef: thumb ? encodeSupabaseRef(thumb.bucket, thumb.path) : null,
 			createdAt: asset.created_at,
 			takenAt: asset.taken_at,
 			width: asset.width,
@@ -459,7 +461,9 @@ async function removeRefsFromTable(table: string, refsToDelete: Set<string>) {
 		.select("id,photos")
 		.not("photos", "is", null);
 	if (error) {
-		throw new Error(`Failed to read ${table} for photo cleanup: ${error.message}`);
+		throw new Error(
+			`Failed to read ${table} for photo cleanup: ${error.message}`,
+		);
 	}
 
 	const rows = (data ?? []) as ContentRowWithPhotos[];
@@ -480,7 +484,9 @@ async function removeRefsFromTable(table: string, refsToDelete: Set<string>) {
 	}
 }
 
-async function removeStorageObjects(objects: Array<{ bucket: string; path: string }>) {
+async function removeStorageObjects(
+	objects: Array<{ bucket: string; path: string }>,
+) {
 	const grouped = new Map<string, string[]>();
 	for (const obj of objects) {
 		if (!obj.bucket || !obj.path) continue;
@@ -505,7 +511,9 @@ export async function deletePhotoAssetById(id: string) {
 		.eq("id", id)
 		.single();
 	if (assetError || !assetRow) {
-		throw new Error(`Failed to load photo asset for deletion: ${assetError?.message}`);
+		throw new Error(
+			`Failed to load photo asset for deletion: ${assetError?.message}`,
+		);
 	}
 
 	const { data: derivatives, error: derivativeError } = await supabaseAdmin

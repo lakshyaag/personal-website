@@ -1,17 +1,17 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
-import { motion } from "motion/react";
-import dynamic from "next/dynamic";
 import airports from "@/data/airports.min.json";
-import type { Visit, Airport } from "@/lib/models";
+import type { Airport, Visit } from "@/lib/models";
 import {
+	TRANSITION_SECTION,
 	VARIANTS_CONTAINER,
 	VARIANTS_SECTION,
-	TRANSITION_SECTION,
 } from "@/lib/utils";
-import AirportList from "./airport-list";
 import { ChevronDown, ChevronUp } from "lucide-react";
+import { motion } from "motion/react";
+import dynamic from "next/dynamic";
+import { useEffect, useMemo, useState } from "react";
+import AirportList from "./airport-list";
 
 const MapContainerComponent = dynamic(() => import("./map"), {
 	ssr: false,

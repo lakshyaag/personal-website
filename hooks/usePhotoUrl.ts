@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { isHttpUrl, isSupabaseRef, parseSupabaseRef } from "@/lib/photo-refs";
 import { createClient } from "@/lib/supabase-client";
-import { parseSupabaseRef, isHttpUrl, isSupabaseRef } from "@/lib/photo-refs";
+import { useEffect, useMemo, useState } from "react";
 
 // Cache for signed URLs to avoid repeated API calls
 // Key: sb:// ref, Value: { url: signedUrl, expiresAt: timestamp }
@@ -172,7 +172,10 @@ export function usePhotoUrls(refs: string[]): Map<string, string> {
 		// Parse refs from the stable key
 		const currentRefs = refsKey ? refsKey.split("|") : [];
 
-		if (currentRefs.length === 0 || (currentRefs.length === 1 && currentRefs[0] === "")) {
+		if (
+			currentRefs.length === 0 ||
+			(currentRefs.length === 1 && currentRefs[0] === "")
+		) {
 			setUrlMap(new Map());
 			return;
 		}

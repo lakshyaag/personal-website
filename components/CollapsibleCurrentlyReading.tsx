@@ -1,11 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { motion } from "motion/react";
-import type { BookEntry } from "@/lib/models";
-import BookCard from "./BookCard";
-import Link from "next/link";
 import { SvgArrowRight } from "@/components/ui/svg-arrow-right";
+import type { BookEntry } from "@/lib/models";
+import { motion } from "motion/react";
+import Link from "next/link";
+import { useEffect, useState } from "react";
+import BookCard from "./BookCard";
 
 export default function CollapsibleCurrentlyReading() {
 	const [book, setBook] = useState<BookEntry | null>(null);
@@ -57,6 +57,7 @@ export default function CollapsibleCurrentlyReading() {
 				className="overflow-hidden rounded-lg border border-zinc-300 bg-white dark:border-zinc-700 dark:bg-zinc-900/50"
 			>
 				<button
+					type="button"
 					onClick={() => setIsOpen(!isOpen)}
 					className="w-full text-left p-4 transition-colors hover:bg-zinc-50 dark:hover:bg-zinc-900"
 				>
@@ -73,6 +74,7 @@ export default function CollapsibleCurrentlyReading() {
 							</p>
 						</div>
 						<motion.svg
+							aria-hidden="true"
 							animate={{ rotate: isOpen ? 180 : 0 }}
 							transition={{ duration: 0.2 }}
 							className="flex-shrink-0 w-4 h-4 text-zinc-600 dark:text-zinc-400"

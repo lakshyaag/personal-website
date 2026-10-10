@@ -1,6 +1,6 @@
-import type { ReactNode } from "react";
-import type { ResolvedPhotoAsset } from "@/lib/photo-assets-db";
 import type { PhotoViewerItem } from "@/components/photos/PhotoLightbox";
+import type { ResolvedPhotoAsset } from "@/lib/photo-assets-db";
+import type { ReactNode } from "react";
 
 export function formatPhotoDate(
 	value: string | null | undefined,
@@ -55,13 +55,7 @@ export function buildPhotoViewerItem(options: {
 	fallbackAlt?: string;
 	fallbackCaption?: ReactNode;
 }): PhotoViewerItem {
-	const {
-		ref,
-		photo,
-		index = 0,
-		fallbackAlt,
-		fallbackCaption,
-	} = options;
+	const { ref, photo, index = 0, fallbackAlt, fallbackCaption } = options;
 
 	if (!photo) {
 		return {

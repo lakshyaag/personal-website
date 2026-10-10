@@ -1,13 +1,13 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import { Header } from "./header";
-import { Footer } from "./footer";
-import { ThemeProvider } from "next-themes";
-import { SpeedInsights } from "@vercel/speed-insights/next";
 import { Analytics } from "@vercel/analytics/react";
+import { SpeedInsights } from "@vercel/speed-insights/next";
+import { ThemeProvider } from "next-themes";
 import Script from "next/script";
 import { Toaster } from "sonner";
+import { Footer } from "./footer";
+import { Header } from "./header";
 
 export const viewport: Viewport = {
 	width: "device-width",

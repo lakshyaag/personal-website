@@ -43,4 +43,3 @@ export function ViewModeToggle({
 }
 
 export type { ViewMode };
-

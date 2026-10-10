@@ -1,37 +1,37 @@
 "use client";
 
-import { useState, useCallback, useMemo, useRef, Suspense } from "react";
-import PhotoUploader from "@/components/admin/PhotoUploader";
-import { DateTimeInput } from "@/components/admin/DateTimeInputs";
-import { TextArea } from "@/components/admin/FormInputs";
-import { FormActions } from "@/components/admin/FormActions";
-import {
-	EntryCard,
-	EntryCardList,
-	EntryCardActionButton,
-} from "@/components/admin/EntryCard";
-import { PageHeader, SectionHeader } from "@/components/admin/PageHeader";
-import { EmptyState } from "@/components/admin/EmptyState";
 import {
 	AdminPageWrapper,
 	AdminSection,
 } from "@/components/admin/AdminPageWrapper";
-import { useRouter, useSearchParams } from "next/navigation";
-import type { FoodEntry } from "@/lib/models";
-import { toast } from "sonner";
+import { DateTimeInput } from "@/components/admin/DateTimeInputs";
+import { EmptyState } from "@/components/admin/EmptyState";
+import {
+	EntryCard,
+	EntryCardActionButton,
+	EntryCardList,
+} from "@/components/admin/EntryCard";
+import {
+	FoodAnalysisModal,
+	type FoodAnalysisResult,
+} from "@/components/admin/FoodAnalysisModal";
+import { FoodDashboard } from "@/components/admin/FoodDashboard";
+import { FormActions } from "@/components/admin/FormActions";
+import { TextArea } from "@/components/admin/FormInputs";
+import { PageHeader, SectionHeader } from "@/components/admin/PageHeader";
+import PhotoUploader from "@/components/admin/PhotoUploader";
+import { useAdminCrud } from "@/hooks/useAdminCrud";
 import {
 	formatDate,
 	formatTime,
 	getCurrentTime,
 	getTodayDate,
 } from "@/lib/date-utils";
-import { useAdminCrud } from "@/hooks/useAdminCrud";
+import type { FoodEntry } from "@/lib/models";
 import { Sparkles } from "lucide-react";
-import {
-	FoodAnalysisModal,
-	type FoodAnalysisResult,
-} from "@/components/admin/FoodAnalysisModal";
-import { FoodDashboard } from "@/components/admin/FoodDashboard";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useCallback, useMemo, useRef, useState } from "react";
+import { toast } from "sonner";
 
 function AdminFoodPageContent() {
 	const router = useRouter();

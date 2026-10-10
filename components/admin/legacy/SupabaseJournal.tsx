@@ -1,24 +1,27 @@
 "use client";
 
-import { useState, useCallback, useMemo, useRef, Suspense } from "react";
-import PhotoUploader from "@/components/admin/PhotoUploader";
-import { DateInput } from "@/components/admin/DateTimeInputs";
-import { TextArea } from "@/components/admin/FormInputs";
-import { FormActions } from "@/components/admin/FormActions";
-import { EntryCard, EntryCardList } from "@/components/admin/EntryCard";
-import { PageHeader, SectionHeader } from "@/components/admin/PageHeader";
-import { EmptyState } from "@/components/admin/EmptyState";
 import {
 	AdminPageWrapper,
 	AdminSection,
 } from "@/components/admin/AdminPageWrapper";
-import { ViewModeToggle, type ViewMode } from "@/components/admin/ViewModeToggle";
+import { DateInput } from "@/components/admin/DateTimeInputs";
+import { EmptyState } from "@/components/admin/EmptyState";
+import { EntryCard, EntryCardList } from "@/components/admin/EntryCard";
+import { FormActions } from "@/components/admin/FormActions";
+import { TextArea } from "@/components/admin/FormInputs";
 import { GroupedEntriesList } from "@/components/admin/GroupedEntriesList";
-import { useRouter, useSearchParams } from "next/navigation";
-import type { JournalEntry } from "@/lib/models";
-import { toast } from "sonner";
-import { formatDate, formatTime, getTodayDate } from "@/lib/date-utils";
+import { PageHeader, SectionHeader } from "@/components/admin/PageHeader";
+import PhotoUploader from "@/components/admin/PhotoUploader";
+import {
+	type ViewMode,
+	ViewModeToggle,
+} from "@/components/admin/ViewModeToggle";
 import { useAdminCrud } from "@/hooks/useAdminCrud";
+import { formatDate, formatTime, getTodayDate } from "@/lib/date-utils";
+import type { JournalEntry } from "@/lib/models";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useCallback, useMemo, useRef, useState } from "react";
+import { toast } from "sonner";
 
 function AdminJournalPageContent() {
 	const router = useRouter();

@@ -1,13 +1,13 @@
-import { NextResponse } from "next/server";
+import { randomUUID } from "node:crypto";
+import type { Visit } from "@/lib/models";
 import {
-	getVisits,
-	saveVisit,
 	deleteVisit,
+	getVisits,
 	getVisitsByDate,
 	getVisitsGroupedByDate,
+	saveVisit,
 } from "@/lib/visits-db";
-import type { Visit } from "@/lib/models";
-import { randomUUID } from "node:crypto";
+import { NextResponse } from "next/server";
 
 export async function GET(req: Request) {
 	try {
@@ -71,10 +71,7 @@ export async function DELETE(req: Request) {
 		const id = searchParams.get("id");
 
 		if (!id) {
-			return NextResponse.json(
-				{ error: "Missing visit id" },
-				{ status: 400 },
-			);
+			return NextResponse.json({ error: "Missing visit id" }, { status: 400 });
 		}
 
 		await deleteVisit(id);

@@ -1,15 +1,15 @@
 "use client";
 
-import { useState, useEffect } from "react";
 import {
 	AdminPageWrapper,
 	AdminSection,
 } from "@/components/admin/AdminPageWrapper";
-import { PageHeader } from "@/components/admin/PageHeader";
 import { FormActions } from "@/components/admin/FormActions";
-import { toast } from "sonner";
-import { Settings, Loader2 } from "lucide-react";
+import { PageHeader } from "@/components/admin/PageHeader";
 import primeModelsJson from "@/data/prime-models-simple.json";
+import { Loader2, Settings } from "lucide-react";
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
 
 const PRIME_MODEL_IDS = (primeModelsJson as string[]).sort((a, b) =>
 	a.localeCompare(b),

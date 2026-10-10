@@ -67,4 +67,3 @@ export function isHttpUrl(str: string): boolean {
 export function isSupabaseRef(str: string): boolean {
 	return str.startsWith(SUPABASE_REF_PREFIX);
 }
-
