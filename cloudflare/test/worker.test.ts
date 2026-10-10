@@ -404,6 +404,16 @@ describe("Photo library", () => {
 			await request("/v1/photos?unused=true&limit=200")
 		).json()) as { photos: { id: string }[] };
 		expect(unused.photos.some((p) => p.id === data.id)).toBe(false);
+		// Gallery photos in no entry are still in use; plain unlinked ones are not.
+		const [gallery, loose] = [await readyPhoto(), await readyPhoto()];
+		await request(`/v1/photos/${gallery.id}`, "PATCH", { featured: true });
+		const unusedIds = (
+			(await (await request("/v1/photos?unused=true&limit=200")).json()) as {
+				photos: { id: string }[];
+			}
+		).photos.map((p) => p.id);
+		expect(unusedIds).toContain(loose.id);
+		expect(unusedIds).not.toContain(gallery.id);
 		expect((await request("/v1/photos?context=fits")).status).toBe(400);
 	});
 	it("deletes private photos dropped from an entry but keeps featured library photos", async () => {

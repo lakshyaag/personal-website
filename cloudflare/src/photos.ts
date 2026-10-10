@@ -248,9 +248,10 @@ export async function listPhotos(env: Env, url: URL) {
 		);
 		params.push(filter.context);
 	}
+	// Unused: in no entry and not in the gallery, i.e. safe to delete.
 	if (filter.unused)
 		where.push(
-			"NOT EXISTS(SELECT 1 FROM photo_links WHERE photo_id = photos.id)",
+			"featured = 0 AND NOT EXISTS(SELECT 1 FROM photo_links WHERE photo_id = photos.id)",
 		);
 	if (cursor) {
 		where.push("(created_at, id) < (?, ?)");

@@ -31,11 +31,21 @@ interface Props {
 	photos: DraftPhoto[];
 	onChange: React.Dispatch<React.SetStateAction<DraftPhoto[]>>;
 	disabled: boolean;
+	/**
+	 * The library has its own upload button (a label for `inputId`) and no per-entry limit,
+	 * so it hides this header.
+	 */
+	inputId?: string;
 }
 export function photoIsReady(item: DraftPhoto) {
 	return !item.uploading && !item.error && item.photo?.state === "ready";
 }
-export default function PhotoField({ photos, onChange, disabled }: Props) {
+export default function PhotoField({
+	photos,
+	onChange,
+	disabled,
+	inputId,
+}: Props) {
 	const uploads = useRef(new Map<string, XMLHttpRequest>());
 	const previews = useRef(new Set<string>());
 	const mounted = useRef(true);
@@ -196,27 +206,39 @@ export default function PhotoField({ photos, onChange, disabled }: Props) {
 	}
 	return (
 		<section className="space-y-2" aria-label="Photos">
-			<div className="flex items-center justify-between">
-				<h3 className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
-					Photos{" "}
-					<span className="text-zinc-500">
-						{photos.length}/{MAX_PHOTOS}
-					</span>
-				</h3>
-				<label className="flex cursor-pointer items-center gap-1.5 rounded-lg border border-zinc-300 px-3 py-2 text-sm font-medium has-disabled:opacity-50 dark:border-zinc-700">
-					<ImagePlus className="h-4 w-4" />
-					Add photos
-					<input
-						className="sr-only"
-						aria-label="Add photos"
-						type="file"
-						multiple
-						accept="image/jpeg,image/png,image/webp,image/avif"
-						disabled={disabled || photos.length >= MAX_PHOTOS}
-						onChange={select}
-					/>
-				</label>
-			</div>
+			{inputId ? (
+				<input
+					id={inputId}
+					className="sr-only"
+					type="file"
+					multiple
+					accept="image/jpeg,image/png,image/webp,image/avif"
+					disabled={disabled || photos.length >= MAX_PHOTOS}
+					onChange={select}
+				/>
+			) : (
+				<div className="flex items-center justify-between">
+					<h3 className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+						Photos{" "}
+						<span className="text-zinc-500">
+							{photos.length}/{MAX_PHOTOS}
+						</span>
+					</h3>
+					<label className="flex cursor-pointer items-center gap-1.5 rounded-lg border border-zinc-300 px-3 py-2 text-sm font-medium has-disabled:opacity-50 dark:border-zinc-700">
+						<ImagePlus className="h-4 w-4" />
+						Add photos
+						<input
+							className="sr-only"
+							aria-label="Add photos"
+							type="file"
+							multiple
+							accept="image/jpeg,image/png,image/webp,image/avif"
+							disabled={disabled || photos.length >= MAX_PHOTOS}
+							onChange={select}
+						/>
+					</label>
+				</div>
+			)}
 			{photos.length > 0 && (
 				<div className="grid grid-cols-3 gap-2">
 					{photos.map((item) => (

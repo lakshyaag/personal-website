@@ -68,7 +68,7 @@ export function Segmented<T extends string>({
 		<div
 			role="group"
 			aria-label={label}
-			className="inline-flex rounded-lg bg-zinc-100 p-1 dark:bg-zinc-900"
+			className="inline-flex max-w-full overflow-x-auto rounded-lg bg-zinc-100 p-1 dark:bg-zinc-900"
 		>
 			{options.map((option) => (
 				<button
@@ -76,7 +76,7 @@ export function Segmented<T extends string>({
 					type="button"
 					aria-pressed={value === option.value}
 					onClick={() => onChange(option.value)}
-					className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
+					className={`shrink-0 whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
 						value === option.value
 							? "bg-white shadow-sm dark:bg-zinc-700"
 							: "text-zinc-600 dark:text-zinc-400"
@@ -299,12 +299,12 @@ export function EditorSheet({
 					if (canSubmit && !saving) onSubmit();
 				}}
 			>
-				<fieldset
-					disabled={saving}
-					className="min-h-0 flex-1 space-y-4 overflow-y-auto px-4 py-4"
-				>
-					{children}
-				</fieldset>
+				{/* A fieldset can't be a reliable flex scroll container, so a div scrolls. */}
+				<div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4">
+					<fieldset disabled={saving} className="min-w-0 space-y-4">
+						{children}
+					</fieldset>
+				</div>
 				<div className="flex items-center gap-2 border-t border-zinc-200 px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] dark:border-zinc-800">
 					{onDelete && (
 						<button
@@ -404,24 +404,40 @@ export function useUndoDelete() {
 			flush();
 		};
 	}, [commit]);
-	const remove = useCallback(
-		(id: string, label: string, path: string) => {
-			setHidden((current) => new Set(current).add(id));
+	/** Hides the records at once; one toast undoes them all. */
+	const removeMany = useCallback(
+		(items: { id: string; path: string }[], label: string) => {
+			setHidden((current) => {
+				const next = new Set(current);
+				for (const item of items) next.add(item.id);
+				return next;
+			});
+			const commitAll = () => {
+				for (const item of items) void commit(item.id);
+			};
 			const toastId = toast(label, {
 				duration: 5000,
 				action: {
 					label: "Undo",
 					onClick: () => {
-						pending.current.delete(id);
-						show(id);
+						for (const item of items) {
+							pending.current.delete(item.id);
+							show(item.id);
+						}
 					},
 				},
-				onAutoClose: () => void commit(id),
-				onDismiss: () => void commit(id),
+				onAutoClose: commitAll,
+				onDismiss: commitAll,
 			});
-			pending.current.set(id, { path, toastId });
+			for (const item of items)
+				pending.current.set(item.id, { path: item.path, toastId });
 		},
 		[commit, show],
 	);
-	return { hidden, remove };
+	const remove = useCallback(
+		(id: string, label: string, path: string) =>
+			removeMany([{ id, path }], label),
+		[removeMany],
+	);
+	return { hidden, remove, removeMany };
 }
