@@ -1,35 +1,18 @@
 "use client";
 
 import { SvgArrowRight } from "@/components/ui/svg-arrow-right";
-import type { BookEntry } from "@/lib/models";
+import type { Book } from "@/shared/books";
 import { motion } from "motion/react";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import BookCard from "./BookCard";
 
-export default function CollapsibleCurrentlyReading() {
-	const [book, setBook] = useState<BookEntry | null>(null);
-	const [loading, setLoading] = useState(true);
+export default function CollapsibleCurrentlyReading({
+	book,
+}: { book: Book | null }) {
 	const [isOpen, setIsOpen] = useState(false);
 
-	useEffect(() => {
-		async function loadBook() {
-			try {
-				const res = await fetch("/api/books");
-				const books = await res.json();
-				const currentBook = books.find((b: any) => b.isCurrent) || null;
-				setBook(currentBook);
-			} catch (error) {
-				console.error("Failed to load book:", error);
-			} finally {
-				setLoading(false);
-			}
-		}
-
-		loadBook();
-	}, []);
-
-	if (loading || !book) {
+	if (!book) {
 		return null;
 	}
 

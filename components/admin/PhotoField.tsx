@@ -6,6 +6,7 @@ import {
 	type Photo,
 	type PhotoVariant,
 } from "@/shared/photos";
+import { ImagePlus, X } from "lucide-react";
 import { useEffect, useRef } from "react";
 import { adminRequest } from "./client";
 import { preparePhoto } from "./photo-variants";
@@ -194,15 +195,16 @@ export default function PhotoField({ photos, onChange, disabled }: Props) {
 		for (const item of additions) if (!item.error) void upload(item);
 	}
 	return (
-		<section className="space-y-3" aria-label="Photos">
+		<section className="space-y-2" aria-label="Photos">
 			<div className="flex items-center justify-between">
-				<h3 className="font-medium">
+				<h3 className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
 					Photos{" "}
-					<span className="text-sm text-zinc-500">
+					<span className="text-zinc-500">
 						{photos.length}/{MAX_PHOTOS}
 					</span>
 				</h3>
-				<label className="cursor-pointer rounded-lg border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700">
+				<label className="flex cursor-pointer items-center gap-1.5 rounded-lg border border-zinc-300 px-3 py-2 text-sm font-medium has-disabled:opacity-50 dark:border-zinc-700">
+					<ImagePlus className="h-4 w-4" />
 					Add photos
 					<input
 						className="sr-only"
@@ -215,48 +217,52 @@ export default function PhotoField({ photos, onChange, disabled }: Props) {
 					/>
 				</label>
 			</div>
-			<p className="text-sm text-zinc-500">
-				JPEG, PNG, WebP, or AVIF · up to 20 MB each.
-			</p>
-			<div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-				{photos.map((item) => (
-					<div
-						key={item.id}
-						data-testid="draft-photo"
-						className="overflow-hidden rounded-xl border border-zinc-200 dark:border-zinc-800"
-					>
-						{/* Private images must not go through Next.js' public image optimization cache. */}
-						{(item.photo?.state === "ready" || item.preview) && (
-							<img
-								src={
-									item.photo?.state === "ready"
-										? `/api/admin/photos/${item.id}/thumb`
-										: item.preview
-								}
-								alt={item.photo?.fileName ?? item.file?.name ?? "Photo"}
-								className="aspect-square w-full object-cover"
-							/>
-						)}
-						<div className="space-y-2 p-3">
-							<p className="truncate text-sm">
-								{item.photo?.fileName ?? item.file?.name}
-							</p>
-							<output className="block text-sm text-zinc-500">
-								{item.uploading
-									? `Uploading ${item.progress}%`
-									: item.photo?.state === "ready"
-										? "Ready"
-										: (item.photo?.state ?? "Not uploaded")}
-							</output>
-							{item.error && (
-								<p
-									role="alert"
-									className="text-sm text-red-600 dark:text-red-400"
+			{photos.length > 0 && (
+				<div className="grid grid-cols-3 gap-2">
+					{photos.map((item) => (
+						<div
+							key={item.id}
+							data-testid="draft-photo"
+							className="overflow-hidden rounded-lg border border-zinc-200 dark:border-zinc-800"
+						>
+							<div className="relative">
+								{/* Private images must not go through Next.js' public image optimization cache. */}
+								{item.photo?.state === "ready" || item.preview ? (
+									<img
+										src={
+											item.photo?.state === "ready"
+												? `/api/admin/photos/${item.id}/thumb`
+												: item.preview
+										}
+										alt={item.photo?.fileName ?? item.file?.name ?? "Photo"}
+										className="aspect-square w-full object-cover"
+									/>
+								) : (
+									<div className="aspect-square w-full bg-zinc-100 dark:bg-zinc-900" />
+								)}
+								<button
+									type="button"
+									aria-label="Remove photo"
+									disabled={disabled || item.uploading}
+									onClick={() => void remove(item)}
+									className="absolute top-1 right-1 flex h-7 w-7 items-center justify-center rounded-full bg-black/60 text-white disabled:opacity-50"
 								>
-									{item.error}
-								</p>
-							)}
-							<div className="flex gap-3 text-sm">
+									<X className="h-4 w-4" />
+								</button>
+							</div>
+							<div className="space-y-1 p-1.5 text-xs">
+								<output className="block text-zinc-500">
+									{item.uploading
+										? `Uploading ${item.progress}%`
+										: item.photo?.state === "ready"
+											? "Ready"
+											: (item.photo?.state ?? "Not uploaded")}
+								</output>
+								{item.error && (
+									<p role="alert" className="text-red-600 dark:text-red-400">
+										{item.error}
+									</p>
+								)}
 								{item.error && (
 									<button
 										type="button"
@@ -267,19 +273,11 @@ export default function PhotoField({ photos, onChange, disabled }: Props) {
 										Retry photo
 									</button>
 								)}
-								<button
-									type="button"
-									className="underline"
-									disabled={disabled || item.uploading}
-									onClick={() => void remove(item)}
-								>
-									Remove photo
-								</button>
 							</div>
 						</div>
-					</div>
-				))}
-			</div>
+					))}
+				</div>
+			)}
 		</section>
 	);
 }

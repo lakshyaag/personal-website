@@ -1,7 +1,7 @@
 "use client";
 
 import { formatDate } from "@/lib/date-utils";
-import type { WorkoutExercise } from "@/lib/models";
+import type { WorkoutExercise } from "@/shared/workouts";
 import { Clock, History, Info, X } from "lucide-react";
 
 interface ExerciseHistoryCardProps {

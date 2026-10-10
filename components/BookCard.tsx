@@ -1,6 +1,6 @@
 "use client";
 
-import type { BookEntry } from "@/lib/models";
+import type { Book as BookEntry } from "@/shared/books";
 
 interface BookCardProps {
 	book: BookEntry;

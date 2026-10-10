@@ -19,6 +19,13 @@ export function toDrafts(photos: Photo[] = []): DraftPhoto[] {
 export function photosReady(drafts: DraftPhoto[]) {
 	return drafts.every(photoIsReady);
 }
+/** Whether the draft still holds exactly the saved photos, in order. */
+export function samePhotos(drafts: DraftPhoto[], saved: Photo[] = []) {
+	return (
+		drafts.map((item) => item.id).join() ===
+		saved.map((photo) => photo.id).join()
+	);
+}
 /** Removes uploads that were never saved to an entry. Attached photos are untouched. */
 export async function discardUploads(drafts: DraftPhoto[]) {
 	await Promise.all(

@@ -6,8 +6,6 @@ import { SpeedInsights } from "@vercel/speed-insights/next";
 import { ThemeProvider } from "next-themes";
 import Script from "next/script";
 import { Toaster } from "sonner";
-import { Footer } from "./footer";
-import { Header } from "./header";
 
 export const viewport: Viewport = {
 	width: "device-width",
@@ -69,16 +67,10 @@ export default function RootLayout({
 					storageKey="theme"
 					defaultTheme="system"
 				>
-					<div className="flex min-h-screen w-screen flex-col font-sans">
-						<div className="relative mx-auto w-full max-w-screen-lg flex-1 px-4 pt-20">
-							<Header />
-							{children}
-							<Footer />
-						</div>
-					</div>
+					{children}
 					<Analytics />
 					<SpeedInsights />
-					<Toaster />
+					<Toaster position="top-center" />
 					<Script
 						data-goatcounter="https://lakshyaag.goatcounter.com/count"
 						src="https://gc.zgo.at/count.js"

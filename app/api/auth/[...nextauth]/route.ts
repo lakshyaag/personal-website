@@ -1,5 +1,5 @@
 import { handlers } from "@/auth";
-import { authConfigured, cloudflareAdmin } from "@/lib/backend/config";
+import { authConfigured } from "@/lib/backend/config";
 import type { NextRequest } from "next/server";
 
 export const runtime = "nodejs";
@@ -13,8 +13,6 @@ function unavailable() {
 	);
 }
 export const GET = (request: NextRequest) =>
-	cloudflareAdmin() && authConfigured() ? handlers.GET(request) : unavailable();
+	authConfigured() ? handlers.GET(request) : unavailable();
 export const POST = (request: NextRequest) =>
-	cloudflareAdmin() && authConfigured()
-		? handlers.POST(request)
-		: unavailable();
+	authConfigured() ? handlers.POST(request) : unavailable();

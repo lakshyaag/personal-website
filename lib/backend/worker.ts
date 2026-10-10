@@ -44,7 +44,8 @@ export async function workerRequest(
 		response = await fetch(new URL(path, url), {
 			...init,
 			headers,
-			cache: "no-store",
+			// Public reads opt into the data cache with `next`; everything else is uncached.
+			...(init.next ? {} : { cache: "no-store" as const }),
 			redirect: "error",
 			signal: init.signal ?? AbortSignal.timeout(30_000),
 			...(init.body instanceof ReadableStream ? { duplex: "half" } : {}),

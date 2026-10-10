@@ -2,8 +2,7 @@
 
 import { useId } from "react";
 
-const INPUT_CLASSES =
-	"w-full rounded-lg border border-zinc-300 bg-white px-4 py-2 text-zinc-900 focus:border-zinc-500 focus:outline-none focus:ring-2 focus:ring-zinc-500/20 disabled:opacity-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100";
+import { fieldClass as INPUT_CLASSES } from "./FormInputs";
 
 interface BaseInputProps {
 	label?: string;
@@ -41,7 +40,7 @@ export function DateInput({
 			{label && (
 				<label
 					htmlFor={inputId}
-					className="mb-2 block text-sm font-medium text-zinc-700 dark:text-zinc-300"
+					className="mb-1.5 block text-sm font-medium text-zinc-700 dark:text-zinc-300"
 				>
 					{label}
 				</label>
@@ -82,7 +81,7 @@ export function TimeInput({
 			{label && (
 				<label
 					htmlFor={inputId}
-					className="mb-2 block text-sm font-medium text-zinc-700 dark:text-zinc-300"
+					className="mb-1.5 block text-sm font-medium text-zinc-700 dark:text-zinc-300"
 				>
 					{label}
 				</label>
@@ -132,7 +131,7 @@ export function DateTimeInput({
 	timeId,
 }: DateTimeInputProps) {
 	return (
-		<div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+		<div className="grid grid-cols-2 gap-3">
 			<DateInput
 				label={dateLabel}
 				id={dateId}

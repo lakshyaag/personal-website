@@ -6,7 +6,6 @@ import {
 	type PhotoViewerItem,
 	normalizePhoto,
 } from "@/components/photos/PhotoLightbox";
-import { usePhotoUrls } from "@/hooks/usePhotoUrl";
 import { useMemo, useState } from "react";
 
 export type { PhotoViewerItem };
@@ -31,16 +30,6 @@ export function PhotoLightboxGrid({
 	onPhotoClick,
 }: PhotoLightboxGridProps) {
 	const items = useMemo(() => photos.map(normalizePhoto), [photos]);
-	const refs = useMemo(() => {
-		return Array.from(
-			new Set(
-				items.flatMap((item) =>
-					item.thumbnailRef ? [item.ref, item.thumbnailRef] : [item.ref],
-				),
-			),
-		);
-	}, [items]);
-	const photoUrlMap = usePhotoUrls(refs);
 	const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
 
 	if (items.length === 0) return null;
@@ -57,9 +46,9 @@ export function PhotoLightboxGrid({
 		<>
 			<div className={gridClassName}>
 				{items.map((item, index) => {
-					const displayUrl = photoUrlMap.get(item.ref);
+					const displayUrl = item.ref;
 					const thumbnailUrl = item.thumbnailRef
-						? photoUrlMap.get(item.thumbnailRef)
+						? item.thumbnailRef
 						: displayUrl;
 
 					return (

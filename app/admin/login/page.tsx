@@ -1,16 +1,10 @@
 import { signIn } from "@/auth";
-import SupabaseLogin from "@/components/admin/legacy/SupabaseLogin";
-import {
-	authConfigured,
-	cloudflareAdmin,
-	safeRedirect,
-} from "@/lib/backend/config";
+import { authConfigured, safeRedirect } from "@/lib/backend/config";
 
 export const dynamic = "force-dynamic";
 export default async function AdminLogin({
 	searchParams,
 }: { searchParams: Promise<{ redirectTo?: string; error?: string }> }) {
-	if (!cloudflareAdmin()) return <SupabaseLogin />;
 	const params = await searchParams;
 	const ready = authConfigured();
 	const redirectTo = safeRedirect(params.redirectTo);
@@ -20,7 +14,7 @@ export default async function AdminLogin({
 		await signIn("github", { redirectTo });
 	}
 	return (
-		<main className="mx-auto max-w-md space-y-6 py-16">
+		<main className="mx-auto max-w-md space-y-6 px-4 py-16">
 			<h1 className="text-3xl font-medium">Sign in to admin</h1>
 			<p className="text-zinc-600 dark:text-zinc-400">
 				Only your approved GitHub account can access the admin application.

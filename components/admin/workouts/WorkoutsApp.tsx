@@ -1,411 +1,334 @@
 "use client";
 
-import {
-	AdminPageWrapper,
-	AdminSection,
-} from "@/components/admin/AdminPageWrapper";
 import { DateInput } from "@/components/admin/DateTimeInputs";
-import { EmptyState } from "@/components/admin/EmptyState";
-import {
-	EntryCard,
-	EntryCardActionButton,
-	EntryCardList,
-} from "@/components/admin/EntryCard";
-import { ExerciseHistoryCard } from "@/components/admin/ExerciseHistoryCard";
-import { ExerciseHistoryModal } from "@/components/admin/ExerciseHistoryModal";
-import { ExerciseSearch } from "@/components/admin/ExerciseSearch";
-import { FormActions } from "@/components/admin/FormActions";
 import { NumberInput, TextArea } from "@/components/admin/FormInputs";
-import { GroupedEntriesList } from "@/components/admin/GroupedEntriesList";
-import { PageHeader, SectionHeader } from "@/components/admin/PageHeader";
 import PhotoField, { type DraftPhoto } from "@/components/admin/PhotoField";
-import {
-	type ViewMode,
-	ViewModeToggle,
-} from "@/components/admin/ViewModeToggle";
-import {
-	WorkoutAnalysisModal,
-	type WorkoutAnalysisResult,
-} from "@/components/admin/WorkoutAnalysisModal";
 import { adminRequest, groupBy } from "@/components/admin/client";
+import {
+	AdminPage,
+	DayNav,
+	EditorSheet,
+	EmptyState,
+	Fab,
+	GroupHeader,
+	ListStatus,
+	RecordCard,
+	Segmented,
+	message,
+	secondaryButton,
+	useAdminList,
+	useUndoDelete,
+} from "@/components/admin/kit";
 import {
 	LibraryPhotoGrid,
 	discardUploads,
 	photosReady,
+	samePhotos,
 	toDrafts,
 } from "@/components/admin/library-photos";
 import { formatDate } from "@/lib/date-utils";
 import { localDate } from "@/shared/common";
-import {
-	type WorkoutExercise,
-	type WorkoutLog,
-	workoutListSchema,
-} from "@/shared/workouts";
-import { BarChart3, Sparkles } from "lucide-react";
+import { type WorkoutLog, workoutListSchema } from "@/shared/workouts";
+import { BarChart3, Loader2, Sparkles } from "lucide-react";
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
+import { ExerciseCard } from "./ExerciseCard";
 
-const toResult = (log: WorkoutLog): WorkoutAnalysisResult => ({
-	sessionType: log.aiSessionType ?? "other",
-	exercises: log.aiExercises ?? [],
-	totalVolume: log.aiTotalVolume ?? null,
-	muscleGroups: log.aiMuscleGroups ?? [],
-	notes: log.aiNotes ?? null,
-});
-const message = (error: unknown, fallback: string) =>
-	error instanceof Error ? error.message : fallback;
+const parse = (data: unknown) => workoutListSchema.parse(data).logs;
+const views = [
+	{ value: "day", label: "Day" },
+	{ value: "all", label: "All" },
+] as const;
+
+function Summary({ log }: { log: WorkoutLog }) {
+	if (!log.aiSessionType) return null;
+	return (
+		<div className="mt-2 flex flex-wrap gap-1.5 text-xs">
+			<span className="rounded-full bg-purple-100 px-2 py-0.5 capitalize text-purple-700 dark:bg-purple-900/30 dark:text-purple-300">
+				{log.aiSessionType}
+			</span>
+			{log.aiExercises && (
+				<span className="rounded-full bg-zinc-100 px-2 py-0.5 dark:bg-zinc-800">
+					{log.aiExercises.length} exercises
+				</span>
+			)}
+			{log.aiTotalVolume ? (
+				<span className="rounded-full bg-zinc-100 px-2 py-0.5 dark:bg-zinc-800">
+					{log.aiTotalVolume.toLocaleString()} lbs
+				</span>
+			) : null}
+		</div>
+	);
+}
 
 export default function WorkoutsApp() {
-	const [date, setDate] = useState(localDate);
-	const [weight, setWeight] = useState("");
-	const [content, setContent] = useState("");
-	const [photos, setPhotos] = useState<DraftPhoto[]>([]);
-	const [editing, setEditing] = useState<WorkoutLog | null>(null);
-	const [logs, setLogs] = useState<WorkoutLog[]>([]);
-	const [viewMode, setViewMode] = useState<ViewMode>("date");
-	const [activeTab, setActiveTab] = useState<"entry" | "lookup">("entry");
-	const [loading, setLoading] = useState(true);
+	const today = localDate();
+	const [view, setView] = useState<"day" | "all">("day");
+	const [day, setDay] = useState(today);
+	const list = useAdminList(
+		view === "day" ? `workouts?date=${day}` : "workouts",
+		parse,
+	);
+	const { hidden, remove } = useUndoDelete();
+	const [editor, setEditor] = useState<{ log: WorkoutLog | null } | null>(null);
+	const refresh = useRef<ReturnType<typeof setTimeout>>(undefined);
+	useEffect(() => () => clearTimeout(refresh.current), []);
+
+	const logs = list.items.filter((log) => !hidden.has(log.id));
+	const card = (log: WorkoutLog) => (
+		<RecordCard
+			key={log.id}
+			label={`Edit workout on ${formatDate(log.date)}`}
+			onOpen={() => setEditor({ log })}
+			media={<LibraryPhotoGrid photos={log.photos} />}
+		>
+			{log.weight !== undefined && (
+				<div className="text-xs text-zinc-500">{log.weight} kg</div>
+			)}
+			{log.content && (
+				<p className="mt-1 line-clamp-4 whitespace-pre-wrap">{log.content}</p>
+			)}
+			<Summary log={log} />
+		</RecordCard>
+	);
+
+	return (
+		<AdminPage
+			title="Workouts"
+			actions={
+				<>
+					<Link
+						href="/admin/workouts/dashboard"
+						aria-label="Stats"
+						className="flex h-9 w-9 items-center justify-center rounded-lg border border-zinc-300 dark:border-zinc-700"
+					>
+						<BarChart3 className="h-4 w-4" />
+					</Link>
+					<Segmented
+						label="View"
+						value={view}
+						options={views}
+						onChange={setView}
+					/>
+				</>
+			}
+		>
+			{view === "day" && <DayNav value={day} onChange={setDay} today={today} />}
+			<ListStatus
+				loading={list.loading}
+				error={list.error}
+				onRetry={list.reload}
+			/>
+			{!list.loading &&
+				!list.error &&
+				(view === "day" ? (
+					<div className="space-y-3">
+						{logs.map(card)}
+						{logs.length === 0 && (
+							<EmptyState>No workout on {formatDate(day)}.</EmptyState>
+						)}
+					</div>
+				) : (
+					<div className="space-y-3">
+						{logs.length === 0 && <EmptyState>No workouts yet.</EmptyState>}
+						{Object.entries(groupBy(logs, (log) => log.date))
+							.sort(([a], [b]) => b.localeCompare(a))
+							.map(([date, group]) => (
+								<section key={date} className="space-y-3">
+									<GroupHeader>{formatDate(date)}</GroupHeader>
+									{group.map(card)}
+								</section>
+							))}
+					</div>
+				))}
+			<Fab label="Log workout" onClick={() => setEditor({ log: null })} />
+			{editor && (
+				<WorkoutEditor
+					key={editor.log?.id ?? "new"}
+					log={editor.log}
+					defaultDate={view === "day" ? day : today}
+					onClose={() => setEditor(null)}
+					onSaved={(analyzeSoon) => {
+						setEditor(null);
+						list.reload();
+						// Changed text is analyzed after saving; pick up the result.
+						if (analyzeSoon) {
+							clearTimeout(refresh.current);
+							refresh.current = setTimeout(list.reload, 12_000);
+						}
+					}}
+					onAnalyzed={list.reload}
+					onDelete={(log) => {
+						setEditor(null);
+						remove(log.id, "Workout deleted", `workouts/${log.id}`);
+					}}
+				/>
+			)}
+		</AdminPage>
+	);
+}
+
+function WorkoutEditor({
+	log,
+	defaultDate,
+	onClose,
+	onSaved,
+	onAnalyzed,
+	onDelete,
+}: {
+	log: WorkoutLog | null;
+	defaultDate: string;
+	onClose: () => void;
+	onSaved: (analyzeSoon: boolean) => void;
+	onAnalyzed: () => void;
+	onDelete: (log: WorkoutLog) => void;
+}) {
+	const [initial] = useState(() => ({
+		date: log?.date ?? defaultDate,
+		weight: log?.weight?.toString() ?? "",
+		content: log?.content ?? "",
+	}));
+	const [form, setForm] = useState(initial);
+	const [photos, setPhotos] = useState<DraftPhoto[]>(() =>
+		toDrafts(log?.photos),
+	);
 	const [saving, setSaving] = useState(false);
-	const [analyzing, setAnalyzing] = useState<WorkoutLog | null>(null);
-	const [isAnalyzing, setIsAnalyzing] = useState(false);
-	const [analysisResult, setAnalysisResult] =
-		useState<WorkoutAnalysisResult | null>(null);
-	const [selectedExercise, setSelectedExercise] = useState<{
-		name: string;
-		lastPerformed: string;
-		sets: NonNullable<WorkoutExercise["sets"]>;
-		notes?: string | null;
-	} | null>(null);
-	const [showHistory, setShowHistory] = useState(false);
+	const [analyzing, setAnalyzing] = useState(false);
+	const [saved, setSaved] = useState(log);
+	const dirty =
+		JSON.stringify(form) !== JSON.stringify(initial) ||
+		!samePhotos(photos, log?.photos);
 
-	const load = useCallback(async (mode: ViewMode, day: string) => {
-		setLoading(true);
-		try {
-			const query = mode === "date" ? `?date=${day}` : "";
-			setLogs(
-				workoutListSchema.parse(await adminRequest(`workouts${query}`)).logs,
-			);
-		} catch (error) {
-			toast.error(message(error, "Failed to load workout logs"));
-		} finally {
-			setLoading(false);
-		}
-	}, []);
-	useEffect(() => {
-		void load("date", localDate());
-	}, [load]);
-	const reload = () => load(viewMode, date);
-
-	function fill(log: WorkoutLog | null) {
-		setEditing(log);
-		setDate(log?.date ?? localDate());
-		setWeight(log?.weight?.toString() ?? "");
-		setContent(log?.content ?? "");
-		setPhotos(toDrafts(log?.photos));
-	}
-	async function startOver(log: WorkoutLog | null) {
+	async function discardAnd(then: () => void) {
 		await discardUploads(photos);
-		fill(log);
-		if (log) {
-			setViewMode("date");
-			void load("date", log.date);
-		}
+		then();
 	}
-	function changeDate(next: string) {
-		setDate(next);
-		if (viewMode === "date") void load("date", next);
-	}
-	function changeView(mode: ViewMode) {
-		setViewMode(mode);
-		void load(mode, date);
-	}
-
 	async function save() {
-		if (!photosReady(photos)) {
-			toast.error("Wait for photos to finish uploading");
-			return;
-		}
-		const parsedWeight = weight ? Number.parseFloat(weight) : null;
+		const weight = form.weight ? Number.parseFloat(form.weight) : null;
 		setSaving(true);
 		try {
-			await adminRequest(`workouts/${editing?.id ?? crypto.randomUUID()}`, {
+			await adminRequest(`workouts/${log?.id ?? crypto.randomUUID()}`, {
 				method: "PUT",
 				body: JSON.stringify({
-					date,
-					content: content.trim(),
-					weight:
-						parsedWeight !== null && Number.isFinite(parsedWeight)
-							? parsedWeight
-							: null,
+					date: form.date,
+					content: form.content.trim(),
+					weight: weight !== null && Number.isFinite(weight) ? weight : null,
 					photoIds: photos.map((item) => item.id),
 				}),
 			});
-			toast.success(editing ? "Log updated" : "Log saved");
-			const savedDate = date;
-			fill(null);
-			setDate(savedDate);
-			await load(viewMode, savedDate);
+			toast.success(log ? "Workout updated" : "Workout saved");
+			onSaved(
+				Boolean(form.content.trim()) &&
+					form.content.trim() !== initial.content.trim(),
+			);
 		} catch (error) {
-			toast.error(message(error, "Failed to save workout log"));
-		} finally {
+			toast.error(message(error, "Failed to save workout"));
 			setSaving(false);
 		}
 	}
-	async function remove(log: WorkoutLog) {
-		if (!window.confirm("Delete this workout log?")) return;
+	async function analyze() {
+		if (!saved) return;
+		setAnalyzing(true);
 		try {
-			await adminRequest(`workouts/${log.id}`, { method: "DELETE" });
-			toast.success("Log deleted");
-			if (editing?.id === log.id) fill(null);
-			await reload();
-		} catch (error) {
-			toast.error(message(error, "Failed to delete workout log"));
-		}
-	}
-	async function analyze(log: WorkoutLog) {
-		setAnalyzing(log);
-		setAnalysisResult(null);
-		setIsAnalyzing(true);
-		try {
-			const updated = await adminRequest<WorkoutLog>(
-				`workouts/${log.id}/analyze`,
-				{ method: "POST" },
+			setSaved(
+				await adminRequest<WorkoutLog>(`workouts/${saved.id}/analyze`, {
+					method: "POST",
+				}),
 			);
-			setAnalysisResult(toResult(updated));
-			setAnalyzing(updated);
-			await reload();
+			onAnalyzed();
 		} catch (error) {
-			toast.error(message(error, "Failed to analyze workout"));
+			toast.error(message(error, "Failed to analyze"));
 		} finally {
-			setIsAnalyzing(false);
+			setAnalyzing(false);
 		}
 	}
-	function openAnalysis(log: WorkoutLog) {
-		if (log.aiSessionType) {
-			setAnalysisResult(null);
-			setAnalyzing(log);
-		} else void analyze(log);
-	}
-	async function selectExercise(exercise: { canonicalName: string }) {
-		try {
-			const data = await adminRequest<{
-				history: {
-					date: string;
-					sets: NonNullable<WorkoutExercise["sets"]>;
-					notes?: string | null;
-				}[];
-			}>(`workouts/exercises/${encodeURIComponent(exercise.canonicalName)}`);
-			const last = data.history[0];
-			setSelectedExercise(
-				last
-					? {
-							name: exercise.canonicalName,
-							lastPerformed: last.date,
-							sets: last.sets,
-							notes: last.notes,
-						}
-					: {
-							name: exercise.canonicalName,
-							lastPerformed: "Never",
-							sets: [],
-							notes: "No history found.",
-						},
-			);
-		} catch (error) {
-			toast.error(message(error, "Failed to load exercise history"));
-		}
-	}
-
-	function card(log: WorkoutLog, showDate = false) {
-		const hasAnalysis = !!log.aiSessionType;
-		return (
-			<EntryCard
-				title={
-					showDate
-						? formatDate(log.date)
-						: log.weight
-							? `${log.weight} kg`
-							: "Workout"
-				}
-				meta={showDate && log.weight ? `${log.weight} kg` : null}
-				body={
-					log.content ? (
-						<div className="whitespace-pre-wrap">{log.content}</div>
-					) : null
-				}
-				actions={
-					<div className="ml-4 flex flex-shrink-0 flex-col gap-2">
-						{log.content && (
-							<EntryCardActionButton
-								onClick={() => openAnalysis(log)}
-								variant={hasAnalysis ? "neutral" : "success"}
-							>
-								<span className="flex items-center gap-1">
-									<Sparkles className="h-3 w-3" />
-									{hasAnalysis ? "View Analysis" : "Analyze"}
-								</span>
-							</EntryCardActionButton>
-						)}
-						<EntryCardActionButton
-							onClick={() => void startOver(log)}
-							variant="neutral"
-						>
-							Edit
-						</EntryCardActionButton>
-						<EntryCardActionButton
-							onClick={() => void remove(log)}
-							variant="danger"
-						>
-							Delete
-						</EntryCardActionButton>
-					</div>
-				}
-			>
-				<LibraryPhotoGrid photos={log.photos} />
-			</EntryCard>
-		);
-	}
-
-	const grouped = groupBy(logs, (log) => log.date);
 
 	return (
-		<AdminPageWrapper>
-			<PageHeader
-				title="Workout Tracker"
-				description="Track your workouts with minimal friction."
+		<EditorSheet
+			title={log ? "Edit workout" : "Log workout"}
+			onClose={() => void discardAnd(onClose)}
+			onSubmit={() => void save()}
+			onDelete={log ? () => void discardAnd(() => onDelete(log)) : undefined}
+			saving={saving}
+			dirty={dirty}
+			canSubmit={
+				Boolean(
+					form.date && (form.content.trim() || form.weight || photos.length),
+				) && photosReady(photos)
+			}
+		>
+			<TextArea
+				id="workout-content"
+				label="Workout"
+				value={form.content}
+				onChange={(content) => setForm({ ...form, content })}
+				rows={5}
+				placeholder="Exercises, sets, reps… however you like"
 			/>
-			<div className="mb-6">
-				<ViewModeToggle
-					viewMode={activeTab === "entry" ? "date" : "all"}
-					onViewModeChange={(mode) =>
-						setActiveTab(mode === "date" ? "entry" : "lookup")
-					}
-					dateLabel="Log Entry"
-					allLabel="Exercise Lookup"
+			<div className="grid grid-cols-2 gap-3">
+				<DateInput
+					id="workout-date"
+					label="Date"
+					value={form.date}
+					onChange={(date) => setForm({ ...form, date })}
+				/>
+				<NumberInput
+					id="workout-weight"
+					label="Bodyweight (kg)"
+					value={form.weight}
+					onChange={(weight) => setForm({ ...form, weight })}
+					step={0.1}
+					placeholder="75.5"
 				/>
 			</div>
-
-			{activeTab === "entry" ? (
-				<AdminSection className="space-y-4">
-					<SectionHeader title={editing ? "Edit Log" : "Quick Log"} />
-					<DateInput
-						id="workout-date"
-						label="Date"
-						value={date}
-						onChange={changeDate}
-					/>
-					<NumberInput
-						id="workout-weight"
-						label="Bodyweight (kg)"
-						value={weight}
-						onChange={setWeight}
-						step={0.1}
-						placeholder="e.g., 75.5"
-					/>
-					<TextArea
-						id="workout-content"
-						label="Notes (optional)"
-						value={content}
-						onChange={setContent}
-						rows={4}
-						placeholder="Log your workout... exercises, sets, reps, or whatever you want to track"
-					/>
-					<PhotoField photos={photos} onChange={setPhotos} disabled={saving} />
-					<FormActions
-						saving={saving}
-						isEditing={!!editing}
-						onSave={save}
-						onCancel={() => void startOver(null)}
-						disabled={
-							!date ||
-							!photosReady(photos) ||
-							(!content.trim() && !weight && photos.length === 0)
-						}
-						saveLabel="Save Log"
-						saveEditLabel="Update Log"
-					/>
-				</AdminSection>
-			) : (
-				<AdminSection className="space-y-4">
-					<div className="flex items-center justify-between">
-						<SectionHeader title="Exercise Lookup" />
-						<Link
-							href="/admin/workouts/dashboard"
-							className="flex items-center gap-2 rounded-lg bg-purple-100 px-4 py-2 text-sm font-medium text-purple-700 transition-colors hover:bg-purple-200 dark:bg-purple-900/30 dark:text-purple-300 dark:hover:bg-purple-900/50"
-						>
-							<BarChart3 className="h-4 w-4" />
-							Stats Dashboard
-						</Link>
-					</div>
-					<ExerciseSearch onSelect={selectExercise} />
-					{selectedExercise && (
-						<ExerciseHistoryCard
-							exerciseName={selectedExercise.name}
-							lastPerformed={selectedExercise.lastPerformed}
-							sets={selectedExercise.sets}
-							notes={selectedExercise.notes}
-							onViewHistory={() => setShowHistory(true)}
-							onClear={() => setSelectedExercise(null)}
-						/>
-					)}
-				</AdminSection>
-			)}
-
-			<AdminSection className="space-y-4">
-				<div className="flex items-center justify-between">
-					<SectionHeader title="Logs" />
-					<ViewModeToggle
-						viewMode={viewMode}
-						onViewModeChange={changeView}
-						allLabel="All Logs"
-					/>
-				</div>
-				{loading ? (
-					<p className="py-8 text-center text-zinc-600 dark:text-zinc-400">
-						Loading...
-					</p>
-				) : viewMode === "date" ? (
-					<div className="space-y-3">
-						<h3 className="text-lg font-medium text-zinc-700 dark:text-zinc-300">
-							{formatDate(date)} ({logs.length})
+			<PhotoField photos={photos} onChange={setPhotos} disabled={saving} />
+			{saved?.content && (
+				<section className="space-y-3 rounded-xl bg-zinc-50 p-3 dark:bg-zinc-900">
+					<div className="flex items-center justify-between gap-2">
+						<h3 className="flex items-center gap-1.5 text-sm font-medium">
+							<Sparkles className="h-4 w-4 text-purple-600" />
+							{saved.aiSessionType ? "Analysis" : "Not analyzed yet"}
 						</h3>
-						<EntryCardList>
-							{logs.map((log) => (
-								<div key={log.id}>{card(log)}</div>
-							))}
-							{logs.length === 0 && (
-								<EmptyState message="No logs for this day yet. Add your first entry!" />
+						<button
+							type="button"
+							className={secondaryButton}
+							disabled={analyzing || dirty}
+							onClick={() => void analyze()}
+						>
+							{analyzing ? (
+								<Loader2 className="h-4 w-4 animate-spin" />
+							) : saved.aiSessionType ? (
+								"Re-analyze"
+							) : (
+								"Analyze"
 							)}
-						</EntryCardList>
+						</button>
 					</div>
-				) : (
-					<GroupedEntriesList
-						groupedEntries={grouped}
-						renderEntry={(log) => card(log)}
-						getEntryKey={(log) => log.id}
-						emptyMessage="No workout logs yet. Add your first entry!"
-					/>
-				)}
-			</AdminSection>
-
-			<WorkoutAnalysisModal
-				entry={analyzing}
-				onClose={() => {
-					setAnalyzing(null);
-					setAnalysisResult(null);
-				}}
-				isAnalyzing={isAnalyzing}
-				analysisResult={analysisResult}
-				onAnalyze={(log) => void analyze(log)}
-			/>
-			{showHistory && selectedExercise && (
-				<ExerciseHistoryModal
-					exerciseName={selectedExercise.name}
-					historyUrl="/api/admin/workouts/exercises"
-					onClose={() => setShowHistory(false)}
-				/>
+					<Summary log={saved} />
+					{saved.aiMuscleGroups && saved.aiMuscleGroups.length > 0 && (
+						<p className="text-sm text-zinc-600 dark:text-zinc-400">
+							{saved.aiMuscleGroups.join(" · ")}
+						</p>
+					)}
+					{saved.aiExercises?.map((exercise, index) => (
+						<ExerciseCard
+							key={`${exercise.name}-${index}`}
+							exercise={exercise}
+						/>
+					))}
+					{saved.aiNotes && (
+						<p className="text-sm text-zinc-600 dark:text-zinc-400">
+							{saved.aiNotes}
+						</p>
+					)}
+					{dirty && (
+						<p className="text-xs text-zinc-500">
+							Save first to analyze changes.
+						</p>
+					)}
+				</section>
 			)}
-		</AdminPageWrapper>
+		</EditorSheet>
 	);
 }

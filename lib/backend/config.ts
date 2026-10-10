@@ -1,6 +1,3 @@
-export function cloudflareAdmin() {
-	return process.env.ADMIN_BACKEND === "cloudflare";
-}
 export function validSecret(value: string | undefined) {
 	return Boolean(
 		value && value.length >= 32 && !/REPLACE|CHANGEME|placeholder/i.test(value),

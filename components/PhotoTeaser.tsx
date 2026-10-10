@@ -3,64 +3,10 @@
 import { PhotoLightboxGrid } from "@/components/photos/PhotoLightboxGrid";
 import { buildPhotoViewerItem } from "@/components/photos/buildPhotoViewerItem";
 import { SvgArrowRight } from "@/components/ui/svg-arrow-right";
-import type { ResolvedPhotoAsset } from "@/lib/photo-assets-db";
+import type { PublicPhoto } from "@/lib/public-types";
 import Link from "next/link";
-import { useEffect, useState } from "react";
 
-interface TeaserPhoto {
-	id: string;
-	displayRef: string;
-	thumbnailRef: string | null;
-	title: string | null;
-	caption: string | null;
-	locationLabel: string | null;
-	takenAt: string | null;
-	createdAt: string;
-	width?: number | null;
-	height?: number | null;
-	safeExif?: Record<string, unknown>;
-}
-
-function toResolved(photo: TeaserPhoto): ResolvedPhotoAsset {
-	return {
-		id: photo.id,
-		visibility: "public",
-		displayRef: photo.displayRef,
-		thumbnailRef: photo.thumbnailRef,
-		createdAt: photo.createdAt,
-		takenAt: photo.takenAt,
-		width: photo.width ?? null,
-		height: photo.height ?? null,
-		safeExif: photo.safeExif ?? {},
-		title: photo.title,
-		caption: photo.caption,
-		locationLabel: photo.locationLabel,
-	};
-}
-
-export function PhotoTeaser() {
-	const [photos, setPhotos] = useState<TeaserPhoto[]>([]);
-
-	useEffect(() => {
-		let cancelled = false;
-		async function loadPhotos() {
-			try {
-				const response = await fetch("/api/photos");
-				if (!response.ok) return;
-				const data = (await response.json()) as TeaserPhoto[];
-				if (!cancelled) {
-					setPhotos(data.slice(0, 4));
-				}
-			} catch (error) {
-				console.error(error);
-			}
-		}
-		void loadPhotos();
-		return () => {
-			cancelled = true;
-		};
-	}, []);
-
+export function PhotoTeaser({ photos }: { photos: PublicPhoto[] }) {
 	return (
 		<section>
 			<div className="mb-5 flex items-center justify-between">
@@ -87,7 +33,7 @@ export function PhotoTeaser() {
 					photos={photos.map((photo, index) =>
 						buildPhotoViewerItem({
 							ref: photo.displayRef,
-							photo: toResolved(photo),
+							photo,
 							index,
 						}),
 					)}

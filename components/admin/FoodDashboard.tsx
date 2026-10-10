@@ -1,4 +1,4 @@
-import type { FoodEntry } from "@/lib/models";
+import type { FoodEntry } from "@/shared/food";
 import { useMemo } from "react";
 
 interface FoodDashboardProps {

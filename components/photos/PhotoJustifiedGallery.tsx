@@ -6,7 +6,6 @@ import {
 	type PhotoViewerItem,
 	normalizePhoto,
 } from "@/components/photos/PhotoLightbox";
-import { usePhotoUrls } from "@/hooks/usePhotoUrl";
 import { cn } from "@/lib/utils";
 import {
 	type CSSProperties,
@@ -97,16 +96,6 @@ export function PhotoJustifiedGallery({
 	className,
 }: PhotoJustifiedGalleryProps) {
 	const items = useMemo(() => photos.map(normalizePhoto), [photos]);
-	const refs = useMemo(() => {
-		return Array.from(
-			new Set(
-				items.flatMap((item) =>
-					item.thumbnailRef ? [item.ref, item.thumbnailRef] : [item.ref],
-				),
-			),
-		);
-	}, [items]);
-	const photoUrlMap = usePhotoUrls(refs);
 	const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
 	const containerRef = useRef<HTMLDivElement>(null);
 	const [containerWidth, setContainerWidth] = useState(0);
@@ -159,9 +148,9 @@ export function PhotoJustifiedGallery({
 							>
 								{row.indices.map((index) => {
 									const item = items[index];
-									const displayUrl = photoUrlMap.get(item.ref);
+									const displayUrl = item.ref;
 									const thumbnailUrl = item.thumbnailRef
-										? photoUrlMap.get(item.thumbnailRef)
+										? item.thumbnailRef
 										: displayUrl;
 									const aspect = aspectRatio(item);
 									const showOverlay =

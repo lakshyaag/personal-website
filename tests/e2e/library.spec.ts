@@ -1,24 +1,15 @@
 import { expect, test } from "@playwright/test";
-import { encode } from "next-auth/jwt";
 import sharp from "sharp";
-import { AUTH_SECRET, BASE_URL, OWNER_ID } from "./env";
+import { BASE_URL } from "./env";
+import { deleteFromSheet, open, sheet, signIn } from "./helpers";
 
 test("uploads to the library, publishes to the gallery, and serves it publicly only while public", async ({
 	page,
 	context,
 	browser,
 }) => {
-	const name = "authjs.session-token";
-	const value = await encode({
-		token: { sub: OWNER_ID, ownerId: OWNER_ID },
-		secret: AUTH_SECRET,
-		salt: name,
-		maxAge: 3600,
-	});
-	await context.addCookies([
-		{ name, value, url: BASE_URL, httpOnly: true, sameSite: "Lax" },
-	]);
-	await page.goto("/admin/photos");
+	await signIn(context);
+	await open(page, "/admin/photos");
 	const image = await sharp({
 		create: { width: 40, height: 30, channels: 3, background: "#3a7bd5" },
 	})
@@ -39,42 +30,52 @@ test("uploads to the library, publishes to the gallery, and serves it publicly o
 			{ name: "library-test.jpg", mimeType: "image/jpeg", buffer: image },
 		]);
 	await page.getByRole("button", { name: "Unused", exact: true }).click();
-	const tile = page.getByRole("button").filter({ hasText: "Private · Unused" });
+	const tile = page.getByRole("button", { name: "Edit library-test.jpg" });
 	await expect(tile.first()).toBeVisible({ timeout: 60_000 });
 	await tile.first().click();
-	await page.getByLabel("Title").fill("Library browser test");
-	await page.getByLabel("Visibility").selectOption("public");
-	await page.getByLabel("Show in gallery").check();
-	await page.getByRole("button", { name: "Save", exact: true }).click();
+	await sheet(page).getByLabel("Title").fill("Library browser test");
+	await sheet(page).getByLabel("Visibility").selectOption("public");
+	await sheet(page).getByLabel("Show in gallery").check();
+	await sheet(page).getByRole("button", { name: "Save", exact: true }).click();
 	await page.getByRole("button", { name: "Gallery", exact: true }).click();
-	const published = page
-		.getByRole("button")
-		.filter({ hasText: "Library browser test" });
+	const published = page.getByRole("button", {
+		name: "Edit Library browser test",
+	});
 	await expect(published).toBeVisible();
+	await expect(published).toContainText("Public");
 
-	// The public feed and image work without any session.
+	// The gallery page shows it right away (the save refreshed the public cache) without a session.
 	const anonymous = await browser.newContext();
-	const gallery = (await (
-		await anonymous.request.get(`${BASE_URL}/api/photos`)
-	).json()) as { id: string; title: string; displayRef: string }[];
-	const item = gallery.find((photo) => photo.title === "Library browser test");
-	expect(item?.displayRef).toMatch(/\/public\/photos\/.+\/display$/);
-	const served = await anonymous.request.get(item?.displayRef ?? "");
+	const visitor = await anonymous.newPage();
+	await visitor.goto(`${BASE_URL}/photos`);
+	const thumb = await visitor
+		.getByRole("img", { name: "Library browser test" })
+		.first()
+		.getAttribute("src");
+	expect(thumb).toMatch(/\/public\/photos\/.+\/thumb$/);
+	const display = (thumb ?? "").replace(/thumb$/, "display");
+	const served = await anonymous.request.get(display);
 	expect(served.status()).toBe(200);
 	expect(served.headers()["cache-control"]).toContain("immutable");
 	// Browser-made variants never carry the original's EXIF/GPS.
 	expect((await served.body()).includes("Exif")).toBe(false);
 
 	await published.click();
-	await page.getByLabel("Visibility").selectOption("private");
-	await page.getByRole("button", { name: "Save", exact: true }).click();
-	await expect(published).toContainText("Private");
-	expect((await anonymous.request.get(item?.displayRef ?? "")).status()).toBe(
-		404,
-	);
+	await sheet(page).getByLabel("Visibility").selectOption("private");
+	await sheet(page).getByRole("button", { name: "Save", exact: true }).click();
+	await expect(published).not.toContainText("Public");
+	expect((await anonymous.request.get(display)).status()).toBe(404);
 	await published.click();
-	page.once("dialog", (dialog) => dialog.accept());
-	await page.getByRole("button", { name: "Delete", exact: true }).click();
-	await expect(published).not.toBeVisible();
+	const id = /photos\/([^/]+)\//.exec(display)?.[1];
+	await deleteFromSheet(page, "Photo deleted");
+	// The request goes out once the undo window passes; the Worker's cron removes the files.
+	await expect
+		.poll(async () => {
+			const response = await context.request.get(
+				`${BASE_URL}/api/admin/photos/${id}`,
+			);
+			return response.status() === 404 ? "gone" : (await response.json()).state;
+		})
+		.toMatch(/^(gone|deleting)$/);
 	await anonymous.close();
 });

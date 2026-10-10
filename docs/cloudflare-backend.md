@@ -2,7 +2,7 @@
 
 ## Current state
 
-The admin backend is moving from Supabase to Cloudflare, ending with Supabase retired entirely (public pages included). **Everything is migrated:** journal, the photo library, food (+ AI analysis), workouts (+ AI analysis and stats), airport visits, books and recommendations, plus the public gallery, airports map and bookshelf when `ADMIN_BACKEND=cloudflare`. Fits, AI request logs and the AI config page were dropped rather than migrated. The local Next.js app talks to the production Cloudflare backend. Vercel hosting still runs the Supabase version, and **Supabase itself is untouched**: migration only ever reads from it.
+The whole site runs on Cloudflare: journal, the photo library, food (+ AI analysis), workouts (+ AI analysis and stats), airport visits, books and recommendations, plus the public homepage, gallery, airports map and bookshelf. The Supabase code is gone from the app; Fits, AI request logs and the AI config page were dropped rather than migrated. The local Next.js app talks to the production Cloudflare backend. **Supabase itself is untouched** and still serves the currently deployed Vercel build until this branch ships; `scripts/migrate/` (read-only against Supabase) is kept for the final sync.
 
 **One shared backend for the entire application**: one Worker, one D1 database, one private photo bucket. New features add tables (numbered SQL migrations) and routes to it — never a separate database or bucket.
 
@@ -14,10 +14,10 @@ The admin backend is moving from Supabase to Cloudflare, ending with Supabase re
 | `shared/` | Request/response schemas used by both Next.js and the Worker |
 | `lib/backend/` | Next.js side: owner auth (`api.ts`), config (`config.ts`), Worker client (`worker.ts`), private R2 upload URLs (`r2.ts`) |
 | `app/api/admin/*` | Thin authenticated Next.js routes that proxy to the Worker |
-| `components/admin/{journal,food,workouts,airports,books}/` | Cloudflare admin pages; `components/admin/legacy/` holds the Supabase versions behind the switch |
-| `lib/backend/public-data.ts` | Filtered public views (visits with public photos only, books, recommendations) for the public pages |
-
-`ADMIN_BACKEND=cloudflare` switches the whole admin to this backend. Features that haven't moved yet are blocked in that mode rather than silently writing to Supabase. Any other value keeps the legacy Supabase admin, which is what Vercel runs until every feature has moved. Once that happens, delete the switch and the legacy code.
+| `app/admin/(app)/` | Admin pages inside `AdminShell` (tab bar on phones, top bar on desktop) |
+| `components/admin/kit.tsx` | Shared admin pieces: page header, "+" button, record card, editor sheet, list loader, delete with undo |
+| `components/admin/{journal,food,workouts,airports,books,photos}/` | One component per admin page, each a list plus an editor sheet |
+| `lib/backend/public-data.ts` | Public pages' data, read on the server and cached under one tag that every admin change expires (`privateRoute`) |
 
 | Resource | Production |
 | --- | --- |
@@ -76,7 +76,6 @@ bun run dev
 Open `http://localhost:3000/admin/journal`. GitHub OAuth calls back to `http://localhost:3000/api/auth/callback/github`. The only allowed account is `lakshyaag` (numeric ID `10924399`).
 
 ```dotenv
-ADMIN_BACKEND=cloudflare
 AUTH_URL=http://localhost:3000
 ADMIN_GITHUB_ID=10924399
 CLOUDFLARE_WORKER_URL=https://personal-website-backend.lakshyaag1202.workers.dev
@@ -107,9 +106,9 @@ Food, workouts, visits, books (2026-10-10): `scripts/migrate/records.ts plan|app
 ## Remaining
 
 1. Hosted site: set the Worker URL/secret and private R2 keys on Vercel, register a production GitHub OAuth app, and add the Vercel origin to R2 CORS.
-2. Cut over: re-run `scripts/migrate/records.ts apply` + `verify` (and the photo import) so nothing written on the live site is missed, then set `ADMIN_BACKEND=cloudflare` on Vercel.
-3. UI/copy polish for the admin pages.
-4. Once the live site has run on Cloudflare for a while: remove the switch, the legacy Supabase code and finally Supabase itself. Only when explicitly decided.
+2. Cut over: re-run `scripts/migrate/records.ts apply` + `verify` (and the photo import) so nothing written on the live site is missed, then deploy this branch. There is no switch any more: deploying it is the cutover.
+3. Per-page UI work and a "today" admin home.
+4. Retiring Supabase itself (and `scripts/migrate/`) only when explicitly decided.
 
 ## Tests
 

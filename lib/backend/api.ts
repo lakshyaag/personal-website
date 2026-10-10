@@ -1,16 +1,11 @@
 import "server-only";
 import { auth } from "@/auth";
 import { z } from "zod";
-import { authConfigured, cloudflareAdmin, ownerAllowed } from "./config";
+import { authConfigured, ownerAllowed } from "./config";
+import { refreshPublicData } from "./public-data";
 import { BackendError } from "./worker";
 
 export async function requireOwner(request?: Request) {
-	if (!cloudflareAdmin())
-		throw new BackendError(
-			404,
-			"Cloudflare admin backend is not enabled",
-			"DISABLED",
-		);
 	if (!authConfigured())
 		throw new BackendError(
 			503,
@@ -103,7 +98,11 @@ export async function privateRoute(
 ) {
 	try {
 		await requireOwner(request);
-		return await action();
+		const response = await action();
+		// Any admin change may show on the public pages.
+		if (response.ok && !["GET", "HEAD"].includes(request.method))
+			refreshPublicData();
+		return response;
 	} catch (error) {
 		return apiError(error);
 	}

@@ -1,359 +1,337 @@
 "use client";
 
-import {
-	AdminPageWrapper,
-	AdminSection,
-} from "@/components/admin/AdminPageWrapper";
 import { DateTimeInput } from "@/components/admin/DateTimeInputs";
-import { EmptyState } from "@/components/admin/EmptyState";
-import {
-	EntryCard,
-	EntryCardActionButton,
-	EntryCardList,
-} from "@/components/admin/EntryCard";
-import {
-	FoodAnalysisModal,
-	type FoodAnalysisResult,
-} from "@/components/admin/FoodAnalysisModal";
 import { FoodDashboard } from "@/components/admin/FoodDashboard";
-import { FormActions } from "@/components/admin/FormActions";
 import { TextArea } from "@/components/admin/FormInputs";
-import { PageHeader, SectionHeader } from "@/components/admin/PageHeader";
 import PhotoField, { type DraftPhoto } from "@/components/admin/PhotoField";
-import {
-	type ViewMode,
-	ViewModeToggle,
-} from "@/components/admin/ViewModeToggle";
 import { adminRequest, groupBy } from "@/components/admin/client";
+import {
+	AdminPage,
+	DayNav,
+	EditorSheet,
+	EmptyState,
+	Fab,
+	GroupHeader,
+	ListStatus,
+	RecordCard,
+	Segmented,
+	message,
+	secondaryButton,
+	useAdminList,
+	useUndoDelete,
+} from "@/components/admin/kit";
 import {
 	LibraryPhotoGrid,
 	discardUploads,
 	photosReady,
+	samePhotos,
 	toDrafts,
 } from "@/components/admin/library-photos";
 import { formatDate, formatTime } from "@/lib/date-utils";
 import { localDate } from "@/shared/common";
 import { type FoodEntry, foodListSchema } from "@/shared/food";
-import { Sparkles } from "lucide-react";
+import { Loader2, Sparkles } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
+const parse = (data: unknown) => foodListSchema.parse(data).entries;
 const currentTime = () => new Date().toTimeString().slice(0, 5);
 const timeOf = (iso: string) => new Date(iso).toTimeString().slice(0, 5);
-const toResult = (entry: FoodEntry): FoodAnalysisResult => ({
-	foodName: entry.aiFoodName ?? "",
-	calories: entry.aiCalories ?? 0,
-	proteinG: entry.aiProteinG ?? 0,
-	carbsG: entry.aiCarbsG ?? 0,
-	fatG: entry.aiFatG ?? 0,
-	notes: entry.aiNotes ?? "",
-});
-const message = (error: unknown, fallback: string) =>
-	error instanceof Error ? error.message : fallback;
+const views = [
+	{ value: "day", label: "Day" },
+	{ value: "all", label: "All" },
+] as const;
+
+function Macros({ entry }: { entry: FoodEntry }) {
+	if (!entry.aiFoodName) return null;
+	return (
+		<div className="mt-2 flex flex-wrap gap-1.5 text-xs">
+			<span className="rounded-full bg-green-100 px-2 py-0.5 text-green-700 dark:bg-green-900/30 dark:text-green-400">
+				{entry.aiCalories} kcal
+			</span>
+			<span className="rounded-full bg-blue-100 px-2 py-0.5 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
+				P {entry.aiProteinG}g
+			</span>
+			<span className="rounded-full bg-amber-100 px-2 py-0.5 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
+				C {entry.aiCarbsG}g
+			</span>
+			<span className="rounded-full bg-rose-100 px-2 py-0.5 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400">
+				F {entry.aiFatG}g
+			</span>
+		</div>
+	);
+}
 
 export default function FoodApp({ editId }: { editId?: string }) {
 	const router = useRouter();
-	const [date, setDate] = useState(localDate);
-	const [time, setTime] = useState(currentTime);
-	const [description, setDescription] = useState("");
-	const [photos, setPhotos] = useState<DraftPhoto[]>([]);
-	const [editing, setEditing] = useState<FoodEntry | null>(null);
-	const [viewMode, setViewMode] = useState<ViewMode>("date");
-	const [entries, setEntries] = useState<FoodEntry[]>([]);
-	const [loading, setLoading] = useState(true);
-	const [saving, setSaving] = useState(false);
-	const [analyzing, setAnalyzing] = useState<FoodEntry | null>(null);
-	const [isAnalyzing, setIsAnalyzing] = useState(false);
-	const [analysisResult, setAnalysisResult] =
-		useState<FoodAnalysisResult | null>(null);
+	const today = localDate();
+	const [view, setView] = useState<"day" | "all">("day");
+	const [day, setDay] = useState(today);
+	const list = useAdminList(
+		view === "day" ? `food?date=${day}` : "food",
+		parse,
+	);
+	const { hidden, remove } = useUndoDelete();
+	const [editor, setEditor] = useState<{ entry: FoodEntry | null } | null>(
+		null,
+	);
+	const refresh = useRef<ReturnType<typeof setTimeout>>(undefined);
+	useEffect(() => () => clearTimeout(refresh.current), []);
 
-	const load = useCallback(async (mode: ViewMode, day: string) => {
-		setLoading(true);
-		try {
-			const query = mode === "date" ? `?date=${day}` : "";
-			setEntries(
-				foodListSchema.parse(await adminRequest(`food${query}`)).entries,
-			);
-		} catch (error) {
-			toast.error(message(error, "Failed to load food entries"));
-		} finally {
-			setLoading(false);
-		}
-	}, []);
-	const reload = () => load(viewMode, date);
-
-	function fill(entry: FoodEntry | null) {
-		setEditing(entry);
-		setDate(entry?.date ?? localDate());
-		setTime(entry ? timeOf(entry.eatenAt) : currentTime());
-		setDescription(entry?.description ?? "");
-		setPhotos(toDrafts(entry?.photos));
-	}
-	// biome-ignore lint/correctness/useExhaustiveDependencies: fill only calls state setters.
 	useEffect(() => {
-		if (!editId) {
-			void load("date", localDate());
-			return;
-		}
+		if (!editId) return;
 		adminRequest<FoodEntry>(`food/${editId}`)
 			.then((entry) => {
-				fill(entry);
-				void load("date", entry.date);
+				setDay(entry.date);
+				setEditor({ entry });
 			})
 			.catch((error) => toast.error(message(error, "Entry not found")));
-	}, [editId, load]);
+	}, [editId]);
 
-	async function startOver(entry: FoodEntry | null) {
-		await discardUploads(photos);
-		fill(entry);
+	function close() {
+		setEditor(null);
 		if (editId) router.replace("/admin/food");
 	}
-	function changeDate(next: string) {
-		setDate(next);
-		if (viewMode === "date") void load("date", next);
-	}
-	function changeView(mode: ViewMode) {
-		setViewMode(mode);
-		void load(mode, date);
-	}
-
-	async function save() {
-		if (!description.trim() && photos.length === 0) {
-			toast.error("Add a description or photos");
-			return;
-		}
-		if (!photosReady(photos)) {
-			toast.error("Wait for photos to finish uploading");
-			return;
-		}
-		const [hours, minutes] = time.split(":").map(Number);
-		const [year, month, day] = date.split("-").map(Number);
-		setSaving(true);
-		try {
-			await adminRequest(`food/${editing?.id ?? crypto.randomUUID()}`, {
-				method: "PUT",
-				body: JSON.stringify({
-					date,
-					eatenAt: new Date(year, month - 1, day, hours, minutes).toISOString(),
-					description: description.trim(),
-					photoIds: photos.map((item) => item.id),
-				}),
-			});
-			toast.success(editing ? "Entry updated" : "Entry saved. Analyzing…");
-			const savedDate = date;
-			fill(null);
-			setDate(savedDate);
-			if (editId) router.replace("/admin/food");
-			await load(viewMode, savedDate);
-		} catch (error) {
-			toast.error(message(error, "Failed to save entry"));
-		} finally {
-			setSaving(false);
-		}
-	}
-	async function remove(entry: FoodEntry) {
-		if (!window.confirm("Delete this food entry?")) return;
-		try {
-			await adminRequest(`food/${entry.id}`, { method: "DELETE" });
-			toast.success("Entry deleted");
-			if (editing?.id === entry.id) fill(null);
-			await reload();
-		} catch (error) {
-			toast.error(message(error, "Failed to delete entry"));
-		}
-	}
-	async function analyze(entry: FoodEntry) {
-		setAnalyzing(entry);
-		setIsAnalyzing(true);
-		setAnalysisResult(null);
-		try {
-			const updated = await adminRequest<FoodEntry>(
-				`food/${entry.id}/analyze`,
-				{ method: "POST" },
-			);
-			setAnalysisResult(toResult(updated));
-			setAnalyzing(updated);
-			await reload();
-		} catch (error) {
-			toast.error(message(error, "Failed to analyze food entry"));
-		} finally {
-			setIsAnalyzing(false);
-		}
-	}
-	function openAnalysis(entry: FoodEntry) {
-		if (entry.aiFoodName) {
-			setAnalysisResult(null);
-			setAnalyzing(entry);
-		} else void analyze(entry);
-	}
-
-	function card(entry: FoodEntry) {
-		return (
-			<EntryCard
-				key={entry.id}
-				meta={
-					<div className="flex items-center gap-2">
-						<span className="text-xs">{formatTime(entry.eatenAt)}</span>
-						{entry.aiFoodName && (
-							<span className="flex items-center gap-0.5 text-xs text-green-600 dark:text-green-400">
-								<Sparkles className="h-3 w-3" />
-								{entry.aiFoodName}
-							</span>
-						)}
-					</div>
-				}
-				body={
-					<>
-						{entry.description && (
-							<div className="whitespace-pre-wrap">{entry.description}</div>
-						)}
-						{entry.aiFoodName && (
-							<div className="mt-2 flex flex-wrap gap-2 text-xs">
-								<span className="rounded-full bg-green-100 px-2 py-0.5 text-green-700 dark:bg-green-900/30 dark:text-green-400">
-									{entry.aiCalories} kcal
-								</span>
-								<span className="rounded-full bg-blue-100 px-2 py-0.5 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
-									P: {entry.aiProteinG}g
-								</span>
-								<span className="rounded-full bg-amber-100 px-2 py-0.5 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
-									C: {entry.aiCarbsG}g
-								</span>
-								<span className="rounded-full bg-rose-100 px-2 py-0.5 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400">
-									F: {entry.aiFatG}g
-								</span>
-							</div>
-						)}
-					</>
-				}
-				actions={
-					<div className="ml-4 flex flex-shrink-0 flex-col gap-2">
-						<EntryCardActionButton
-							onClick={() => openAnalysis(entry)}
-							variant="success"
-						>
-							<span className="flex items-center gap-1">
-								<Sparkles className="h-3 w-3" />
-								{entry.aiFoodName ? "View Analysis" : "Analyze"}
-							</span>
-						</EntryCardActionButton>
-						<EntryCardActionButton
-							onClick={() => void startOver(entry)}
-							variant="neutral"
-						>
-							Edit
-						</EntryCardActionButton>
-						<EntryCardActionButton
-							onClick={() => void remove(entry)}
-							variant="danger"
-						>
-							Delete
-						</EntryCardActionButton>
-					</div>
-				}
-			>
-				<LibraryPhotoGrid photos={entry.photos} />
-			</EntryCard>
-		);
-	}
-
-	const byDate = Object.entries(groupBy(entries, (entry) => entry.date)).sort(
-		([a], [b]) => b.localeCompare(a),
+	const entries = list.items.filter((entry) => !hidden.has(entry.id));
+	const card = (entry: FoodEntry) => (
+		<RecordCard
+			key={entry.id}
+			label={`Edit ${entry.aiFoodName ?? "food entry"}`}
+			onOpen={() => setEditor({ entry })}
+			media={<LibraryPhotoGrid photos={entry.photos} />}
+		>
+			<div className="flex items-center gap-2 text-xs text-zinc-500">
+				<span>{formatTime(entry.eatenAt)}</span>
+				{entry.aiFoodName && (
+					<span className="flex items-center gap-0.5 text-green-600 dark:text-green-400">
+						<Sparkles className="h-3 w-3" />
+						{entry.aiFoodName}
+					</span>
+				)}
+			</div>
+			{entry.description && (
+				<p className="mt-1 line-clamp-3 whitespace-pre-wrap">
+					{entry.description}
+				</p>
+			)}
+			<Macros entry={entry} />
+		</RecordCard>
 	);
 
 	return (
-		<AdminPageWrapper>
-			<PageHeader
-				title="Food Tracker"
-				description="Track your daily food intake with photos and descriptions."
+		<AdminPage
+			title="Food"
+			actions={
+				<Segmented
+					label="View"
+					value={view}
+					options={views}
+					onChange={setView}
+				/>
+			}
+		>
+			{view === "day" && <DayNav value={day} onChange={setDay} today={today} />}
+			<ListStatus
+				loading={list.loading}
+				error={list.error}
+				onRetry={list.reload}
 			/>
-			<AdminSection className="space-y-4">
-				<SectionHeader title={editing ? "Edit Entry" : "New Entry"} />
-				<DateTimeInput
-					dateId="food-date"
-					timeId="food-time"
-					dateValue={date}
-					timeValue={time}
-					onDateChange={changeDate}
-					onTimeChange={setTime}
-				/>
-				<TextArea
-					id="food-description"
-					label="Description"
-					value={description}
-					onChange={setDescription}
-					rows={4}
-					placeholder="What did you eat? (e.g., Grilled chicken salad with avocado and olive oil)"
-				/>
-				<PhotoField photos={photos} onChange={setPhotos} disabled={saving} />
-				<FormActions
-					saving={saving}
-					isEditing={!!editing}
-					onSave={save}
-					onCancel={() => void startOver(null)}
-					disabled={!date || !photosReady(photos)}
-					saveLabel="Save Entry"
-					saveEditLabel="Update Entry"
-				/>
-			</AdminSection>
-
-			<AdminSection className="space-y-4">
-				<div className="flex items-center justify-between">
-					<SectionHeader title="Entries" />
-					<ViewModeToggle
-						viewMode={viewMode}
-						onViewModeChange={changeView}
-						allLabel="All Entries"
-					/>
-				</div>
-				{loading ? (
-					<p className="py-8 text-center text-zinc-600 dark:text-zinc-400">
-						Loading...
-					</p>
-				) : viewMode === "date" ? (
+			{!list.loading &&
+				!list.error &&
+				(view === "day" ? (
 					<div className="space-y-3">
-						<h3 className="text-lg font-medium text-zinc-700 dark:text-zinc-300">
-							{formatDate(date)} ({entries.length})
-						</h3>
 						<FoodDashboard entries={entries} />
-						<EntryCardList>
-							{entries.map(card)}
-							{entries.length === 0 && (
-								<EmptyState message="No entries for this day yet. Create your first one!" />
-							)}
-						</EntryCardList>
+						{entries.map(card)}
+						{entries.length === 0 && (
+							<EmptyState>Nothing logged on {formatDate(day)}.</EmptyState>
+						)}
 					</div>
 				) : (
-					<div className="space-y-6">
-						{byDate.length === 0 && (
-							<EmptyState message="No entries yet. Create your first one!" />
+					<div className="space-y-3">
+						{entries.length === 0 && (
+							<EmptyState>Nothing logged yet.</EmptyState>
 						)}
-						{byDate.map(([day, dayEntries]) => (
-							<div key={day} className="space-y-3">
-								<div className="flex flex-col justify-between gap-2 py-2 sm:flex-row sm:items-center">
-									<h3 className="text-lg font-medium text-zinc-700 dark:text-zinc-300">
-										{formatDate(day)} ({dayEntries.length})
-									</h3>
-									<FoodDashboard entries={dayEntries} compact />
-								</div>
-								<EntryCardList>{dayEntries.map(card)}</EntryCardList>
-							</div>
-						))}
+						{Object.entries(groupBy(entries, (entry) => entry.date))
+							.sort(([a], [b]) => b.localeCompare(a))
+							.map(([date, group]) => (
+								<section key={date} className="space-y-3">
+									<div className="flex flex-wrap items-center justify-between gap-2">
+										<GroupHeader>{formatDate(date)}</GroupHeader>
+										<FoodDashboard entries={group} compact />
+									</div>
+									{group.map(card)}
+								</section>
+							))}
 					</div>
-				)}
-			</AdminSection>
+				))}
+			<Fab label="Log food" onClick={() => setEditor({ entry: null })} />
+			{editor && (
+				<FoodEditor
+					key={editor.entry?.id ?? "new"}
+					entry={editor.entry}
+					defaultDate={view === "day" ? day : today}
+					onClose={close}
+					onSaved={(isNew) => {
+						close();
+						list.reload();
+						// Analysis runs after a new entry is saved; pick up its result.
+						if (isNew) {
+							clearTimeout(refresh.current);
+							refresh.current = setTimeout(list.reload, 12_000);
+						}
+					}}
+					onAnalyzed={list.reload}
+					onDelete={(entry) => {
+						close();
+						remove(entry.id, "Food entry deleted", `food/${entry.id}`);
+					}}
+				/>
+			)}
+		</AdminPage>
+	);
+}
 
-			<FoodAnalysisModal
-				key={analyzing?.id}
-				entry={analyzing}
-				onClose={() => {
-					setAnalyzing(null);
-					setAnalysisResult(null);
-				}}
-				isAnalyzing={isAnalyzing}
-				analysisResult={analysisResult}
-				onAnalyze={(entry) => void analyze(entry)}
+function FoodEditor({
+	entry,
+	defaultDate,
+	onClose,
+	onSaved,
+	onAnalyzed,
+	onDelete,
+}: {
+	entry: FoodEntry | null;
+	defaultDate: string;
+	onClose: () => void;
+	onSaved: (isNew: boolean) => void;
+	onAnalyzed: () => void;
+	onDelete: (entry: FoodEntry) => void;
+}) {
+	const [initial] = useState(() => ({
+		date: entry?.date ?? defaultDate,
+		time: entry ? timeOf(entry.eatenAt) : currentTime(),
+		description: entry?.description ?? "",
+	}));
+	const [form, setForm] = useState(initial);
+	const [photos, setPhotos] = useState<DraftPhoto[]>(() =>
+		toDrafts(entry?.photos),
+	);
+	const [saving, setSaving] = useState(false);
+	const [analyzing, setAnalyzing] = useState(false);
+	const [saved, setSaved] = useState(entry);
+	const dirty =
+		JSON.stringify(form) !== JSON.stringify(initial) ||
+		!samePhotos(photos, entry?.photos);
+
+	async function discardAnd(then: () => void) {
+		await discardUploads(photos);
+		then();
+	}
+	async function save() {
+		const [hours, minutes] = form.time.split(":").map(Number);
+		const [year, month, day] = form.date.split("-").map(Number);
+		setSaving(true);
+		try {
+			await adminRequest(`food/${entry?.id ?? crypto.randomUUID()}`, {
+				method: "PUT",
+				body: JSON.stringify({
+					date: form.date,
+					eatenAt: new Date(year, month - 1, day, hours, minutes).toISOString(),
+					description: form.description.trim(),
+					photoIds: photos.map((item) => item.id),
+				}),
+			});
+			toast.success(entry ? "Entry updated" : "Entry saved. Analyzing…");
+			onSaved(!entry);
+		} catch (error) {
+			toast.error(message(error, "Failed to save entry"));
+			setSaving(false);
+		}
+	}
+	async function analyze() {
+		if (!saved) return;
+		setAnalyzing(true);
+		try {
+			setSaved(
+				await adminRequest<FoodEntry>(`food/${saved.id}/analyze`, {
+					method: "POST",
+				}),
+			);
+			onAnalyzed();
+		} catch (error) {
+			toast.error(message(error, "Failed to analyze"));
+		} finally {
+			setAnalyzing(false);
+		}
+	}
+
+	return (
+		<EditorSheet
+			title={entry ? "Edit food" : "Log food"}
+			onClose={() => void discardAnd(onClose)}
+			onSubmit={() => void save()}
+			onDelete={
+				entry ? () => void discardAnd(() => onDelete(entry)) : undefined
+			}
+			saving={saving}
+			dirty={dirty}
+			canSubmit={
+				Boolean(form.date && (form.description.trim() || photos.length)) &&
+				photosReady(photos)
+			}
+		>
+			<TextArea
+				id="food-description"
+				label="Description"
+				value={form.description}
+				onChange={(description) => setForm({ ...form, description })}
+				rows={3}
+				placeholder="What did you eat?"
 			/>
-		</AdminPageWrapper>
+			<PhotoField photos={photos} onChange={setPhotos} disabled={saving} />
+			<DateTimeInput
+				dateId="food-date"
+				timeId="food-time"
+				dateValue={form.date}
+				timeValue={form.time}
+				onDateChange={(date) => setForm({ ...form, date })}
+				onTimeChange={(time) => setForm({ ...form, time })}
+			/>
+			{saved && (
+				<section className="space-y-2 rounded-xl bg-zinc-50 p-3 dark:bg-zinc-900">
+					<div className="flex items-center justify-between gap-2">
+						<h3 className="flex items-center gap-1.5 text-sm font-medium">
+							<Sparkles className="h-4 w-4 text-green-600" />
+							{saved.aiFoodName ?? "Not analyzed yet"}
+						</h3>
+						<button
+							type="button"
+							className={secondaryButton}
+							disabled={analyzing || dirty}
+							onClick={() => void analyze()}
+						>
+							{analyzing ? (
+								<Loader2 className="h-4 w-4 animate-spin" />
+							) : saved.aiFoodName ? (
+								"Re-analyze"
+							) : (
+								"Analyze"
+							)}
+						</button>
+					</div>
+					<Macros entry={saved} />
+					{saved.aiNotes && (
+						<p className="text-sm text-zinc-600 dark:text-zinc-400">
+							{saved.aiNotes}
+						</p>
+					)}
+					{dirty && (
+						<p className="text-xs text-zinc-500">
+							Save first to analyze changes.
+						</p>
+					)}
+				</section>
+			)}
+		</EditorSheet>
 	);
 }

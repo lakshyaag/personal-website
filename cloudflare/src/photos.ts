@@ -94,6 +94,16 @@ export async function photoRow(env: Env, id: string) {
 	return photo;
 }
 const placeholders = (count: number) => Array(count).fill("?").join(",");
+/** D1 binds at most 100 parameters per query, so long IN lists are queried in chunks. */
+async function allInChunks<T>(
+	ids: string[],
+	query: (chunk: string[]) => Promise<T[]>,
+) {
+	const rows: T[] = [];
+	for (let i = 0; i < ids.length; i += 90)
+		rows.push(...(await query(ids.slice(i, i + 90))));
+	return rows;
+}
 
 /** Photos linked to each context id, in link order. One query for any number of ids. */
 export async function linkedPhotos(
@@ -103,13 +113,16 @@ export async function linkedPhotos(
 ) {
 	const byContext = new Map<string, Photo[]>(contextIds.map((id) => [id, []]));
 	if (!contextIds.length) return byContext;
-	const { results } = await statement(
-		env,
-		`SELECT p.*, l.context_id AS link_context_id FROM photo_links l JOIN photos p ON p.id = l.photo_id
-		WHERE l.context = ? AND l.context_id IN (${placeholders(contextIds.length)}) ORDER BY l.position`,
-		context,
-		...contextIds,
-	).all<PhotoRow & { link_context_id: string }>();
+	const results = await allInChunks(contextIds, async (chunk) => {
+		const { results } = await statement(
+			env,
+			`SELECT p.*, l.context_id AS link_context_id FROM photo_links l JOIN photos p ON p.id = l.photo_id
+			WHERE l.context = ? AND l.context_id IN (${placeholders(chunk.length)}) ORDER BY l.position`,
+			context,
+			...chunk,
+		).all<PhotoRow & { link_context_id: string }>();
+		return results;
+	});
 	for (const row of results)
 		byContext.get(row.link_context_id)?.push(photoDto(row));
 	return byContext;
@@ -252,11 +265,17 @@ export async function listPhotos(env: Env, url: URL) {
 	const page = results.slice(0, filter.limit);
 	const links = new Map<string, LibraryPhoto["links"]>();
 	if (page.length) {
-		const { results: rows } = await statement(
-			env,
-			`SELECT * FROM photo_links WHERE photo_id IN (${placeholders(page.length)}) ORDER BY context, context_id`,
-			...page.map((row) => row.id),
-		).all<LinkRow>();
+		const rows = await allInChunks(
+			page.map((row) => row.id),
+			async (chunk) => {
+				const { results } = await statement(
+					env,
+					`SELECT * FROM photo_links WHERE photo_id IN (${placeholders(chunk.length)}) ORDER BY context, context_id`,
+					...chunk,
+				).all<LinkRow>();
+				return results;
+			},
+		);
 		for (const row of rows) {
 			const list = links.get(row.photo_id) ?? [];
 			list.push({ context: row.context, contextId: row.context_id });

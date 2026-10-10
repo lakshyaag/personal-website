@@ -1,29 +1,40 @@
 "use client";
 
-import {
-	AdminPageWrapper,
-	AdminSection,
-} from "@/components/admin/AdminPageWrapper";
 import { DateInput } from "@/components/admin/DateTimeInputs";
-import { EmptyState } from "@/components/admin/EmptyState";
-import { EntryCard, EntryCardList } from "@/components/admin/EntryCard";
-import { FormActions } from "@/components/admin/FormActions";
-import { TextArea, TextInput } from "@/components/admin/FormInputs";
-import { PageHeader, SectionHeader } from "@/components/admin/PageHeader";
+import {
+	CheckboxInput,
+	TextArea,
+	TextInput,
+	fieldClass,
+} from "@/components/admin/FormInputs";
 import PhotoField, { type DraftPhoto } from "@/components/admin/PhotoField";
 import { adminRequest, groupBy } from "@/components/admin/client";
+import {
+	AdminPage,
+	EditorSheet,
+	EmptyState,
+	Fab,
+	GroupHeader,
+	ListStatus,
+	RecordCard,
+	Segmented,
+	message,
+	useAdminList,
+	useUndoDelete,
+} from "@/components/admin/kit";
 import {
 	LibraryPhotoGrid,
 	discardUploads,
 	photosReady,
+	samePhotos,
 	toDrafts,
 } from "@/components/admin/library-photos";
 import airportsData from "@/data/airports.min.json";
 import { formatDate } from "@/lib/date-utils";
-import type { Airport } from "@/lib/models";
+import type { Airport } from "@/lib/public-types";
 import { localDate } from "@/shared/common";
 import { type Visit, visitListSchema } from "@/shared/visits";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useState } from "react";
 import { toast } from "sonner";
 
 const airports = airportsData as Airport[];
@@ -32,38 +43,109 @@ const airportName = (ident: string) => {
 	const airport = airportByIdent.get(ident);
 	return airport ? `${airport.name} (${ident})` : ident;
 };
-const message = (error: unknown, fallback: string) =>
-	error instanceof Error ? error.message : fallback;
+const parse = (data: unknown) => visitListSchema.parse(data).visits;
+const views = [
+	{ value: "date", label: "By date" },
+	{ value: "airport", label: "By airport" },
+] as const;
 
 export default function AirportsApp() {
-	const [query, setQuery] = useState("");
-	const [date, setDate] = useState(localDate);
-	const [flightNumbers, setFlightNumbers] = useState<string[]>([""]);
-	const [isLayover, setIsLayover] = useState(false);
-	const [notes, setNotes] = useState("");
-	const [selected, setSelected] = useState<Airport | null>(null);
-	const [photos, setPhotos] = useState<DraftPhoto[]>([]);
-	const [editing, setEditing] = useState<Visit | null>(null);
-	const [visits, setVisits] = useState<Visit[]>([]);
-	const [viewMode, setViewMode] = useState<"byDate" | "byAirport">("byDate");
-	const [loading, setLoading] = useState(true);
-	const [saving, setSaving] = useState(false);
-	const formRef = useRef<HTMLDivElement>(null);
+	const [view, setView] = useState<"date" | "airport">("date");
+	const list = useAdminList("visits", parse);
+	const { hidden, remove } = useUndoDelete();
+	const [editor, setEditor] = useState<{ visit: Visit | null } | null>(null);
 
-	const load = useCallback(async () => {
-		setLoading(true);
-		try {
-			setVisits(visitListSchema.parse(await adminRequest("visits")).visits);
-		} catch (error) {
-			toast.error(message(error, "Failed to load visits"));
-		} finally {
-			setLoading(false);
-		}
-	}, []);
-	useEffect(() => {
-		void load();
-	}, [load]);
+	const visits = list.items.filter((visit) => !hidden.has(visit.id));
+	const grouped = groupBy(visits, (visit) =>
+		view === "date" ? visit.date : visit.airportIdent,
+	);
+	const keys = Object.keys(grouped).sort((a, b) =>
+		view === "date"
+			? b.localeCompare(a)
+			: airportName(a).localeCompare(airportName(b)),
+	);
 
+	return (
+		<AdminPage
+			title="Airports"
+			actions={
+				<Segmented
+					label="Group"
+					value={view}
+					options={views}
+					onChange={setView}
+				/>
+			}
+		>
+			<ListStatus
+				loading={list.loading}
+				error={list.error}
+				onRetry={list.reload}
+			/>
+			{!list.loading && !list.error && keys.length === 0 && (
+				<EmptyState>No visits yet.</EmptyState>
+			)}
+			{keys.map((key) => (
+				<section key={key} className="space-y-3">
+					<GroupHeader>
+						{view === "date" ? formatDate(key) : airportName(key)}
+					</GroupHeader>
+					{grouped[key].map((visit) => (
+						<RecordCard
+							key={visit.id}
+							label={`Edit visit to ${visit.airportIdent} on ${visit.date}`}
+							onOpen={() => setEditor({ visit })}
+							media={<LibraryPhotoGrid photos={visit.photos} />}
+						>
+							<div className="font-medium">
+								{view === "date"
+									? (airportByIdent.get(visit.airportIdent)?.name ??
+										visit.airportIdent)
+									: formatDate(visit.date)}
+							</div>
+							{visit.flightNumbers.length > 0 && (
+								<div className="mt-1 text-zinc-600 dark:text-zinc-400">
+									{visit.isLayover ? "Flights: " : "Flight: "}
+									{visit.flightNumbers.join(" → ")}
+								</div>
+							)}
+							{visit.notes && (
+								<div className="mt-1 text-zinc-600 dark:text-zinc-400">
+									{visit.notes}
+								</div>
+							)}
+						</RecordCard>
+					))}
+				</section>
+			))}
+			<Fab label="Add visit" onClick={() => setEditor({ visit: null })} />
+			{editor && (
+				<VisitEditor
+					key={editor.visit?.id ?? "new"}
+					visit={editor.visit}
+					onClose={() => setEditor(null)}
+					onSaved={() => {
+						setEditor(null);
+						list.reload();
+					}}
+					onDelete={(visit) => {
+						setEditor(null);
+						remove(visit.id, "Visit deleted", `visits/${visit.id}`);
+					}}
+				/>
+			)}
+		</AdminPage>
+	);
+}
+
+function AirportSearch({
+	selected,
+	onSelect,
+}: {
+	selected: Airport | null;
+	onSelect: (airport: Airport | null) => void;
+}) {
+	const [query, setQuery] = useState(selected?.name ?? "");
 	const lowered = query.toLowerCase();
 	const results =
 		query && !selected
@@ -77,51 +159,108 @@ export default function AirportsApp() {
 					)
 					.slice(0, 20)
 			: [];
+	return (
+		<div>
+			<label
+				htmlFor="airport-search"
+				className="mb-1.5 block text-sm font-medium text-zinc-700 dark:text-zinc-300"
+			>
+				Search Airport
+			</label>
+			<input
+				id="airport-search"
+				className={fieldClass}
+				placeholder="ICAO, IATA, name or city"
+				value={query}
+				onChange={(event) => {
+					setQuery(event.target.value);
+					onSelect(null);
+				}}
+			/>
+			{results.length > 0 && (
+				<div className="mt-2 max-h-64 overflow-auto rounded-lg border border-zinc-300 dark:border-zinc-700">
+					{results.map((airport) => (
+						<button
+							type="button"
+							key={airport.ident}
+							className="w-full px-3 py-2.5 text-left text-sm active:bg-zinc-100 dark:active:bg-zinc-800"
+							onClick={() => {
+								onSelect(airport);
+								setQuery(airport.name);
+							}}
+						>
+							<div className="font-medium">
+								{airport.ident}
+								{airport.iata_code ? ` (${airport.iata_code})` : ""}
+							</div>
+							<div className="text-zinc-600 dark:text-zinc-400">
+								{airport.name} — {airport.municipality}, {airport.iso_country}
+							</div>
+						</button>
+					))}
+				</div>
+			)}
+			{selected && (
+				<p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
+					{selected.ident}
+					{selected.iata_code ? ` (${selected.iata_code})` : ""} —{" "}
+					{selected.municipality}, {selected.iso_country}
+				</p>
+			)}
+		</div>
+	);
+}
 
-	function fill(visit: Visit | null) {
-		const airport = visit ? airportByIdent.get(visit.airportIdent) : null;
-		setEditing(visit);
-		setSelected(airport ?? null);
-		setQuery(airport?.name ?? visit?.airportIdent ?? "");
-		setDate(visit?.date ?? localDate());
-		setFlightNumbers(visit?.flightNumbers.length ? visit.flightNumbers : [""]);
-		setIsLayover(visit?.isLayover ?? false);
-		setNotes(visit?.notes ?? "");
-		setPhotos(toDrafts(visit?.photos));
-	}
-	async function startOver(visit: Visit | null) {
-		if (visit && !airportByIdent.has(visit.airportIdent)) {
-			toast.error(
-				`Could not find airport ${visit.airportIdent} in the local airport list.`,
-			);
-			return;
-		}
+function VisitEditor({
+	visit,
+	onClose,
+	onSaved,
+	onDelete,
+}: {
+	visit: Visit | null;
+	onClose: () => void;
+	onSaved: () => void;
+	onDelete: (visit: Visit) => void;
+}) {
+	const [initial] = useState(() => ({
+		airport: visit ? (airportByIdent.get(visit.airportIdent) ?? null) : null,
+		date: visit?.date ?? localDate(),
+		flights: visit?.flightNumbers.length ? visit.flightNumbers : [""],
+		isLayover: visit?.isLayover ?? false,
+		notes: visit?.notes ?? "",
+	}));
+	const [form, setForm] = useState(initial);
+	const [photos, setPhotos] = useState<DraftPhoto[]>(() =>
+		toDrafts(visit?.photos),
+	);
+	const [saving, setSaving] = useState(false);
+	const dirty =
+		JSON.stringify(form) !== JSON.stringify(initial) ||
+		!samePhotos(photos, visit?.photos);
+
+	async function discardAnd(then: () => void) {
 		await discardUploads(photos);
-		fill(visit);
-		if (visit)
-			requestAnimationFrame(() =>
-				formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }),
-			);
+		then();
 	}
-	function changeLayover(checked: boolean) {
-		setIsLayover(checked);
-		if (checked && flightNumbers.length === 1)
-			setFlightNumbers([flightNumbers[0], ""]);
-		else if (!checked) setFlightNumbers([flightNumbers[0] ?? ""]);
+	function setLayover(isLayover: boolean) {
+		setForm({
+			...form,
+			isLayover,
+			flights: isLayover
+				? [form.flights[0] ?? "", ""]
+				: [form.flights[0] ?? ""],
+		});
 	}
-
+	function setFlight(index: number, value: string) {
+		const flights = [...form.flights];
+		flights[index] = value;
+		setForm({ ...form, flights });
+	}
 	async function save() {
-		if (!selected) {
-			toast.error("Select an airport");
-			return;
-		}
-		if (!photosReady(photos)) {
-			toast.error("Wait for photos to finish uploading");
-			return;
-		}
+		if (!form.airport) return;
 		setSaving(true);
 		try {
-			// Visit photos appear on the public airports map, as they did before.
+			// Visit photos appear on the public airports map.
 			await Promise.all(
 				photos
 					.filter((item) => !item.existing)
@@ -132,264 +271,81 @@ export default function AirportsApp() {
 						}),
 					),
 			);
-			await adminRequest(`visits/${editing?.id ?? crypto.randomUUID()}`, {
+			await adminRequest(`visits/${visit?.id ?? crypto.randomUUID()}`, {
 				method: "PUT",
 				body: JSON.stringify({
-					airportIdent: selected.ident,
-					date,
-					flightNumbers: flightNumbers
-						.map((flight) => flight.trim())
-						.filter(Boolean),
-					isLayover,
-					notes: notes.trim(),
+					airportIdent: form.airport.ident,
+					date: form.date,
+					flightNumbers: form.flights.map((f) => f.trim()).filter(Boolean),
+					isLayover: form.isLayover,
+					notes: form.notes.trim(),
 					photoIds: photos.map((item) => item.id),
 				}),
 			});
-			toast.success(editing ? "Visit updated" : "Visit saved");
-			fill(null);
-			await load();
+			toast.success(visit ? "Visit updated" : "Visit saved");
+			onSaved();
 		} catch (error) {
 			toast.error(message(error, "Failed to save visit"));
-		} finally {
 			setSaving(false);
 		}
 	}
-	async function remove(visit: Visit) {
-		if (!window.confirm("Delete this visit?")) return;
-		try {
-			await adminRequest(`visits/${visit.id}`, { method: "DELETE" });
-			toast.success("Visit deleted");
-			if (editing?.id === visit.id) fill(null);
-			await load();
-		} catch (error) {
-			toast.error(message(error, "Failed to delete visit"));
-		}
-	}
-
-	const groups = useMemo(() => {
-		const grouped = groupBy(visits, (visit) =>
-			viewMode === "byDate" ? visit.date : visit.airportIdent,
-		);
-		const keys = Object.keys(grouped);
-		if (viewMode === "byAirport")
-			keys.sort((a, b) => airportName(a).localeCompare(airportName(b)));
-		else keys.sort((a, b) => b.localeCompare(a));
-		return keys.map((key) => [key, grouped[key]] as const);
-	}, [visits, viewMode]);
-
-	function card(visit: Visit) {
-		const showAirport = viewMode === "byDate";
-		const meta = [
-			showAirport ? visit.airportIdent : null,
-			showAirport ? null : formatDate(visit.date),
-		]
-			.filter(Boolean)
-			.join(" ");
-		return (
-			<EntryCard
-				onEdit={() => void startOver(visit)}
-				onDelete={() => void remove(visit)}
-				title={
-					showAirport
-						? (airportByIdent.get(visit.airportIdent)?.name ??
-							visit.airportIdent)
-						: null
-				}
-				meta={meta || null}
-				body={
-					<>
-						{visit.flightNumbers.length > 0 && (
-							<div className="mt-1">
-								{visit.isLayover ? "Flights: " : "Flight: "}
-								{visit.flightNumbers.join(" → ")}
-							</div>
-						)}
-						{visit.notes && <div className="mt-1">{visit.notes}</div>}
-					</>
-				}
-			>
-				<LibraryPhotoGrid photos={visit.photos} />
-			</EntryCard>
-		);
-	}
 
 	return (
-		<AdminPageWrapper>
-			<PageHeader
-				title="Manage Airport Visits"
-				description="Add, edit, and manage your airport visits."
+		<EditorSheet
+			title={visit ? "Edit visit" : "Add visit"}
+			onClose={() => void discardAnd(onClose)}
+			onSubmit={() => void save()}
+			onDelete={
+				visit ? () => void discardAnd(() => onDelete(visit)) : undefined
+			}
+			saving={saving}
+			dirty={dirty}
+			canSubmit={Boolean(form.airport && form.date) && photosReady(photos)}
+		>
+			<AirportSearch
+				selected={form.airport}
+				onSelect={(airport) => setForm((current) => ({ ...current, airport }))}
 			/>
-			<AdminSection>
-				<div ref={formRef} className="scroll-mt-4 space-y-4">
-					<SectionHeader title={editing ? "Edit Visit" : "Add New Visit"} />
-					<div>
-						<label
-							htmlFor="airport-search"
-							className="mb-2 block text-sm font-medium text-zinc-700 dark:text-zinc-300"
-						>
-							Search Airport
-						</label>
-						<input
-							id="airport-search"
-							className="w-full rounded-lg border border-zinc-300 bg-white px-4 py-2 text-zinc-900 focus:border-zinc-500 focus:outline-none focus:ring-2 focus:ring-zinc-500/20 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
-							placeholder="Search by ICAO, IATA, name, or city..."
-							value={query}
-							onChange={(event) => {
-								setQuery(event.target.value);
-								setSelected(null);
-							}}
-						/>
-						{results.length > 0 && (
-							<div className="mt-2 max-h-64 overflow-auto rounded-lg border border-zinc-300 dark:border-zinc-700">
-								{results.map((airport) => (
-									<button
-										type="button"
-										key={airport.ident}
-										className="w-full px-4 py-2 text-left text-sm transition-colors hover:bg-zinc-100 dark:hover:bg-zinc-800"
-										onClick={() => {
-											setSelected(airport);
-											setQuery(airport.name);
-										}}
-									>
-										<div className="font-medium">
-											{airport.ident}
-											{airport.iata_code ? ` (${airport.iata_code})` : ""}
-										</div>
-										<div className="text-zinc-600 dark:text-zinc-400">
-											{airport.name} — {airport.municipality},{" "}
-											{airport.iso_country}
-										</div>
-									</button>
-								))}
-							</div>
-						)}
-						{selected && (
-							<div className="mt-2 rounded-lg bg-zinc-100 px-4 py-2 dark:bg-zinc-900/50">
-								<div className="font-medium">Selected: {selected.name}</div>
-								<div className="text-sm text-zinc-600 dark:text-zinc-400">
-									{selected.ident}
-									{selected.iata_code ? ` (${selected.iata_code})` : ""} —{" "}
-									{selected.municipality}, {selected.iso_country}
-								</div>
-							</div>
-						)}
-					</div>
-					<DateInput label="Visit Date" value={date} onChange={setDate} />
-					<div>
-						<div className="mb-3 flex items-center gap-3">
-							<span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
-								Flight Information (optional)
-							</span>
-							<label
-								htmlFor="layover-checkbox"
-								className="flex items-center gap-2"
-							>
-								<input
-									id="layover-checkbox"
-									type="checkbox"
-									checked={isLayover}
-									onChange={(event) => changeLayover(event.target.checked)}
-									className="rounded border-zinc-300 text-zinc-900 focus:ring-2 focus:ring-zinc-500/20 dark:border-zinc-700"
-								/>
-								<span className="text-sm text-zinc-600 dark:text-zinc-400">
-									Layover
-								</span>
-							</label>
-						</div>
-						{isLayover ? (
-							<div className="space-y-2">
-								{["Arrival Flight", "Departure Flight"].map((label, index) => (
-									<TextInput
-										key={label}
-										label={label}
-										value={flightNumbers[index] ?? ""}
-										onChange={(value) =>
-											setFlightNumbers((current) => {
-												const next = [...current];
-												next[index] = value;
-												return next;
-											})
-										}
-										placeholder={index ? "e.g., THY 35" : "e.g., THY 717"}
-									/>
-								))}
-							</div>
-						) : (
-							<TextInput
-								value={flightNumbers[0] ?? ""}
-								onChange={(value) => setFlightNumbers([value])}
-								placeholder="e.g., THY 36"
-							/>
-						)}
-					</div>
-					<TextArea
-						label="Notes (optional)"
-						value={notes}
-						onChange={setNotes}
-						rows={3}
-						placeholder="Add any notes about this visit..."
+			<DateInput
+				label="Visit Date"
+				value={form.date}
+				onChange={(date) => setForm({ ...form, date })}
+			/>
+			<CheckboxInput
+				label="Layover"
+				checked={form.isLayover}
+				onChange={setLayover}
+			/>
+			{form.isLayover ? (
+				<div className="grid grid-cols-2 gap-3">
+					<TextInput
+						label="Arrival Flight"
+						value={form.flights[0] ?? ""}
+						onChange={(value) => setFlight(0, value)}
+						placeholder="THY 717"
 					/>
-					<PhotoField
-						photos={photos}
-						onChange={setPhotos}
-						disabled={saving || !selected}
-					/>
-					<FormActions
-						saving={saving}
-						isEditing={!!editing}
-						onSave={save}
-						onCancel={() => void startOver(null)}
-						disabled={!selected || !date || !photosReady(photos)}
-						saveLabel="Save Visit"
-						saveEditLabel="Update Visit"
+					<TextInput
+						label="Departure Flight"
+						value={form.flights[1] ?? ""}
+						onChange={(value) => setFlight(1, value)}
+						placeholder="THY 35"
 					/>
 				</div>
-			</AdminSection>
-
-			<AdminSection className="space-y-4">
-				<div className="flex items-center justify-between">
-					<SectionHeader title="Visits" />
-					<div className="flex gap-2">
-						{(["byDate", "byAirport"] as const).map((mode) => (
-							<button
-								key={mode}
-								type="button"
-								onClick={() => setViewMode(mode)}
-								className={`rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
-									viewMode === mode
-										? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900"
-										: "bg-zinc-100 text-zinc-900 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-100 dark:hover:bg-zinc-700"
-								}`}
-							>
-								{mode === "byDate" ? "By Date" : "By Airport"}
-							</button>
-						))}
-					</div>
-				</div>
-				{loading ? (
-					<p className="py-8 text-center text-zinc-600 dark:text-zinc-400">
-						Loading...
-					</p>
-				) : groups.length === 0 ? (
-					<EmptyState message="No visits yet. Add your first airport visit!" />
-				) : (
-					<div className="space-y-6">
-						{groups.map(([key, group]) => (
-							<div key={key} className="space-y-3">
-								<h3 className="py-2 text-lg font-medium text-zinc-700 dark:text-zinc-300">
-									{viewMode === "byDate" ? formatDate(key) : airportName(key)} (
-									{group.length})
-								</h3>
-								<EntryCardList>
-									{group.map((visit) => (
-										<div key={visit.id}>{card(visit)}</div>
-									))}
-								</EntryCardList>
-							</div>
-						))}
-					</div>
-				)}
-			</AdminSection>
-		</AdminPageWrapper>
+			) : (
+				<TextInput
+					label="Flight (optional)"
+					value={form.flights[0] ?? ""}
+					onChange={(value) => setFlight(0, value)}
+					placeholder="THY 36"
+				/>
+			)}
+			<TextArea
+				label="Notes (optional)"
+				value={form.notes}
+				onChange={(notes) => setForm({ ...form, notes })}
+				rows={3}
+			/>
+			<PhotoField photos={photos} onChange={setPhotos} disabled={saving} />
+		</EditorSheet>
 	);
 }

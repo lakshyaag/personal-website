@@ -1,8 +1,7 @@
 "use client";
 
-import type { Recommendation } from "@/lib/models";
+import type { Recommendation } from "@/shared/books";
 import { motion } from "motion/react";
-import { useEffect, useState } from "react";
 
 function formatDate(timestamp: number): string {
 	return new Date(timestamp).toLocaleDateString("en-US", {
@@ -12,26 +11,9 @@ function formatDate(timestamp: number): string {
 	});
 }
 
-export function RecommendationList() {
-	const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
-	const [loading, setLoading] = useState(true);
-
-	useEffect(() => {
-		fetch("/api/recommend")
-			.then((res) => res.json())
-			.then((data) => {
-				setRecommendations(data);
-				setLoading(false);
-			})
-			.catch(() => setLoading(false));
-	}, []);
-
-	if (loading) {
-		return (
-			<div className="text-sm text-neutral-500">Loading recommendations...</div>
-		);
-	}
-
+export function RecommendationList({
+	recommendations,
+}: { recommendations: Recommendation[] }) {
 	if (recommendations.length === 0) {
 		return null;
 	}

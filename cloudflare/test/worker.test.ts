@@ -619,6 +619,22 @@ describe("Food, workouts, visits and books", () => {
 		expect((await request(`/v1/books/${first}`, "DELETE")).status).toBe(204);
 		expect((await request(`/v1/books/${first}`, "DELETE")).status).toBe(404);
 	});
+	it("lists more records than D1 binds in one query", async () => {
+		for (let i = 0; i < 120; i++)
+			await request(`/v1/visits/${id()}`, "PUT", {
+				airportIdent: "KJFK",
+				date: "2026-01-02",
+				flightNumbers: [],
+				isLayover: false,
+				notes: "",
+				photoIds: [],
+			});
+		const response = await request("/v1/visits");
+		expect(response.status).toBe(200);
+		expect(
+			((await response.json()) as { visits: unknown[] }).visits.length,
+		).toBeGreaterThanOrEqual(120);
+	});
 	it("accepts bounded public recommendations", async () => {
 		expect(
 			(await request("/v1/recommendations", "POST", { bookName: "" })).status,

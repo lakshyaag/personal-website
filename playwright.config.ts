@@ -33,7 +33,6 @@ export default defineConfig({
 			timeout: 120_000,
 			env: {
 				NEXT_DIST_DIR: ".next-e2e",
-				ADMIN_BACKEND: "cloudflare",
 				AUTH_SECRET,
 				ADMIN_GITHUB_ID: OWNER_ID,
 				AUTH_GITHUB_ID: "browser-test-client",
@@ -43,9 +42,6 @@ export default defineConfig({
 				CLOUDFLARE_WORKER_URL: "http://localhost:8788",
 				CLOUDFLARE_WORKER_SECRET: WORKER_SECRET,
 				LOCAL_WORKER_UPLOADS: "true",
-				NEXT_PUBLIC_SUPABASE_URL: "https://unused-migration-source.supabase.co",
-				NEXT_PUBLIC_SUPABASE_ANON_KEY: "browser-test-anon-key",
-				SUPABASE_SERVICE_ROLE_KEY: "browser-test-service-role-key",
 			},
 		},
 	],
