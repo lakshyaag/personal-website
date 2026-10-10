@@ -624,20 +624,6 @@ async function route(request: Request, env: Env): Promise<Response> {
 			request.method === "POST"
 		)
 			return responseJson(await completePhoto(env, id, action === "retry"));
-		// Service-only endpoint for migration checksum verification; not exposed by Next.js.
-		if (action === "original" && request.method === "GET") {
-			const row = await photoRow(env, id);
-			if (row.state === "deleting")
-				throw new ApiError(404, "NOT_FOUND", "Photo not found");
-			const object = await env.PHOTOS.get(originalKey(id));
-			if (!object) throw new ApiError(404, "NOT_FOUND", "Original not found");
-			return new Response(object.body, {
-				headers: {
-					"Content-Type": row.mime_type,
-					"Content-Disposition": "attachment",
-				},
-			});
-		}
 		if (action === "display" && request.method === "GET") {
 			const row = await photoRow(env, id);
 			if (row.state !== "ready" || !row.display_key)

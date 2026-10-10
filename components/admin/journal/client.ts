@@ -13,7 +13,7 @@ export async function journalRequest<T>(
 	const headers = new Headers(init.headers);
 	if (typeof init.body === "string")
 		headers.set("Content-Type", "application/json");
-	const response = await fetch(`/api/migration/${path}`, {
+	const response = await fetch(`/api/admin/${path}`, {
 		...init,
 		headers,
 		cache: "no-store",

@@ -348,9 +348,6 @@ export default function JournalApp({ editId }: { editId?: string }) {
 		<main className="space-y-8 pb-16">
 			<header className="flex items-end justify-between gap-4">
 				<div className="space-y-2">
-					<p className="text-sm text-zinc-500">
-						Private · Cloudflare migration
-					</p>
 					<h1 className="text-3xl font-medium">Journal</h1>
 					<p className="text-zinc-600 dark:text-zinc-400">
 						A place for your thoughts, moments, and memories.
@@ -558,7 +555,7 @@ export default function JournalApp({ editId }: { editId?: string }) {
 								{entry.photos.map((photo) => (
 									<img
 										key={photo.id}
-										src={`/api/migration/photos/${photo.id}/display`}
+										src={`/api/admin/photos/${photo.id}/display`}
 										alt={photo.fileName}
 										loading="lazy"
 										className="aspect-square w-full rounded-lg object-cover"

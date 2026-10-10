@@ -1,20 +1,20 @@
 import { auth } from "@/auth";
-import { proxy as legacyProxy } from "@/lib/legacy-proxy";
 import {
 	authConfigured,
-	migrationEnabled,
+	cloudflareAdmin,
 	ownerAllowed,
-} from "@/lib/migration/config";
+} from "@/lib/backend/config";
+import { proxy as legacyProxy } from "@/lib/legacy-proxy";
 import { type NextRequest, NextResponse } from "next/server";
 
 export async function proxy(request: NextRequest) {
-	if (!migrationEnabled()) {
+	if (!cloudflareAdmin()) {
 		if (request.nextUrl.pathname.startsWith("/api/auth/"))
 			return NextResponse.next();
 		return legacyProxy(request);
 	}
 	const path = request.nextUrl.pathname;
-	if (path.startsWith("/api/auth/") || path.startsWith("/api/migration/"))
+	if (path.startsWith("/api/auth/") || path.startsWith("/api/admin/"))
 		return NextResponse.next();
 	if (path === "/admin/login") return NextResponse.next();
 	if (path === "/api/logout")
@@ -36,7 +36,7 @@ export async function proxy(request: NextRequest) {
 		response.headers.set("Cache-Control", "private, no-store");
 		return response;
 	}
-	// Keep the existing public gallery/teaser working during the journal-only migration.
+	// Public gallery/teaser still reads from Supabase until photos are migrated.
 	if (
 		path === "/api/photos" &&
 		request.method === "GET" &&
@@ -61,8 +61,7 @@ export async function proxy(request: NextRequest) {
 	) {
 		return NextResponse.json(
 			{
-				error:
-					"This API is unavailable in migration mode. Use the new journal API.",
+				error: "This API has not moved to the Cloudflare admin backend yet.",
 			},
 			{ status: 410, headers: { "Cache-Control": "no-store" } },
 		);

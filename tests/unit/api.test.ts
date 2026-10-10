@@ -1,13 +1,13 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 vi.mock("../../auth", () => ({ auth: vi.fn() }));
-import { GET, POST } from "../../app/api/migration/journal/route";
+import { GET, POST } from "../../app/api/admin/journal/route";
 import { auth } from "../../auth";
-import { requireOwner } from "../../lib/migration/api";
-import { workerRequest } from "../../lib/migration/worker-client";
+import { requireOwner } from "../../lib/backend/api";
+import { workerRequest } from "../../lib/backend/worker";
 
 const secret = "local-test-secret-at-least-32-characters-long";
 function configured() {
-	vi.stubEnv("JOURNAL_BACKEND", "cloudflare");
+	vi.stubEnv("ADMIN_BACKEND", "cloudflare");
 	vi.stubEnv("AUTH_SECRET", secret);
 	vi.stubEnv("AUTH_GITHUB_ID", "test-oauth-client");
 	vi.stubEnv("AUTH_GITHUB_SECRET", "test-oauth-secret");
@@ -28,8 +28,7 @@ describe("Next.js private API", () => {
 		const fetch = vi.fn();
 		vi.stubGlobal("fetch", fetch);
 		expect(
-			(await GET(new Request("https://website.test/api/migration/journal")))
-				.status,
+			(await GET(new Request("https://website.test/api/admin/journal"))).status,
 		).toBe(401);
 		expect(fetch).not.toHaveBeenCalled();
 	});
@@ -42,8 +41,7 @@ describe("Next.js private API", () => {
 		configured();
 		vi.stubEnv("AUTH_SECRET", "REPLACE_WITH_A_LONG_RANDOM_AUTH_SECRET");
 		expect(
-			(await GET(new Request("https://website.test/api/migration/journal")))
-				.status,
+			(await GET(new Request("https://website.test/api/admin/journal"))).status,
 		).toBe(503);
 	});
 	it("requires same-origin mutations even for an authenticated owner", async () => {
@@ -51,7 +49,7 @@ describe("Next.js private API", () => {
 		vi.mocked(auth).mockResolvedValue({ user: { id: "123" } } as never);
 		for (const origin of [undefined, "https://evil.test"]) {
 			const response = await POST(
-				new Request("https://website.test/api/migration/journal", {
+				new Request("https://website.test/api/admin/journal", {
 					method: "POST",
 					headers: origin ? { Origin: origin } : {},
 				}),
@@ -65,7 +63,7 @@ describe("Next.js private API", () => {
 		const fetch = vi.fn();
 		vi.stubGlobal("fetch", fetch);
 		const response = await POST(
-			new Request("https://website.test/api/migration/journal", {
+			new Request("https://website.test/api/admin/journal", {
 				method: "POST",
 				headers: {
 					Origin: "https://website.test",

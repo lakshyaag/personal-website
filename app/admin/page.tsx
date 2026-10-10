@@ -1,12 +1,12 @@
 import { signOut } from "@/auth";
 import SupabaseDashboard from "@/components/admin/legacy/SupabaseDashboard";
-import { requireOwner } from "@/lib/migration/api";
-import { migrationEnabled } from "@/lib/migration/config";
+import { requireOwner } from "@/lib/backend/api";
+import { cloudflareAdmin } from "@/lib/backend/config";
 import Link from "next/link";
 
 export const dynamic = "force-dynamic";
 export default async function AdminPage() {
-	if (!migrationEnabled()) return <SupabaseDashboard />;
+	if (!cloudflareAdmin()) return <SupabaseDashboard />;
 	await requireOwner();
 	async function logout() {
 		"use server";
@@ -22,18 +22,12 @@ export default async function AdminPage() {
 					</button>
 				</form>
 			</div>
-			<p className="text-zinc-600 dark:text-zinc-400">
-				The new journal uses Cloudflare. Other admin features are unavailable in
-				migration mode. Public pages still use the existing backend.
-			</p>
 			<Link
 				href="/admin/journal"
 				className="block rounded-xl border border-zinc-300 p-6 dark:border-zinc-700"
 			>
 				<h2 className="text-xl font-medium">Journal</h2>
-				<p className="mt-2 text-zinc-500">
-					Private entries and photos · D1 + R2
-				</p>
+				<p className="mt-2 text-zinc-500">Entries and photos</p>
 			</Link>
 		</main>
 	);

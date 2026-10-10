@@ -6,6 +6,17 @@ The admin backend is moving from Supabase to Cloudflare. **Journal is migrated**
 
 **One shared backend for the entire application**: one Worker, one D1 database, one private photo bucket. New features add tables (numbered SQL migrations) and routes to it — never a separate database or bucket.
 
+## Code layout
+
+| Path | Role |
+| --- | --- |
+| `cloudflare/` | The Worker: `src/index.ts`, D1 `migrations/`, `cloudflare.config.ts` |
+| `shared/` | Request/response schemas used by both Next.js and the Worker |
+| `lib/backend/` | Next.js side: owner auth (`api.ts`), config (`config.ts`), Worker client (`worker.ts`), private R2 upload URLs (`r2.ts`) |
+| `app/api/admin/*` | Thin authenticated Next.js routes that proxy to the Worker |
+
+`ADMIN_BACKEND=cloudflare` switches the whole admin to this backend. Features that haven't moved yet are blocked in that mode rather than silently writing to Supabase. Any other value keeps the legacy Supabase admin, which is what Vercel runs until every feature has moved. Once that happens, delete the switch and the legacy code.
+
 | Resource | Production |
 | --- | --- |
 | Worker | `personal-website-backend` |
@@ -45,7 +56,7 @@ bun run dev
 Open `http://localhost:3000/admin/journal`. GitHub OAuth calls back to `http://localhost:3000/api/auth/callback/github`. The only allowed account is `lakshyaag` (numeric ID `10924399`).
 
 ```dotenv
-JOURNAL_BACKEND=cloudflare
+ADMIN_BACKEND=cloudflare
 AUTH_URL=http://localhost:3000
 ADMIN_GITHUB_ID=10924399
 CLOUDFLARE_WORKER_URL=https://personal-website-backend.lakshyaag1202.workers.dev

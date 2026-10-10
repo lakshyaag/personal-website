@@ -20,7 +20,7 @@ export async function workerRequest(
 	if (!base || !validSecret(secret))
 		throw new BackendError(
 			503,
-			"Cloudflare backend is not configured. See docs/cloudflare-migration.md.",
+			"Cloudflare backend is not configured. See docs/cloudflare-backend.md.",
 			"CONFIGURATION",
 		);
 	const url = new URL(base);

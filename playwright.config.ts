@@ -32,7 +32,7 @@ export default defineConfig({
 			reuseExistingServer: false,
 			timeout: 120_000,
 			env: {
-				JOURNAL_BACKEND: "cloudflare",
+				ADMIN_BACKEND: "cloudflare",
 				AUTH_SECRET,
 				ADMIN_GITHUB_ID: OWNER_ID,
 				AUTH_GITHUB_ID: "browser-test-client",

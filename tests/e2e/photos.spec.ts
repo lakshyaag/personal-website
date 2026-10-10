@@ -20,15 +20,12 @@ test("retains a successful upload when another file fails, then saves only the r
 	await page.goto("/admin/journal");
 	await page.getByLabel("Your thoughts").fill("Browser test: partial upload");
 	let uploads = 0;
-	await page.route(
-		/\/api\/migration\/photos\/[^/]+\/upload$/,
-		async (route) => {
-			uploads++;
-			if (uploads === 2)
-				await route.fulfill({ status: 503, body: "Simulated upload failure" });
-			else await route.continue();
-		},
-	);
+	await page.route(/\/api\/admin\/photos\/[^/]+\/upload$/, async (route) => {
+		uploads++;
+		if (uploads === 2)
+			await route.fulfill({ status: 503, body: "Simulated upload failure" });
+		else await route.continue();
+	});
 	const image = await sharp({
 		create: { width: 30, height: 20, channels: 3, background: "#ebc27a" },
 	})
@@ -58,12 +55,12 @@ test("retains a successful upload when another file fails, then saves only the r
 		.filter({ hasText: "Browser test: partial upload" });
 	await expect(card.getByRole("img")).toHaveCount(1);
 	const data = (await (
-		await context.request.get(`${BASE_URL}/api/migration/journal?limit=50`)
+		await context.request.get(`${BASE_URL}/api/admin/journal?limit=50`)
 	).json()) as { entries: { id: string; version: number; content: string }[] };
 	for (const entry of data.entries)
 		if (entry.content === "Browser test: partial upload")
 			await context.request.delete(
-				`${BASE_URL}/api/migration/journal/${entry.id}?expectedVersion=${entry.version}`,
+				`${BASE_URL}/api/admin/journal/${entry.id}?expectedVersion=${entry.version}`,
 				{ headers: { Origin: BASE_URL } },
 			);
 });

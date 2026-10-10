@@ -1,5 +1,5 @@
-export function migrationEnabled() {
-	return process.env.JOURNAL_BACKEND === "cloudflare";
+export function cloudflareAdmin() {
+	return process.env.ADMIN_BACKEND === "cloudflare";
 }
 export function validSecret(value: string | undefined) {
 	return Boolean(

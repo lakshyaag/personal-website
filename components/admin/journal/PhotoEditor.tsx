@@ -304,7 +304,7 @@ export default function PhotoEditor({
 							<img
 								src={
 									item.photo?.state === "ready"
-										? `/api/migration/photos/${item.id}/display`
+										? `/api/admin/photos/${item.id}/display`
 										: item.preview
 								}
 								alt={item.photo?.fileName ?? item.file?.name ?? "Journal photo"}

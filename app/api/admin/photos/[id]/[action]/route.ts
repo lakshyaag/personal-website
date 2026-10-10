@@ -1,10 +1,6 @@
-import { privateJson, privateRoute } from "@/lib/migration/api";
-import { localWorkerUploads } from "@/lib/migration/config";
-import {
-	BackendError,
-	workerJson,
-	workerRequest,
-} from "@/lib/migration/worker-client";
+import { privateJson, privateRoute } from "@/lib/backend/api";
+import { localWorkerUploads } from "@/lib/backend/config";
+import { BackendError, workerJson, workerRequest } from "@/lib/backend/worker";
 import { MAX_PHOTO_BYTES, idSchema, photoSchema } from "@/shared/journal";
 import { z } from "zod";
 

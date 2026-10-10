@@ -22,7 +22,7 @@ async function ready(page: Page) {
 }
 async function clearTestEntries(context: BrowserContext) {
 	const response = await context.request.get(
-		`${BASE_URL}/api/migration/journal?limit=50`,
+		`${BASE_URL}/api/admin/journal?limit=50`,
 	);
 	if (!response.ok()) return;
 	const data = (await response.json()) as {
@@ -31,7 +31,7 @@ async function clearTestEntries(context: BrowserContext) {
 	for (const entry of data.entries)
 		if (entry.content.startsWith("Browser test:"))
 			await context.request.delete(
-				`${BASE_URL}/api/migration/journal/${entry.id}?expectedVersion=${entry.version}`,
+				`${BASE_URL}/api/admin/journal/${entry.id}?expectedVersion=${entry.version}`,
 				{ headers: { Origin: BASE_URL } },
 			);
 }
@@ -45,18 +45,18 @@ test("anonymous and wrong-owner access is rejected without a private image leak"
 	await page.goto("/admin/journal");
 	await expect(page).toHaveURL(/\/admin\/login/);
 	expect(
-		(await context.request.get(`${BASE_URL}/api/migration/journal`)).status(),
+		(await context.request.get(`${BASE_URL}/api/admin/journal`)).status(),
 	).toBe(401);
 	expect(
 		(
 			await context.request.get(
-				`${BASE_URL}/api/migration/photos/${crypto.randomUUID()}/display`,
+				`${BASE_URL}/api/admin/photos/${crypto.randomUUID()}/display`,
 			)
 		).status(),
 	).toBe(401);
 	await signIn(context, "999999");
 	expect(
-		(await context.request.get(`${BASE_URL}/api/migration/journal`)).status(),
+		(await context.request.get(`${BASE_URL}/api/admin/journal`)).status(),
 	).toBe(401);
 });
 test("creates, edits, filters and deletes a journal entry", async ({
@@ -96,7 +96,7 @@ test("keeps a draft on a failed save and warns before discarding", async ({
 	await signIn(context);
 	await ready(page);
 	await page.getByLabel("Your thoughts").fill("Browser test: keep this draft");
-	await page.route("**/api/migration/journal", async (route) => {
+	await page.route("**/api/admin/journal", async (route) => {
 		if (route.request().method() === "POST")
 			await route.fulfill({
 				status: 502,
@@ -127,7 +127,7 @@ test("prevents an older date response from replacing the selected date", async (
 }) => {
 	await signIn(context);
 	await ready(page);
-	await page.route("**/api/migration/journal?*", async (route) => {
+	await page.route("**/api/admin/journal?*", async (route) => {
 		const date = new URL(route.request().url()).searchParams.get("date");
 		if (date === "2026-01-01") {
 			await new Promise((resolve) => setTimeout(resolve, 600));
@@ -179,7 +179,7 @@ test("uploads a real image, waits for Cloudflare processing and saves its privat
 		.filter({ hasText: "Browser test: photo memory" });
 	await expect(card).toBeVisible();
 	const source = await card.getByRole("img").getAttribute("src");
-	expect(source).toMatch(/^\/api\/migration\/photos\/.+\/display$/);
+	expect(source).toMatch(/^\/api\/admin\/photos\/.+\/display$/);
 	const response = await context.request.get(BASE_URL + source);
 	expect(response.status()).toBe(200);
 	expect(response.headers()["cache-control"]).toBe("private, no-store");

@@ -1,5 +1,5 @@
-import { privateJson, privateRoute } from "@/lib/migration/api";
-import { workerJson, workerRequest } from "@/lib/migration/worker-client";
+import { privateJson, privateRoute } from "@/lib/backend/api";
+import { workerJson, workerRequest } from "@/lib/backend/worker";
 import { idSchema, photoSchema } from "@/shared/journal";
 
 type Context = { params: Promise<{ id: string }> };

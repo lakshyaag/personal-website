@@ -3,7 +3,7 @@ import {
 	ownerAllowed,
 	safeRedirect,
 	validSecret,
-} from "../../lib/migration/config";
+} from "../../lib/backend/config";
 import {
 	MAX_PHOTO_BYTES,
 	createPhotoSchema,

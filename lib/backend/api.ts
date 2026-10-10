@@ -1,16 +1,20 @@
 import "server-only";
 import { auth } from "@/auth";
 import { z } from "zod";
-import { authConfigured, migrationEnabled, ownerAllowed } from "./config";
-import { BackendError } from "./worker-client";
+import { authConfigured, cloudflareAdmin, ownerAllowed } from "./config";
+import { BackendError } from "./worker";
 
 export async function requireOwner(request?: Request) {
-	if (!migrationEnabled())
-		throw new BackendError(404, "Migration backend is not enabled", "DISABLED");
+	if (!cloudflareAdmin())
+		throw new BackendError(
+			404,
+			"Cloudflare admin backend is not enabled",
+			"DISABLED",
+		);
 	if (!authConfigured())
 		throw new BackendError(
 			503,
-			"GitHub sign-in is not configured. See docs/cloudflare-migration.md.",
+			"GitHub sign-in is not configured. See docs/cloudflare-backend.md.",
 			"CONFIGURATION",
 		);
 	const session = await auth();
@@ -87,7 +91,7 @@ export function apiError(error: unknown) {
 			error.status,
 		);
 	const requestId = crypto.randomUUID();
-	console.error(JSON.stringify({ code: "MIGRATION_API_FAILURE", requestId }));
+	console.error(JSON.stringify({ code: "ADMIN_API_FAILURE", requestId }));
 	return privateJson(
 		{ error: "Request failed. Retry shortly.", requestId },
 		500,

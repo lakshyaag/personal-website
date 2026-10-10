@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { photoUploadUrl } from "../../lib/migration/r2";
+import { photoUploadUrl } from "../../lib/backend/r2";
 import type { JournalPhoto } from "../../shared/journal";
 
 const photo: JournalPhoto = {

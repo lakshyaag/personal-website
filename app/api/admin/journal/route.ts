@@ -1,5 +1,5 @@
-import { privateJson, privateRoute, readJson } from "@/lib/migration/api";
-import { workerJson } from "@/lib/migration/worker-client";
+import { privateJson, privateRoute, readJson } from "@/lib/backend/api";
+import { workerJson } from "@/lib/backend/worker";
 import {
 	entrySchema,
 	journalListSchema,

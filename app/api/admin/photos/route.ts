@@ -1,7 +1,7 @@
-import { privateJson, privateRoute, readJson } from "@/lib/migration/api";
-import { localWorkerUploads } from "@/lib/migration/config";
-import { photoUploadUrl } from "@/lib/migration/r2";
-import { workerJson } from "@/lib/migration/worker-client";
+import { privateJson, privateRoute, readJson } from "@/lib/backend/api";
+import { localWorkerUploads } from "@/lib/backend/config";
+import { photoUploadUrl } from "@/lib/backend/r2";
+import { workerJson } from "@/lib/backend/worker";
 import { createPhotoSchema, photoSchema } from "@/shared/journal";
 
 export const runtime = "nodejs";
@@ -17,7 +17,7 @@ export function POST(request: Request) {
 		const uploadUrl =
 			photo.state === "pending"
 				? localWorkerUploads()
-					? `/api/migration/photos/${photo.id}/upload`
+					? `/api/admin/photos/${photo.id}/upload`
 					: await photoUploadUrl(photo)
 				: null;
 		return privateJson(
