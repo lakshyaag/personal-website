@@ -1,3 +1,6 @@
+import { Analytics } from "@vercel/analytics/react";
+import { SpeedInsights } from "@vercel/speed-insights/next";
+import Script from "next/script";
 import { Footer } from "./footer";
 import { Header } from "./header";
 
@@ -11,6 +14,13 @@ export default function SiteLayout({
 				{children}
 				<Footer />
 			</div>
+			<Analytics />
+			<SpeedInsights />
+			<Script
+				data-goatcounter="https://lakshyaag.goatcounter.com/count"
+				src="https://gc.zgo.at/count.js"
+				strategy="afterInteractive"
+			/>
 		</div>
 	);
 }
