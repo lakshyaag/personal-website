@@ -17,7 +17,7 @@ import type { LibraryPhoto, Photo, PhotoList } from "@/shared/photos";
 import { Check, ImagePlus, MapPin, Star } from "lucide-react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import PhotoField, { type DraftPhoto, photoIsReady } from "../PhotoField";
 import { adminRequest } from "../client";
@@ -122,9 +122,12 @@ export default function PhotoLibrary() {
 	const [selected, setSelected] = useState<ReadonlySet<string>>(new Set());
 	const [busy, setBusy] = useState(false);
 	const { hidden, removeMany } = useUndoDelete();
+	// Only the latest load may update the list, so a slow earlier one (another filter) can't replace it.
+	const latestLoad = useRef(0);
 
 	const load = useCallback(
 		async (next?: string | null) => {
+			const request = ++latestLoad.current;
 			setLoading(true);
 			setError(null);
 			try {
@@ -132,14 +135,16 @@ export default function PhotoLibrary() {
 				query.set("limit", "120");
 				if (next) query.set("cursor", next);
 				const page = await adminRequest<PhotoList>(`photos?${query}`);
+				if (request !== latestLoad.current) return;
 				setPhotos((current) =>
 					next ? [...current, ...page.photos] : page.photos,
 				);
 				setCursor(page.nextCursor);
 			} catch (reason) {
-				setError(message(reason, "Could not load photos"));
+				if (request === latestLoad.current)
+					setError(message(reason, "Could not load photos"));
 			} finally {
-				setLoading(false);
+				if (request === latestLoad.current) setLoading(false);
 			}
 		},
 		[filter],

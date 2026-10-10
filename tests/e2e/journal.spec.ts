@@ -79,6 +79,8 @@ test("creates, edits, filters, deletes with undo, then deletes a journal entry",
 	await expect(updated).toHaveCount(0);
 	await page.getByRole("button", { name: "Undo" }).click();
 	await expect(updated).toBeVisible();
+	// The undone toast animates out; let it go before the next delete shows the same text.
+	await expect(page.getByText("Entry deleted")).toHaveCount(0);
 
 	await updated.getByRole("button", { name: /^Edit entry/ }).click();
 	await deleteFromSheet(page, "Entry deleted");
