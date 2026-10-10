@@ -1,6 +1,7 @@
 import { applyD1Migrations, env } from "cloudflare:test";
 import { beforeAll, describe, expect, it, vi } from "vitest";
 import { originalKey, variantKey } from "../../shared/photos";
+import { type AnalysisJob, consumeAnalysis } from "../src/analysis";
 import worker, { cleanupPhotos, type Env } from "../src/index";
 
 const bindings = env as unknown as Env & {
@@ -660,6 +661,66 @@ describe("Food, workouts, visits and books", () => {
 		expect((await request(`/v1/workouts/${id()}/analyze`, "POST")).status).toBe(
 			404,
 		);
+	});
+	it("queues analysis on save, applies it in the consumer, and retries only model failures", async () => {
+		const sent: AnalysisJob[] = [];
+		const queueEnv = {
+			...aiEnv,
+			ANALYSIS_QUEUE: { send: async (job: AnalysisJob) => sent.push(job) },
+		} as unknown as Env;
+		const logId = id();
+		const save = (content: string) =>
+			worker.fetch(
+				new Request(`https://worker.test/v1/workouts/${logId}`, {
+					method: "PUT",
+					headers: { ...token, "Content-Type": "application/json" },
+					body: JSON.stringify({
+						date: "2026-04-16",
+						content,
+						weight: null,
+						photoIds: [],
+					}),
+				}),
+				queueEnv,
+			);
+		await save("Push-ups 3x20");
+		expect(sent).toEqual([
+			{ kind: "workouts", id: logId, origin: "https://worker.test" },
+		]);
+		const consume = async (job: AnalysisJob) => {
+			const message = { body: job, attempts: 1, ack: vi.fn(), retry: vi.fn() };
+			await consumeAnalysis(
+				{ messages: [message] } as unknown as MessageBatch<AnalysisJob>,
+				queueEnv,
+			);
+			return message;
+		};
+		const failing = vi
+			.spyOn(globalThis, "fetch")
+			.mockResolvedValue(new Response("busy", { status: 503 }));
+		const failed = await consume(sent[0]);
+		failing.mockRestore();
+		expect(failed.retry).toHaveBeenCalled();
+		expect(failed.ack).not.toHaveBeenCalled();
+		const spy = stubModel({
+			sessionType: "strength",
+			exercises: [],
+			muscleGroups: ["chest"],
+			notes: "Solid",
+		});
+		const done = await consume(sent[0]);
+		spy.mockRestore();
+		expect(done.ack).toHaveBeenCalled();
+		const log = (await (await request(`/v1/workouts/${logId}`)).json()) as {
+			aiSessionType?: string;
+		};
+		expect(log.aiSessionType).toBe("strength");
+		// An analyzed workout saved unchanged isn't queued again; a deleted one is dropped.
+		await save("Push-ups 3x20");
+		expect(sent).toHaveLength(1);
+		const gone = await consume({ ...sent[0], id: id() });
+		expect(gone.ack).toHaveBeenCalled();
+		expect(gone.retry).not.toHaveBeenCalled();
 	});
 	it("refuses analysis without an API key", async () => {
 		const logId = id();

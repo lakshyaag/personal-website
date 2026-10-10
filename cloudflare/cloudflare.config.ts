@@ -27,13 +27,23 @@ export default defineConfig((ctx) => {
 						: "2a0807fc-e848-424d-af30-e028e831ac8d",
 				}),
 				PHOTOS: bindings.r2({ name: `${prefix}-private` }),
+				ANALYSIS_QUEUE: bindings.queue({ name: `${prefix}-analysis` }),
 				WORKER_API_SECRET: bindings.secret(),
 				LOCAL_UPLOADS: bindings.text(production ? "false" : "true"),
 				// Food/workout analysis via Prime Intellect's OpenAI-compatible API.
 				PRIME_API_KEY: bindings.secret(),
 				AI_MODEL: bindings.text("z-ai/glm-5.3-flash"),
 			},
-			triggers: [triggers.scheduled({ schedule: "*/10 * * * *" })],
+			triggers: [
+				triggers.scheduled({ schedule: "*/10 * * * *" }),
+				// Food/workout analysis after a save; Vercel never waits on the model.
+				triggers.queue({
+					name: `${prefix}-analysis`,
+					maxBatchSize: 1,
+					maxBatchTimeout: 1,
+					maxRetries: 3,
+				}),
+			],
 		},
 	};
 });

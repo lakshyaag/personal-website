@@ -12,6 +12,7 @@ import {
 } from "../../shared/photos";
 import { saveVisitSchema } from "../../shared/visits";
 import { saveWorkoutSchema } from "../../shared/workouts";
+import { type AnalysisJob, consumeAnalysis, queueAnalysis } from "./analysis";
 import {
 	createRecommendation,
 	deleteBook,
@@ -183,12 +184,18 @@ async function recordRoute(request: Request, env: Env, url: URL) {
 	}
 	if (method === "PUT") {
 		const body = await jsonBody(request);
-		if (resource === "food")
-			return responseJson(await saveFood(env, id, saveFoodSchema.parse(body)));
-		if (resource === "workouts")
-			return responseJson(
-				await saveWorkout(env, id, saveWorkoutSchema.parse(body)),
-			);
+		if (resource === "food") {
+			const entry = await saveFood(env, id, saveFoodSchema.parse(body));
+			if (!entry.aiFoodName)
+				await queueAnalysis(env, { kind: "food", id, origin: url.origin });
+			return responseJson(entry);
+		}
+		if (resource === "workouts") {
+			const log = await saveWorkout(env, id, saveWorkoutSchema.parse(body));
+			if (log.content && !log.aiSessionType)
+				await queueAnalysis(env, { kind: "workouts", id, origin: url.origin });
+			return responseJson(log);
+		}
 		if (resource === "visits")
 			return responseJson(
 				await saveVisit(env, id, saveVisitSchema.parse(body)),
@@ -286,6 +293,7 @@ export default {
 		response.headers.set("X-Request-Id", requestId);
 		return response;
 	},
+	queue: (batch, env) => consumeAnalysis(batch, env),
 	async scheduled(
 		_event: ScheduledController,
 		env: Env,
@@ -293,4 +301,4 @@ export default {
 	) {
 		ctx.waitUntil(cleanupPhotos(env));
 	},
-} satisfies ExportedHandler<Env>;
+} satisfies ExportedHandler<Env, AnalysisJob>;

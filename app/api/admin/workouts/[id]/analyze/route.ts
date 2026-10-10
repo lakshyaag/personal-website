@@ -4,7 +4,7 @@ import { workerJson } from "@/lib/backend/worker";
 import { workoutLogSchema } from "@/shared/workouts";
 
 export const runtime = "nodejs";
-export const maxDuration = 120;
+export const maxDuration = 60;
 export function POST(request: Request, context: IdContext) {
 	return privateRoute(request, async () =>
 		privateJson(

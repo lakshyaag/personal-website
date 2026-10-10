@@ -1,6 +1,9 @@
+import type { AnalysisJob } from "./analysis";
+
 export interface Env {
 	DB: D1Database;
 	PHOTOS: R2Bucket;
+	ANALYSIS_QUEUE: Queue<AnalysisJob>;
 	WORKER_API_SECRET: string;
 	LOCAL_UPLOADS?: string;
 	PRIME_API_KEY?: string;

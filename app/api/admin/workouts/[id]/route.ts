@@ -1,15 +1,9 @@
 import { privateJson, privateRoute, readJson } from "@/lib/backend/api";
-import {
-	type IdContext,
-	analyzeLater,
-	noContent,
-	routeId,
-} from "@/lib/backend/routes";
+import { type IdContext, noContent, routeId } from "@/lib/backend/routes";
 import { workerJson, workerRequest } from "@/lib/backend/worker";
 import { saveWorkoutSchema, workoutLogSchema } from "@/shared/workouts";
 
 export const runtime = "nodejs";
-export const maxDuration = 120;
 export function GET(request: Request, context: IdContext) {
 	return privateRoute(request, async () =>
 		privateJson(
@@ -29,8 +23,6 @@ export function PUT(request: Request, context: IdContext) {
 				body: JSON.stringify(input),
 			}),
 		);
-		if (log.content && !log.aiSessionType)
-			analyzeLater(`/v1/workouts/${id}/analyze`);
 		return privateJson(log);
 	});
 }
