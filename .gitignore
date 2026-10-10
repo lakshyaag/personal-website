@@ -60,3 +60,6 @@ node_modules/
 .cloudflare/
 .secrets*.json
 .next-build/
+
+# Throwaway local scripts
+zz-*
