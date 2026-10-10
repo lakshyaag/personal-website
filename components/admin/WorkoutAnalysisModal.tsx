@@ -10,15 +10,27 @@ export interface WorkoutAnalysisResult {
 	totalVolume: number | null;
 	muscleGroups: string[];
 	notes: string | null;
-	metadataId: string;
+	metadataId?: string;
 }
 
-interface WorkoutAnalysisModalProps {
-	entry: WorkoutLog | null;
+/** The fields the modal reads; legacy and Cloudflare logs both fit. */
+type AnalyzableWorkout = Pick<
+	WorkoutLog,
+	| "id"
+	| "content"
+	| "aiSessionType"
+	| "aiExercises"
+	| "aiTotalVolume"
+	| "aiMuscleGroups"
+	| "aiNotes"
+	| "aiMetadataId"
+> & { photos?: readonly unknown[] };
+interface WorkoutAnalysisModalProps<E extends AnalyzableWorkout> {
+	entry: E | null;
 	onClose: () => void;
 	isAnalyzing: boolean;
 	analysisResult: WorkoutAnalysisResult | null;
-	onAnalyze: (entry: WorkoutLog) => void;
+	onAnalyze: (entry: E) => void;
 }
 
 function ExerciseCard({ exercise }: { exercise: WorkoutExercise }) {
@@ -102,13 +114,13 @@ function ExerciseCard({ exercise }: { exercise: WorkoutExercise }) {
 	);
 }
 
-export function WorkoutAnalysisModal({
+export function WorkoutAnalysisModal<E extends AnalyzableWorkout>({
 	entry,
 	onClose,
 	isAnalyzing,
 	analysisResult,
 	onAnalyze,
-}: WorkoutAnalysisModalProps) {
+}: WorkoutAnalysisModalProps<E>) {
 	const justAnalyzed = !!analysisResult;
 
 	const hasExistingAnalysis = useMemo(() => {

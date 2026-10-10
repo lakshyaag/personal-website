@@ -1,3 +1,5 @@
+import { cloudflareAdmin } from "@/lib/backend/config";
+import { resolvePublicPhotos } from "@/lib/backend/public-photos";
 import {
 	type ResolvedPhotoAsset,
 	resolvePhotoAssetsByDisplayRefs,
@@ -27,6 +29,9 @@ export async function POST(req: Request) {
 			);
 		}
 
+		// Only public photos resolve; the admin pages render library photos directly.
+		if (cloudflareAdmin())
+			return NextResponse.json({ photos: await resolvePublicPhotos(refs) });
 		const resolved = await resolvePhotoAssetsByDisplayRefs(refs);
 		return NextResponse.json({
 			photos: Object.fromEntries(resolved) as Record<

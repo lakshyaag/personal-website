@@ -2,7 +2,7 @@
 
 ## Current state
 
-The admin backend is moving from Supabase to Cloudflare, ending with Supabase retired entirely (public pages included). **Migrated: journal and the photo library** (all 86 photos, public gallery). Food, workouts, visits/airports and books still run on Supabase; Fits, AI request logs and the AI config page will be dropped rather than migrated. The local Next.js app talks to the production Cloudflare backend. Vercel hosting, Supabase, and the public `site-assets` bucket are unchanged.
+The admin backend is moving from Supabase to Cloudflare, ending with Supabase retired entirely (public pages included). **Everything is migrated:** journal, the photo library, food (+ AI analysis), workouts (+ AI analysis and stats), airport visits, books and recommendations, plus the public gallery, airports map and bookshelf when `ADMIN_BACKEND=cloudflare`. Fits, AI request logs and the AI config page were dropped rather than migrated. The local Next.js app talks to the production Cloudflare backend. Vercel hosting still runs the Supabase version, and **Supabase itself is untouched**: migration only ever reads from it.
 
 **One shared backend for the entire application**: one Worker, one D1 database, one private photo bucket. New features add tables (numbered SQL migrations) and routes to it — never a separate database or bucket.
 
@@ -14,6 +14,8 @@ The admin backend is moving from Supabase to Cloudflare, ending with Supabase re
 | `shared/` | Request/response schemas used by both Next.js and the Worker |
 | `lib/backend/` | Next.js side: owner auth (`api.ts`), config (`config.ts`), Worker client (`worker.ts`), private R2 upload URLs (`r2.ts`) |
 | `app/api/admin/*` | Thin authenticated Next.js routes that proxy to the Worker |
+| `components/admin/{journal,food,workouts,airports,books}/` | Cloudflare admin pages; `components/admin/legacy/` holds the Supabase versions behind the switch |
+| `lib/backend/public-data.ts` | Filtered public views (visits with public photos only, books, recommendations) for the public pages |
 
 `ADMIN_BACKEND=cloudflare` switches the whole admin to this backend. Features that haven't moved yet are blocked in that mode rather than silently writing to Supabase. Any other value keeps the legacy Supabase admin, which is what Vercel runs until every feature has moved. Once that happens, delete the switch and the legacy code.
 
@@ -24,7 +26,15 @@ The admin backend is moving from Supabase to Cloudflare, ending with Supabase re
 | D1 | `personal-website-production` (`6302f028-7188-46d5-8077-8a7fbfd0cc95`) |
 | Private photo bucket | `personal-website-production-private` |
 
-**Workers Free plan.** Each request gets ~10–50 ms of CPU, so the Worker must never process images or other heavy payloads. It only does D1 queries, R2 metadata checks and streaming. There is no queue.
+**Workers Free plan.** Each request gets ~10–50 ms of CPU, so the Worker must never process images or other heavy payloads. It only does D1 queries, R2 metadata checks, streaming and waiting on the AI provider (wall-clock time, not CPU). There is no queue.
+
+## AI analysis
+
+Food and workout entries are analyzed by Prime Intellect (`google/gemini-3-flash-preview`, the `AI_MODEL` value in `cloudflare.config.ts`; key in the `PRIME_API_KEY` secret) through its OpenAI-compatible API with a JSON schema response. `POST /v1/{food,workouts}/:id/analyze` runs it.
+
+- **Photos** are sent as short-lived signed links (`/signed/photos/:id/:generation/display?expires=…&sig=…`, HMAC, 10 minutes) that the provider fetches itself. The Worker never downloads or encodes images.
+- **When:** after a save that leaves an entry unanalyzed, the Next.js route runs analysis in `after()`, like the old Supabase webhook. A failure only leaves the "Analyze" button. Saving keeps the analysis unless the description/photos (food) or text (workout) changed.
+- Results are written only if the entry wasn't edited during analysis. Total workout volume is computed, not taken from the model. Loose answers ("510 kcal", "8-10 reps", "bodyweight") are coerced.
 
 ## Photos
 
@@ -92,11 +102,14 @@ Photos (2026-10-10): 82 Supabase photos imported with `scripts/migrate/photos.ts
 
 The journal's one-off scripts were removed after its migration; `scripts/migrate/` is deleted the same way once every feature has moved. Backups and the import snapshot are in gitignored `migration-artifacts/`.
 
+Food, workouts, visits, books (2026-10-10): `scripts/migrate/records.ts plan|apply|verify` copied 73 food entries, 23 workouts, 101 visits and 18 books (0 recommendations); verify checks every column of every row against Supabase. It also **rebuilt the food/workout/visit photo links**: Supabase's `photo_attachments` are keyed by upload folder (a date or airport code), not entry, so the photo import had linked them to nothing. Links now come from each entry's own `photos` refs (67 links). Photos referenced by no entry stay in the library as unused. The import is idempotent, so re-run `apply` + `verify` right before cutover to pick up anything written on the live site since. Pre-change D1 bookmark: `000003f1-00000000-00005100-02ad51510cbac6977e50890d779815f8` (0005).
+
 ## Remaining
 
 1. Hosted site: set the Worker URL/secret and private R2 keys on Vercel, register a production GitHub OAuth app, and add the Vercel origin to R2 CORS.
-2. Migrate food (+ AI analysis), workouts (+ AI), visits/airports and books into the same backend, one at a time, then cut the public pages over and retire Supabase.
+2. Cut over: re-run `scripts/migrate/records.ts apply` + `verify` (and the photo import) so nothing written on the live site is missed, then set `ADMIN_BACKEND=cloudflare` on Vercel.
 3. UI/copy polish for the admin pages.
+4. Once the live site has run on Cloudflare for a while: remove the switch, the legacy Supabase code and finally Supabase itself. Only when explicitly decided.
 
 ## Tests
 

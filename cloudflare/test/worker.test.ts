@@ -426,3 +426,225 @@ describe("Photo library", () => {
 		expect(await state(library.id)).toBe("ready");
 	});
 });
+describe("Food, workouts, visits and books", () => {
+	const aiEnv = { ...bindings, PRIME_API_KEY: "test-key" } as Env;
+	function stubModel(answer: unknown, seen: string[] = []) {
+		return vi
+			.spyOn(globalThis, "fetch")
+			.mockImplementation(async (resource, init) => {
+				const body = JSON.parse(String(init?.body));
+				seen.push(
+					...body.messages[0].content
+						.filter((part: { type: string }) => part.type === "image_url")
+						.map((part: { image_url: { url: string } }) => part.image_url.url),
+				);
+				expect(String(resource)).toBe(
+					"https://api.pinference.ai/api/v1/chat/completions",
+				);
+				expect(body.response_format.type).toBe("json_schema");
+				return Response.json({
+					choices: [{ message: { content: JSON.stringify(answer) } }],
+				});
+			});
+	}
+	it("saves food with photos, analyzes through a signed link, and clears stale analysis", async () => {
+		const meal = await readyPhoto();
+		await storeUpload(meal.id);
+		const foodId = id();
+		const save = (description: string, photoIds = [meal.id]) =>
+			request(`/v1/food/${foodId}`, "PUT", {
+				date: "2026-04-16",
+				eatenAt: "2026-04-16T12:30:00.000Z",
+				description,
+				photoIds,
+			});
+		expect((await save("Avocado toast")).status).toBe(200);
+		expect(
+			(
+				await request(`/v1/food/${id()}`, "PUT", {
+					date: "2026-04-16",
+					eatenAt: "2026-04-16T12:30:00.000Z",
+					description: "",
+					photoIds: [],
+				})
+			).status,
+		).toBe(400);
+		const seen: string[] = [];
+		const spy = stubModel(
+			{
+				foodName: "Avocado toast",
+				calories: "510 kcal",
+				proteinG: 18,
+				carbsG: "35g",
+				fatG: 32,
+				notes: "Healthy fats",
+			},
+			seen,
+		);
+		const analyzed = (await (
+			await worker.fetch(
+				new Request(`https://worker.test/v1/food/${foodId}/analyze`, {
+					method: "POST",
+					headers: token,
+				}),
+				aiEnv,
+			)
+		).json()) as { aiCalories: number; aiCarbsG: number; photos: unknown[] };
+		spy.mockRestore();
+		expect(analyzed).toMatchObject({ aiCalories: 510, aiCarbsG: 35 });
+		expect(analyzed.photos).toHaveLength(1);
+		// The model gets a short-lived link that works without the API secret.
+		expect(seen).toHaveLength(1);
+		const link = new URL(seen[0]);
+		expect(link.pathname).toContain(`/signed/photos/${meal.id}/`);
+		const fetched = await worker.fetch(new Request(link), bindings);
+		expect(fetched.status).toBe(200);
+		expect((await fetched.arrayBuffer()).byteLength).toBe(2);
+		link.searchParams.set("sig", "0".repeat(64));
+		expect((await worker.fetch(new Request(link), bindings)).status).toBe(404);
+		// Same input keeps the analysis; a new description clears it.
+		const kept = (await (await save("Avocado toast")).json()) as {
+			aiCalories?: number;
+		};
+		expect(kept.aiCalories).toBe(510);
+		const cleared = (await (await save("Two eggs")).json()) as {
+			aiCalories?: number;
+		};
+		expect(cleared.aiCalories).toBeUndefined();
+		const day = (await (await request("/v1/food?date=2026-04-16")).json()) as {
+			entries: { id: string }[];
+		};
+		expect(day.entries.some((entry) => entry.id === foodId)).toBe(true);
+		expect((await request(`/v1/food/${foodId}`, "DELETE")).status).toBe(204);
+		expect(await state(meal.id)).toBe("deleting");
+		expect((await request(`/v1/food/${foodId}`)).status).toBe(404);
+	});
+	it("analyzes workouts, computing volume and coercing loose numbers", async () => {
+		const logId = id();
+		await request(`/v1/workouts/${logId}`, "PUT", {
+			date: "2026-04-16",
+			content: "Goblet squat 25,35 - 8-10 reps",
+			weight: 79.2,
+			photoIds: [],
+		});
+		const spy = stubModel({
+			sessionType: "strength",
+			exercises: [
+				{
+					name: "Goblet Squat",
+					category: "compound",
+					muscleGroups: ["quads"],
+					sets: [
+						{ weight: "25", reps: "8-10" },
+						{ weight: 35, reps: 9 },
+						{ weight: "bodyweight", reps: 10 },
+					],
+				},
+			],
+			muscleGroups: ["quads"],
+			notes: null,
+		});
+		const response = await worker.fetch(
+			new Request(`https://worker.test/v1/workouts/${logId}/analyze`, {
+				method: "POST",
+				headers: token,
+			}),
+			aiEnv,
+		);
+		spy.mockRestore();
+		const log = (await response.json()) as {
+			weight: number;
+			aiTotalVolume: number;
+			aiExercises: { sets: { weight: number | null; reps: number }[] }[];
+		};
+		expect(log.weight).toBe(79.2);
+		expect(log.aiTotalVolume).toBe(25 * 9 + 35 * 9);
+		expect(log.aiExercises[0].sets[2]).toEqual({ weight: null, reps: 10 });
+		expect((await request(`/v1/workouts/${id()}/analyze`, "POST")).status).toBe(
+			404,
+		);
+	});
+	it("refuses analysis without an API key", async () => {
+		const logId = id();
+		await request(`/v1/workouts/${logId}`, "PUT", {
+			date: "2026-04-16",
+			content: "Run",
+			weight: null,
+			photoIds: [],
+		});
+		expect(
+			(await request(`/v1/workouts/${logId}/analyze`, "POST")).status,
+		).toBe(503);
+	});
+	it("saves visits with flights and keeps a single current book", async () => {
+		const visitId = id();
+		const visit = (await (
+			await request(`/v1/visits/${visitId}`, "PUT", {
+				airportIdent: "kjfk",
+				date: "2026-01-02",
+				flightNumbers: ["THY 717", "THY 35"],
+				isLayover: true,
+				notes: "",
+				photoIds: [],
+			})
+		).json()) as Record<string, unknown>;
+		expect(visit).toMatchObject({
+			airportIdent: "KJFK",
+			flightNumbers: ["THY 717", "THY 35"],
+			isLayover: true,
+		});
+		expect(visit.notes).toBeUndefined();
+		const book = (title: string, isCurrent: boolean) => ({
+			title,
+			author: "Author",
+			status: "reading",
+			dateStarted: "2026-01-01",
+			progress: 10,
+			isCurrent,
+		});
+		const [first, second] = [id(), id()];
+		await request(`/v1/books/${first}`, "PUT", book("One", true));
+		await request(`/v1/books/${second}`, "PUT", book("Two", true));
+		const current = async () =>
+			(
+				(await (await request("/v1/books")).json()) as {
+					books: { id: string; isCurrent: boolean }[];
+				}
+			).books
+				.filter((b) => b.isCurrent)
+				.map((b) => b.id);
+		expect(await current()).toEqual([second]);
+		await request(`/v1/books/${first}/current`, "POST");
+		expect(await current()).toEqual([first]);
+		expect((await request(`/v1/books/${first}`, "DELETE")).status).toBe(204);
+		expect((await request(`/v1/books/${first}`, "DELETE")).status).toBe(404);
+	});
+	it("accepts bounded public recommendations", async () => {
+		expect(
+			(await request("/v1/recommendations", "POST", { bookName: "" })).status,
+		).toBe(400);
+		expect(
+			(
+				await request("/v1/recommendations", "POST", {
+					bookName: "Dune",
+					bookCoverUrl: "javascript:alert(1)",
+				})
+			).status,
+		).toBe(400);
+		const created = (await (
+			await request("/v1/recommendations", "POST", {
+				bookName: "Dune",
+				recommenderName: " Sam ",
+			})
+		).json()) as { id: string };
+		const list = (await (await request("/v1/recommendations")).json()) as {
+			recommendations: { id: string; recommenderName: string }[];
+		};
+		expect(list.recommendations.find((r) => r.id === created.id)).toMatchObject(
+			{ recommenderName: "Sam" },
+		);
+		expect(
+			(await request(`/v1/recommendations/${created.id}`, "DELETE")).status,
+		).toBe(204);
+	});
+});

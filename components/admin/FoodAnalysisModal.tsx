@@ -11,24 +11,37 @@ export interface FoodAnalysisResult {
 	carbsG: number;
 	fatG: number;
 	notes: string;
-	metadataId: string;
+	metadataId?: string;
 }
 
-interface FoodAnalysisModalProps {
-	entry: FoodEntry | null;
+/** The fields the modal reads; legacy and Cloudflare entries both fit. */
+type AnalyzableFood = Pick<
+	FoodEntry,
+	| "id"
+	| "description"
+	| "aiFoodName"
+	| "aiCalories"
+	| "aiProteinG"
+	| "aiCarbsG"
+	| "aiFatG"
+	| "aiNotes"
+	| "aiMetadataId"
+> & { photos?: readonly unknown[] };
+interface FoodAnalysisModalProps<E extends AnalyzableFood> {
+	entry: E | null;
 	onClose: () => void;
 	isAnalyzing: boolean;
 	analysisResult: FoodAnalysisResult | null;
-	onAnalyze: (entry: FoodEntry) => void;
+	onAnalyze: (entry: E) => void;
 }
 
-export function FoodAnalysisModal({
+export function FoodAnalysisModal<E extends AnalyzableFood>({
 	entry,
 	onClose,
 	isAnalyzing,
 	analysisResult,
 	onAnalyze,
-}: FoodAnalysisModalProps) {
+}: FoodAnalysisModalProps<E>) {
 	// Track if the current result came from a fresh analysis (not from existing data)
 	const justAnalyzed = !!analysisResult;
 

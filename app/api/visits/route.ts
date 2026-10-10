@@ -1,4 +1,6 @@
 import { randomUUID } from "node:crypto";
+import { cloudflareAdmin } from "@/lib/backend/config";
+import { publicVisits } from "@/lib/backend/public-data";
 import type { Visit } from "@/lib/models";
 import {
 	deleteVisit,
@@ -14,6 +16,8 @@ export async function GET(req: Request) {
 		const { searchParams } = new URL(req.url);
 		const date = searchParams.get("date");
 		const grouped = searchParams.get("grouped");
+		// The public airports map. The admin page uses /api/admin/visits.
+		if (cloudflareAdmin()) return NextResponse.json(await publicVisits());
 
 		// Get by date
 		if (date) {

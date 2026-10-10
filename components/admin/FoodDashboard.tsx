@@ -2,7 +2,10 @@ import type { FoodEntry } from "@/lib/models";
 import { useMemo } from "react";
 
 interface FoodDashboardProps {
-	entries: FoodEntry[];
+	entries: Pick<
+		FoodEntry,
+		"aiCalories" | "aiProteinG" | "aiCarbsG" | "aiFatG"
+	>[];
 	compact?: boolean;
 }
 

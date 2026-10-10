@@ -29,6 +29,9 @@ export default defineConfig((ctx) => {
 				PHOTOS: bindings.r2({ name: `${prefix}-private` }),
 				WORKER_API_SECRET: bindings.secret(),
 				LOCAL_UPLOADS: bindings.text(production ? "false" : "true"),
+				// Food/workout analysis via Prime Intellect's OpenAI-compatible API.
+				PRIME_API_KEY: bindings.secret(),
+				AI_MODEL: bindings.text("google/gemini-3-flash-preview"),
 			},
 			triggers: [triggers.scheduled({ schedule: "*/10 * * * *" })],
 		},

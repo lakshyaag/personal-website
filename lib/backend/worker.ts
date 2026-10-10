@@ -46,7 +46,7 @@ export async function workerRequest(
 			headers,
 			cache: "no-store",
 			redirect: "error",
-			signal: AbortSignal.timeout(30_000),
+			signal: init.signal ?? AbortSignal.timeout(30_000),
 			...(init.body instanceof ReadableStream ? { duplex: "half" } : {}),
 		});
 	} catch {

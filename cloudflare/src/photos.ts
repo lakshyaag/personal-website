@@ -443,6 +443,68 @@ export async function privateVariant(
 	});
 }
 
+async function signature(env: Env, message: string) {
+	const key = await crypto.subtle.importKey(
+		"raw",
+		new TextEncoder().encode(`signed-photo:${env.WORKER_API_SECRET}`),
+		{ name: "HMAC", hash: "SHA-256" },
+		false,
+		["sign"],
+	);
+	const mac = await crypto.subtle.sign(
+		"HMAC",
+		key,
+		new TextEncoder().encode(message),
+	);
+	return Array.from(new Uint8Array(mac), (v) =>
+		v.toString(16).padStart(2, "0"),
+	).join("");
+}
+const signedTtlSeconds = 600;
+/** A short-lived, unauthenticated link to a private photo, for the AI provider to fetch. */
+export async function signedPhotoUrl(env: Env, origin: string, photo: Photo) {
+	if (photo.state !== "ready" || !photo.generation)
+		throw new ApiError(409, "NOT_READY", "Photo is not ready");
+	const expires = Math.floor(Date.now() / 1000) + signedTtlSeconds;
+	const path = `/signed/photos/${photo.id}/${photo.generation}/display`;
+	return `${origin}${path}?expires=${expires}&sig=${await signature(env, `${path}:${expires}`)}`;
+}
+export async function signedVariant(env: Env, url: URL) {
+	const notFound = () =>
+		new Response("Not found", {
+			status: 404,
+			headers: { "Cache-Control": "no-store" },
+		});
+	const match = url.pathname.match(
+		/^\/signed\/photos\/([^/]+)\/([0-9a-f-]{36})\/(display|thumb)$/,
+	);
+	const expires = Number(url.searchParams.get("expires"));
+	const sig = url.searchParams.get("sig") ?? "";
+	if (
+		!match ||
+		!Number.isInteger(expires) ||
+		expires < Date.now() / 1000 ||
+		expires > Date.now() / 1000 + signedTtlSeconds
+	)
+		return notFound();
+	const expected = await signature(env, `${url.pathname}:${expires}`);
+	let diff = expected.length ^ sig.length;
+	for (let i = 0; i < expected.length; i++)
+		diff |= expected.charCodeAt(i) ^ sig.charCodeAt(i);
+	if (diff !== 0) return notFound();
+	const object = await env.PHOTOS.get(
+		variantKey(match[1], match[2], match[3] as PhotoVariant),
+	);
+	if (!object) return notFound();
+	return new Response(object.body, {
+		headers: {
+			"Content-Type": object.httpMetadata?.contentType ?? "",
+			"Cache-Control": "private, no-store",
+			"X-Content-Type-Options": "nosniff",
+		},
+	});
+}
+
 const publicPath =
 	/^\/public\/photos\/([^/]+)\/([0-9a-f-]{36})\/(display|thumb)$/;
 /** Unauthenticated, immutable variants of public photos. The generation in the URL busts caches. */

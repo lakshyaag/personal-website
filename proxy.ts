@@ -29,23 +29,35 @@ export async function proxy(request: NextRequest) {
 			url.searchParams.set("redirectTo", path + request.nextUrl.search);
 			return NextResponse.redirect(url);
 		}
-		// Unmigrated admin features must never silently write to Supabase.
-		if (!["/admin", "/admin/journal", "/admin/photos"].includes(path))
+		// Unmigrated admin features must never silently write to Supabase. Fits and the AI
+		// config page were dropped rather than migrated.
+		if (
+			![
+				"/admin",
+				"/admin/journal",
+				"/admin/photos",
+				"/admin/food",
+				"/admin/workouts",
+				"/admin/workouts/dashboard",
+				"/admin/airports",
+				"/admin/books",
+			].includes(path)
+		)
 			return NextResponse.redirect(new URL("/admin", request.url));
 		const response = NextResponse.next();
 		response.headers.set("Cache-Control", "private, no-store");
 		return response;
 	}
-	// Public gallery/teaser still reads from Supabase until photos are migrated.
+	// Public gallery/teaser, served from Cloudflare by the route itself.
 	if (
 		path === "/api/photos" &&
 		request.method === "GET" &&
 		request.nextUrl.searchParams.get("admin") !== "true"
 	)
 		return NextResponse.next();
-	// Preserve the existing resolver's Supabase gate; it is not a new public endpoint.
+	// Resolves public photo URLs only (airport visit captions), so it is safe anonymously.
 	if (path === "/api/photos/resolve" && request.method === "POST")
-		return legacyProxy(request);
+		return NextResponse.next();
 	const legacyPrivate = [
 		"/api/journal",
 		"/api/food",

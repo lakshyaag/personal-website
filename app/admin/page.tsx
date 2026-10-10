@@ -25,6 +25,10 @@ export default async function AdminPage() {
 			<nav className="grid gap-4 sm:grid-cols-2">
 				{[
 					["/admin/journal", "Journal", "Entries and photos"],
+					["/admin/food", "Food", "Meals and nutrition analysis"],
+					["/admin/workouts", "Workouts", "Logs, analysis and stats"],
+					["/admin/airports", "Airports", "Visits on the public map"],
+					["/admin/books", "Books", "Bookshelf and recommendations"],
 					["/admin/photos", "Photos", "Library and public gallery"],
 				].map(([href, title, description]) => (
 					<Link

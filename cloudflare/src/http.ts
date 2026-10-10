@@ -3,6 +3,8 @@ export interface Env {
 	PHOTOS: R2Bucket;
 	WORKER_API_SECRET: string;
 	LOCAL_UPLOADS?: string;
+	PRIME_API_KEY?: string;
+	AI_MODEL?: string;
 }
 export class ApiError extends Error {
 	constructor(
@@ -19,6 +21,16 @@ export const statement = (env: Env, sql: string, ...values: SqlValue[]) =>
 	env.DB.prepare(sql).bind(...values);
 export const responseJson = (data: unknown, status = 200) =>
 	Response.json(data, { status });
+/** DTOs omit empty columns rather than sending null. */
+export const optional = <T>(value: T | null) => value ?? undefined;
+export function jsonColumn<T>(value: string | null, fallback: T): T {
+	if (!value) return fallback;
+	try {
+		return JSON.parse(value) as T;
+	} catch {
+		return fallback;
+	}
+}
 
 export async function hash(value: string) {
 	return Array.from(

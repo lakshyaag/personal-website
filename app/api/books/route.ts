@@ -1,10 +1,14 @@
 import { randomUUID } from "node:crypto";
+import { cloudflareAdmin } from "@/lib/backend/config";
+import { publicBooks } from "@/lib/backend/public-data";
 import { deleteBook, getBooks, saveBook } from "@/lib/books-db";
 import type { BookEntry } from "@/lib/models";
 import { NextResponse } from "next/server";
 
 export async function GET() {
 	try {
+		// The public bookshelf. The admin page uses /api/admin/books.
+		if (cloudflareAdmin()) return NextResponse.json(await publicBooks());
 		const books = await getBooks();
 		return NextResponse.json(books);
 	} catch (error) {

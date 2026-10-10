@@ -1,5 +1,7 @@
 import { z } from "zod";
+import { createRecommendationSchema, saveBookSchema } from "../../shared/books";
 import { idSchema } from "../../shared/common";
+import { saveFoodSchema } from "../../shared/food";
 import { saveJournalSchema } from "../../shared/journal";
 import {
 	completePhotoSchema,
@@ -8,6 +10,18 @@ import {
 	updatePhotoSchema,
 	variantKey,
 } from "../../shared/photos";
+import { saveVisitSchema } from "../../shared/visits";
+import { saveWorkoutSchema } from "../../shared/workouts";
+import {
+	createRecommendation,
+	deleteBook,
+	deleteRecommendation,
+	listBooks,
+	listRecommendations,
+	saveBook,
+	setCurrentBook,
+} from "./books";
+import { analyzeFood, deleteFood, getFood, listFood, saveFood } from "./food";
 import { ApiError, type Env, authorized, jsonBody, responseJson } from "./http";
 import { deleteEntry, getEntry, listEntries, saveEntry } from "./journal";
 import {
@@ -20,8 +34,17 @@ import {
 	photoRow,
 	privateVariant,
 	publicVariant,
+	signedVariant,
 	updatePhoto,
 } from "./photos";
+import { deleteVisit, getVisit, listVisits, saveVisit } from "./visits";
+import {
+	analyzeWorkout,
+	deleteWorkout,
+	getWorkout,
+	listWorkouts,
+	saveWorkout,
+} from "./workouts";
 
 export type { Env } from "./http";
 export { authorized } from "./http";
@@ -107,7 +130,81 @@ async function route(request: Request, env: Env): Promise<Response> {
 		)
 			return localUpload(request, env, id, action.slice("upload/".length));
 	}
+	const records = await recordRoute(request, env, url);
+	if (records) return records;
 	throw new ApiError(404, "NOT_FOUND", "Route not found");
+}
+
+const noContent = () => new Response(null, { status: 204 });
+/** Food, workouts, visits, books and recommendations: list, then get/put/delete by id. */
+async function recordRoute(request: Request, env: Env, url: URL) {
+	const method = request.method;
+	const match = url.pathname.match(
+		/^\/v1\/(food|workouts|visits|books|recommendations)(?:\/([^/]+)(?:\/(analyze|current))?)?$/,
+	);
+	if (!match) return null;
+	const [, resource, rawId, action] = match;
+	if (!rawId) {
+		if (
+			method !== "GET" &&
+			!(resource === "recommendations" && method === "POST")
+		)
+			return null;
+		if (resource === "food") return responseJson(await listFood(env, url));
+		if (resource === "workouts")
+			return responseJson(await listWorkouts(env, url));
+		if (resource === "visits") return responseJson(await listVisits(env));
+		if (resource === "books") return responseJson(await listBooks(env));
+		if (method === "POST")
+			return responseJson(
+				await createRecommendation(
+					env,
+					createRecommendationSchema.parse(await jsonBody(request)),
+				),
+				201,
+			);
+		return responseJson(await listRecommendations(env));
+	}
+	const id = idSchema.parse(rawId);
+	if (action) {
+		if (method !== "POST") return null;
+		if (resource === "food" && action === "analyze")
+			return responseJson(await analyzeFood(env, id, url.origin));
+		if (resource === "workouts" && action === "analyze")
+			return responseJson(await analyzeWorkout(env, id));
+		if (resource === "books" && action === "current")
+			return responseJson(await setCurrentBook(env, id));
+		return null;
+	}
+	if (method === "GET") {
+		if (resource === "food") return responseJson(await getFood(env, id));
+		if (resource === "workouts") return responseJson(await getWorkout(env, id));
+		if (resource === "visits") return responseJson(await getVisit(env, id));
+	}
+	if (method === "PUT") {
+		const body = await jsonBody(request);
+		if (resource === "food")
+			return responseJson(await saveFood(env, id, saveFoodSchema.parse(body)));
+		if (resource === "workouts")
+			return responseJson(
+				await saveWorkout(env, id, saveWorkoutSchema.parse(body)),
+			);
+		if (resource === "visits")
+			return responseJson(
+				await saveVisit(env, id, saveVisitSchema.parse(body)),
+			);
+		if (resource === "books")
+			return responseJson(await saveBook(env, id, saveBookSchema.parse(body)));
+	}
+	if (method === "DELETE") {
+		if (resource === "food") await deleteFood(env, id);
+		else if (resource === "workouts") await deleteWorkout(env, id);
+		else if (resource === "visits") await deleteVisit(env, id);
+		else if (resource === "books") await deleteBook(env, id);
+		else await deleteRecommendation(env, id);
+		return noContent();
+	}
+	return null;
 }
 
 /** Local development only: Next.js proxies uploads here instead of presigned R2 URLs. */
@@ -149,6 +246,8 @@ export default {
 			(request.method === "GET" || request.method === "HEAD")
 		)
 			return publicVariant(env, path);
+		if (path.startsWith("/signed/") && request.method === "GET")
+			return signedVariant(env, new URL(request.url));
 		const requestId = crypto.randomUUID();
 		let response: Response;
 		try {

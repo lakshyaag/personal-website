@@ -16,11 +16,14 @@ interface HistoryEntry {
 interface ExerciseHistoryModalProps {
 	exerciseName: string;
 	onClose: () => void;
+	/** Exercise history API; the Cloudflare admin uses /api/admin/workouts/exercises. */
+	historyUrl?: string;
 }
 
 export function ExerciseHistoryModal({
 	exerciseName,
 	onClose,
+	historyUrl = "/api/workouts/exercises",
 }: ExerciseHistoryModalProps) {
 	const [history, setHistory] = useState<HistoryEntry[]>([]);
 	const [loading, setLoading] = useState(true);
@@ -29,7 +32,7 @@ export function ExerciseHistoryModal({
 		async function fetchHistory() {
 			try {
 				const res = await fetch(
-					`/api/workouts/exercises/${encodeURIComponent(exerciseName)}`,
+					`${historyUrl}/${encodeURIComponent(exerciseName)}`,
 				);
 				const data = await res.json();
 				setHistory(data.history || []);
@@ -40,7 +43,7 @@ export function ExerciseHistoryModal({
 			}
 		}
 		fetchHistory();
-	}, [exerciseName]);
+	}, [exerciseName, historyUrl]);
 
 	return (
 		<div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">

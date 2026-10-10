@@ -1,13 +1,22 @@
+import { cloudflareAdmin } from "@/lib/backend/config";
+import {
+	publicRecommendations,
+	submitRecommendation,
+} from "@/lib/backend/public-data";
 import type { Recommendation } from "@/lib/models";
 import {
 	deleteRecommendation,
 	getRecommendations,
 	saveRecommendation,
 } from "@/lib/recommendations-db";
+import { createRecommendationSchema } from "@/shared/books";
 import { NextResponse } from "next/server";
+import { z } from "zod";
 
 export async function GET() {
 	try {
+		if (cloudflareAdmin())
+			return NextResponse.json(await publicRecommendations());
 		const recommendations = await getRecommendations();
 		return NextResponse.json(recommendations);
 	} catch (error) {
@@ -22,6 +31,16 @@ export async function GET() {
 export async function POST(req: Request) {
 	try {
 		const body = await req.json();
+		if (cloudflareAdmin()) {
+			const parsed = createRecommendationSchema.safeParse(body);
+			if (!parsed.success)
+				return NextResponse.json(
+					{ error: z.prettifyError(parsed.error) },
+					{ status: 400 },
+				);
+			await submitRecommendation(parsed.data);
+			return NextResponse.json({ success: true });
+		}
 		const {
 			bookName,
 			bookAuthor,

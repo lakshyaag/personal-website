@@ -1,3 +1,11 @@
+export function groupBy<T>(items: T[], key: (item: T) => string) {
+	const groups: Record<string, T[]> = {};
+	for (const item of items) {
+		const name = key(item);
+		groups[name] = [...(groups[name] ?? []), item];
+	}
+	return groups;
+}
 export class AdminRequestError extends Error {
 	constructor(
 		message: string,
