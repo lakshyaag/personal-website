@@ -1,6 +1,10 @@
 import { z } from "zod";
 import { createRecommendationSchema, saveBookSchema } from "../../shared/books";
 import { idSchema } from "../../shared/common";
+import {
+	flightLookupQuerySchema,
+	saveFlightSchema,
+} from "../../shared/flights";
 import { saveFoodSchema } from "../../shared/food";
 import { saveJournalSchema } from "../../shared/journal";
 import {
@@ -10,7 +14,6 @@ import {
 	updatePhotoSchema,
 	variantKey,
 } from "../../shared/photos";
-import { saveVisitSchema } from "../../shared/visits";
 import { saveWorkoutSchema } from "../../shared/workouts";
 import {
 	type AnalysisJob,
@@ -27,6 +30,8 @@ import {
 	saveBook,
 	setCurrentBook,
 } from "./books";
+import { lookupFlight } from "./flight-lookup";
+import { deleteFlight, getFlight, listFlights, saveFlight } from "./flights";
 import { deleteFood, getFood, listFood, saveFood } from "./food";
 import { ApiError, type Env, authorized, jsonBody, responseJson } from "./http";
 import { deleteEntry, getEntry, listEntries, saveEntry } from "./journal";
@@ -43,7 +48,6 @@ import {
 	signedVariant,
 	updatePhoto,
 } from "./photos";
-import { deleteVisit, getVisit, listVisits, saveVisit } from "./visits";
 import {
 	deleteWorkout,
 	getWorkout,
@@ -135,17 +139,23 @@ async function route(request: Request, env: Env): Promise<Response> {
 		)
 			return localUpload(request, env, id, action.slice("upload/".length));
 	}
+	if (url.pathname === "/v1/flights/lookup" && request.method === "GET") {
+		const query = flightLookupQuerySchema.parse(
+			Object.fromEntries(url.searchParams),
+		);
+		return responseJson(await lookupFlight(env, query.number, query.date));
+	}
 	const records = await recordRoute(request, env, url);
 	if (records) return records;
 	throw new ApiError(404, "NOT_FOUND", "Route not found");
 }
 
 const noContent = () => new Response(null, { status: 204 });
-/** Food, workouts, visits, books and recommendations: list, then get/put/delete by id. */
+/** Food, workouts, flights, books and recommendations: list, then get/put/delete by id. */
 async function recordRoute(request: Request, env: Env, url: URL) {
 	const method = request.method;
 	const match = url.pathname.match(
-		/^\/v1\/(food|workouts|visits|books|recommendations)(?:\/([^/]+)(?:\/(analyze|current))?)?$/,
+		/^\/v1\/(food|workouts|flights|books|recommendations)(?:\/([^/]+)(?:\/(analyze|current))?)?$/,
 	);
 	if (!match) return null;
 	const [, resource, rawId, action] = match;
@@ -158,7 +168,7 @@ async function recordRoute(request: Request, env: Env, url: URL) {
 		if (resource === "food") return responseJson(await listFood(env, url));
 		if (resource === "workouts")
 			return responseJson(await listWorkouts(env, url));
-		if (resource === "visits") return responseJson(await listVisits(env));
+		if (resource === "flights") return responseJson(await listFlights(env));
 		if (resource === "books") return responseJson(await listBooks(env));
 		if (method === "POST")
 			return responseJson(
@@ -188,7 +198,7 @@ async function recordRoute(request: Request, env: Env, url: URL) {
 	if (method === "GET") {
 		if (resource === "food") return responseJson(await getFood(env, id));
 		if (resource === "workouts") return responseJson(await getWorkout(env, id));
-		if (resource === "visits") return responseJson(await getVisit(env, id));
+		if (resource === "flights") return responseJson(await getFlight(env, id));
 	}
 	if (method === "PUT") {
 		const body = await jsonBody(request);
@@ -209,9 +219,9 @@ async function recordRoute(request: Request, env: Env, url: URL) {
 					: await queueAnalysis(env, "workouts", id, url.origin),
 			);
 		}
-		if (resource === "visits")
+		if (resource === "flights")
 			return responseJson(
-				await saveVisit(env, id, saveVisitSchema.parse(body)),
+				await saveFlight(env, id, saveFlightSchema.parse(body)),
 			);
 		if (resource === "books")
 			return responseJson(await saveBook(env, id, saveBookSchema.parse(body)));
@@ -219,7 +229,7 @@ async function recordRoute(request: Request, env: Env, url: URL) {
 	if (method === "DELETE") {
 		if (resource === "food") await deleteFood(env, id);
 		else if (resource === "workouts") await deleteWorkout(env, id);
-		else if (resource === "visits") await deleteVisit(env, id);
+		else if (resource === "flights") await deleteFlight(env, id);
 		else if (resource === "books") await deleteBook(env, id);
 		else await deleteRecommendation(env, id);
 		return noContent();

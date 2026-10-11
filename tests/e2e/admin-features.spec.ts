@@ -7,7 +7,8 @@ test("migrated admin APIs reject anonymous visitors", async ({ context }) => {
 		"food",
 		"workouts",
 		"workouts/stats",
-		"visits",
+		"flights",
+		"flights/lookup?number=AC590&date=2026-06-24",
 		"books",
 		"recommendations",
 	])
@@ -102,37 +103,64 @@ test("logs a workout and loads the stats dashboard", async ({
 	await expect(log).toHaveCount(0);
 });
 
-test("saves a layover visit that shows on the public airports page", async ({
+test("logs a connecting trip that shows on the public airports page", async ({
 	page,
 	context,
 	browser,
 }) => {
 	await signIn(context);
-	await open(page, "/admin/airports");
-	await page.getByRole("button", { name: "Add visit" }).click();
-	const form = sheet(page);
-	await form.getByLabel("Search Airport").fill("KJFK");
+	await open(page, "/admin/flights");
+	await page.getByRole("button", { name: "Add flight" }).click();
+	// Typed by hand: the lookup costs API units, so the test never presses it.
+	let form = sheet(page);
+	await form.getByLabel("Flight", { exact: true }).fill("TK 12");
+	await form.getByLabel("Date", { exact: true }).fill("2026-01-02");
+	await form.getByLabel("From", { exact: true }).fill("KJFK");
 	await form.getByRole("button", { name: /^KJFK/ }).click();
-	await form.getByLabel("Visit Date").fill("2026-01-02");
-	await form.getByLabel("Layover").check();
-	await form.getByLabel("Arrival Flight").fill("THY 717");
-	await form.getByLabel("Departure Flight").fill("THY 35");
-	await form.getByLabel("Notes (optional)").fill("Browser test: layover");
+	await form.getByLabel("To", { exact: true }).fill("LTFM");
+	await form.getByRole("button", { name: /^LTFM/ }).click();
+	await form.getByLabel("Aircraft").fill("Boeing 777-300ER");
+	await form.getByLabel("Registration").fill("tc-jjt");
+	await form.getByLabel("Seat", { exact: true }).fill("30c");
+	await form.getByLabel("Notes (private)").fill("Browser test: private note");
 	await form.getByRole("button", { name: "Save", exact: true }).click();
-	const visit = card(page, "Browser test: layover");
-	await expect(visit).toContainText("Flights: THY 717 → THY 35");
-	// The public page is rendered on the server and refreshed by the save.
+	const first = card(page, "TK 12 · JFK → IST");
+	await expect(first).toContainText("TC-JJT");
+
+	// The next leg starts where the first one landed.
+	await first.getByRole("button", { name: /^Edit/ }).click();
+	await sheet(page)
+		.getByRole("button", { name: "Add next leg from IST" })
+		.click();
+	form = sheet(page);
+	await expect(form).toContainText("LTFM (IST)");
+	await form.getByLabel("Flight", { exact: true }).fill("TK 17");
+	await form.getByLabel("To", { exact: true }).fill("CYYZ");
+	await form.getByRole("button", { name: /^CYYZ/ }).click();
+	await form.getByRole("button", { name: "Save", exact: true }).click();
+	const second = card(page, "TK 17 · IST → YYZ");
+	await expect(second).toContainText("Connection");
+
+	// The public page is rendered on the server and refreshed by the save. Seats and notes stay
+	// private. (Checked on the rendered text: `next dev` embeds server debug data in the HTML.)
 	const anonymous = await browser.newContext();
-	const html = await (
-		await anonymous.request.get(`${BASE_URL}/airports`)
-	).text();
-	expect(html).toContain("Browser test: layover");
-	expect(html).toContain("THY 717");
+	const visitor = await anonymous.newPage();
+	await visitor.goto(`${BASE_URL}/airports`);
+	const text = await visitor.locator("main").innerText();
+	expect(text).toContain("JFK → IST → YYZ");
+	expect(text).toContain("TC-JJT");
+	expect(text).not.toContain("Browser test: private note");
+	expect(text).not.toContain("30C");
 	await anonymous.close();
-	await visit.getByRole("button", { name: /^Edit/ }).click();
-	await deleteFromSheet(page, "Visit deleted");
-	await page.reload();
-	await expect(visit).toHaveCount(0);
+	for (const [leg, code] of [
+		[second, "TK 17"],
+		[first, "TK 12"],
+	] as const) {
+		await leg.getByRole("button", { name: /^Edit/ }).click();
+		await deleteFromSheet(page, "Flight deleted");
+		await page.reload();
+		await expect(card(page, code)).toHaveCount(0);
+	}
 });
 
 test("adds a book and turns a public recommendation into one", async ({

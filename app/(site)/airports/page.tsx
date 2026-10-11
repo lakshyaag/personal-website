@@ -1,6 +1,6 @@
-import { publicVisits } from "@/lib/backend/public-data";
+import { publicFlights } from "@/lib/backend/public-data";
 import Airports from "./airports";
 
 export default async function AirportsPage() {
-	return <Airports visits={await publicVisits()} />;
+	return <Airports {...(await publicFlights())} />;
 }

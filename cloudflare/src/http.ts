@@ -7,6 +7,7 @@ export interface Env {
 	WORKER_API_SECRET: string;
 	LOCAL_UPLOADS?: string;
 	PRIME_API_KEY?: string;
+	AERODATABOX_API_KEY?: string;
 	AI_MODEL?: string;
 }
 export class ApiError extends Error {

@@ -130,9 +130,9 @@ export async function linkedPhotos(
 	return byContext;
 }
 
-/** Who can see a photo follows where it is used: the gallery or a visit (unless hidden from the map). */
-const PUBLIC_BY_USE = `featured = 1 OR (map_hidden = 0 AND EXISTS(
-	SELECT 1 FROM photo_links WHERE photo_id = photos.id AND context = 'visit'))`;
+/** Who can see a photo follows where it is used: the gallery or a flight (unless hidden from the map). */
+export const PUBLIC_BY_USE = `featured = 1 OR (map_hidden = 0 AND EXISTS(
+	SELECT 1 FROM photo_links WHERE photo_id = photos.id AND context = 'flight'))`;
 export function syncVisibility(env: Env) {
 	return statement(
 		env,
@@ -287,14 +287,15 @@ export async function listPhotos(env: Env, url: URL) {
 				const { results } = await statement(
 					env,
 					`SELECT l.photo_id, l.context, l.context_id,
-						COALESCE(j.entry_date, f.entry_date, w.log_date, v.visit_date) AS date,
+						COALESCE(j.entry_date, f.entry_date, w.log_date, fl.flight_date) AS date,
 						COALESCE(substr(j.content, 1, 60), f.ai_food_name, substr(f.description, 1, 60),
-							w.ai_session_type, substr(w.content, 1, 60), v.airport_ident) AS label
+							w.ai_session_type, substr(w.content, 1, 60),
+							COALESCE(fl.airline_iata, fl.airline_icao) || ' ' || fl.flight_number || ' ' || fl.from_ident || '–' || fl.to_ident) AS label
 					FROM photo_links l
 					LEFT JOIN journal_entries j ON l.context = 'journal' AND j.id = l.context_id
 					LEFT JOIN food_entries f ON l.context = 'food' AND f.id = l.context_id
 					LEFT JOIN workout_logs w ON l.context = 'workout' AND w.id = l.context_id
-					LEFT JOIN visits v ON l.context = 'visit' AND v.id = l.context_id
+					LEFT JOIN flights fl ON l.context = 'flight' AND fl.id = l.context_id
 					WHERE l.photo_id IN (${placeholders(chunk.length)}) ORDER BY l.context, l.context_id`,
 					...chunk,
 				).all<LinkRow & { date: string | null; label: string | null }>();

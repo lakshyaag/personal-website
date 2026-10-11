@@ -5,7 +5,7 @@ export const MAX_PHOTO_BYTES = 20 * 1024 * 1024;
 export const MAX_PHOTOS = 20;
 export const MAX_VARIANT_BYTES = 8 * 1024 * 1024;
 export const variantSizes = { display: 2048, thumb: 480 } as const;
-export const photoContexts = ["journal", "food", "workout", "visit"] as const;
+export const photoContexts = ["journal", "food", "workout", "flight"] as const;
 export type PhotoContext = (typeof photoContexts)[number];
 export const photoVariants = ["display", "thumb"] as const;
 export type PhotoVariant = (typeof photoVariants)[number];
@@ -41,7 +41,7 @@ export const photoSchema = z.object({
 	latitude: z.number().nullable(),
 	longitude: z.number().nullable(),
 	showLocation: z.boolean(),
-	/** Visit photos are public on the airports map unless hidden from it. */
+	/** Flight photos are public on the airports map unless hidden from it. */
 	hiddenFromMap: z.boolean(),
 	camera: cameraSchema.nullable(),
 	createdAt: z.iso.datetime(),
@@ -103,7 +103,7 @@ const optionalText = (max: number) =>
 		.nullable();
 export const updatePhotoSchema = z
 	.object({
-		// Visibility is not set directly: it follows the gallery and visit use.
+		// Visibility is not set directly: it follows the gallery and flight use.
 		featured: z.boolean(),
 		hiddenFromMap: z.boolean(),
 		title: optionalText(200),

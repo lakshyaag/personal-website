@@ -1,17 +1,28 @@
 import "server-only";
-import type { PublicPhoto, PublicVisit } from "@/lib/public-types";
+import airportData from "@/data/airports.min.json";
+import type {
+	Airport,
+	PublicFlight,
+	PublicFlights,
+	PublicPhoto,
+} from "@/lib/public-types";
 import {
 	type CreateRecommendationInput,
 	bookListSchema,
 	recommendationListSchema,
 } from "@/shared/books";
 import {
+	chronological,
+	connects,
+	flightCode,
+	flightListSchema,
+} from "@/shared/flights";
+import {
 	type LibraryPhoto,
 	type Photo,
 	type PhotoVariant,
 	photoListSchema,
 } from "@/shared/photos";
-import { visitListSchema } from "@/shared/visits";
 import { revalidateTag } from "next/cache";
 import { unstable_rethrow } from "next/navigation";
 import type { z } from "zod";
@@ -98,29 +109,74 @@ export async function publicGallery() {
 	return photos.map(publicPhoto);
 }
 
-export async function publicVisits(): Promise<PublicVisit[]> {
-	const { visits } = await publicJson("/v1/visits", visitListSchema, {
-		visits: [],
+const airportsByIdent = new Map(
+	(airportData as Airport[]).map((airport) => [airport.ident, airport]),
+);
+/** Great-circle distance in km. */
+function distance(
+	a: { lat: number; lon: number },
+	b: { lat: number; lon: number },
+) {
+	const rad = Math.PI / 180;
+	const h =
+		Math.sin(((b.lat - a.lat) * rad) / 2) ** 2 +
+		Math.cos(a.lat * rad) *
+			Math.cos(b.lat * rad) *
+			Math.sin(((b.lon - a.lon) * rad) / 2) ** 2;
+	return 2 * 6371 * Math.asin(Math.sqrt(h));
+}
+
+/** Flights for the public airports page, newest first, with the airports they use. */
+export async function publicFlights(): Promise<PublicFlights> {
+	const { flights } = await publicJson("/v1/flights", flightListSchema, {
+		flights: [],
 	});
-	return visits.map((visit) => {
-		// Only public photos appear on the public map.
-		const photos = visit.photos
-			.filter(
-				(photo) => photo.visibility === "public" && photo.state === "ready",
-			)
-			.map(publicPhoto);
-		return {
-			id: visit.id,
-			airportIdent: visit.airportIdent,
-			date: visit.date,
-			flightNumbers: visit.flightNumbers.length
-				? visit.flightNumbers
-				: undefined,
-			isLayover: visit.isLayover,
-			notes: visit.notes,
-			photos: photos.length ? photos : undefined,
-		};
+	const ordered = chronological(flights);
+	const result: PublicFlight[] = [];
+	ordered.forEach((flight, index) => {
+		const from = airportsByIdent.get(flight.from);
+		const to = airportsByIdent.get(flight.to);
+		if (!from || !to) return;
+		const previous = ordered[index - 1];
+		result.push({
+			id: flight.id,
+			date: flight.date,
+			code: flightCode(flight),
+			airlineName:
+				flight.airlineName ?? flight.airlineIata ?? flight.airlineIcao ?? "",
+			from: flight.from,
+			to: flight.to,
+			km: Math.round(distance(from, to)),
+			aircraft: flight.aircraft,
+			registration: flight.registration,
+			cabin: flight.cabin,
+			connecting: Boolean(previous && connects(previous, flight)),
+			// Only public photos appear on the public page. A photo with GPS belongs to whichever
+			// end of the flight it was taken nearer; otherwise to the destination.
+			photos: flight.photos
+				.filter(
+					(photo) => photo.visibility === "public" && photo.state === "ready",
+				)
+				.map((photo) => ({
+					...publicPhoto(photo),
+					airport:
+						photo.latitude !== null &&
+						photo.longitude !== null &&
+						distance({ lat: photo.latitude, lon: photo.longitude }, from) <
+							distance({ lat: photo.latitude, lon: photo.longitude }, to)
+							? flight.from
+							: flight.to,
+				})),
+		});
 	});
+	const used = new Set(result.flatMap((flight) => [flight.from, flight.to]));
+	return {
+		flights: result.reverse(),
+		airports: [...used].flatMap((ident) => {
+			const airport = airportsByIdent.get(ident);
+			return airport ? [airport] : [];
+		}),
+	};
 }
 export async function publicBooks() {
 	return (await publicJson("/v1/books", bookListSchema, { books: [] })).books;
