@@ -28,7 +28,7 @@ const PhotoMap = dynamic(() => import("./PhotoMap"), { ssr: false });
 const filters = {
 	all: { label: "All", query: "" },
 	gallery: { label: "Gallery", query: "featured=true" },
-	visit: { label: "Airports", query: "context=visit" },
+	flight: { label: "Flights", query: "context=flight" },
 	food: { label: "Food", query: "context=food" },
 	journal: { label: "Journal", query: "context=journal" },
 	workout: { label: "Workouts", query: "context=workout" },
@@ -45,13 +45,13 @@ const contextName: Record<PhotoLink["context"], string> = {
 	journal: "Journal",
 	food: "Food",
 	workout: "Workout",
-	visit: "Airport visit",
+	flight: "Flight",
 };
 function linkHref(link: PhotoLink) {
 	if (link.context === "journal")
 		return `/admin/journal?edit=${link.contextId}`;
 	if (link.context === "food") return `/admin/food?edit=${link.contextId}`;
-	return link.context === "workout" ? "/admin/workouts" : "/admin/airports";
+	return link.context === "workout" ? "/admin/workouts" : "/admin/flights";
 }
 const linkText = (link: PhotoLink) =>
 	[
@@ -68,7 +68,7 @@ const linkText = (link: PhotoLink) =>
 		.join(" · ");
 
 const onMap = (photo: LibraryPhoto) =>
-	!photo.hiddenFromMap && photo.links.some((link) => link.context === "visit");
+	!photo.hiddenFromMap && photo.links.some((link) => link.context === "flight");
 /** Where the public can see it, if anywhere. */
 function audience(photo: LibraryPhoto) {
 	const places = [
@@ -428,7 +428,7 @@ function PhotoEditor({
 	}));
 	const [form, setForm] = useState(initial);
 	const [saving, setSaving] = useState(false);
-	const onVisit = photo.links.some((link) => link.context === "visit");
+	const onFlight = photo.links.some((link) => link.context === "flight");
 	const gps =
 		photo.latitude !== null && photo.longitude !== null
 			? { lat: photo.latitude, lon: photo.longitude }
@@ -504,7 +504,7 @@ function PhotoEditor({
 				checked={form.featured}
 				onChange={(featured) => setForm({ ...form, featured })}
 			/>
-			{onVisit && (
+			{onFlight && (
 				<CheckboxInput
 					label="Show on the airports map"
 					checked={!form.hiddenFromMap}

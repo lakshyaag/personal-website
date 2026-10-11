@@ -39,6 +39,27 @@ async function request(
 		customEnv,
 	);
 }
+function flightInput(overrides = {}) {
+	return {
+		date: "2026-04-21",
+		airlineIcao: "DAL",
+		airlineIata: "DL",
+		airlineName: "Delta Air Lines",
+		flightNumber: "2011",
+		from: "KATL",
+		to: "KAUS",
+		departsAt: null,
+		arrivesAt: null,
+		aircraft: "",
+		registration: "",
+		seat: "",
+		seatType: null,
+		cabin: null,
+		notes: "",
+		photoIds: [],
+		...overrides,
+	};
+}
 async function photo() {
 	const data = {
 		id: id(),
@@ -383,29 +404,24 @@ describe("Photo library", () => {
 				}
 			).visibility;
 		// Visibility can't be set directly any more.
-		const [onVisit, inJournal] = [await readyPhoto(), await readyPhoto()];
+		const [onFlight, inJournal] = [await readyPhoto(), await readyPhoto()];
 		expect(
 			(
-				await request(`/v1/photos/${onVisit.id}`, "PATCH", {
+				await request(`/v1/photos/${onFlight.id}`, "PATCH", {
 					visibility: "public",
 				})
 			).status,
 		).toBe(400);
-		const visitId = id();
-		const visit = (photoIds: string[]) =>
-			request(`/v1/visits/${visitId}`, "PUT", {
-				airportIdent: "KAUS",
-				date: "2026-04-21",
-				flightNumbers: [],
-				isLayover: false,
-				notes: "",
-				photoIds,
-			});
-		await visit([onVisit.id]);
-		expect(await status(onVisit.id)).toBe("public");
-		await request(`/v1/photos/${onVisit.id}`, "PATCH", { hiddenFromMap: true });
-		expect(await status(onVisit.id)).toBe("private");
-		await request(`/v1/photos/${onVisit.id}`, "PATCH", {
+		const flightId = id();
+		const flight = (photoIds: string[]) =>
+			request(`/v1/flights/${flightId}`, "PUT", flightInput({ photoIds }));
+		await flight([onFlight.id]);
+		expect(await status(onFlight.id)).toBe("public");
+		await request(`/v1/photos/${onFlight.id}`, "PATCH", {
+			hiddenFromMap: true,
+		});
+		expect(await status(onFlight.id)).toBe("private");
+		await request(`/v1/photos/${onFlight.id}`, "PATCH", {
 			hiddenFromMap: false,
 		});
 		const entry = input(id(), {
@@ -420,7 +436,7 @@ describe("Photo library", () => {
 			.bind("2030-01-01T00:00:00.000Z", inJournal.id)
 			.run();
 		await bindings.DB.prepare("UPDATE photos SET taken_at=NULL WHERE id=?")
-			.bind(onVisit.id)
+			.bind(onFlight.id)
 			.run();
 		const pages: {
 			id: string;
@@ -443,20 +459,20 @@ describe("Photo library", () => {
 			}),
 		]);
 		expect(new Set(pages.map((p) => p.id)).size).toBe(pages.length);
-		const undated = pages.findIndex((p) => p.id === onVisit.id);
+		const undated = pages.findIndex((p) => p.id === onFlight.id);
 		expect(pages[undated].links).toEqual([
 			expect.objectContaining({
-				context: "visit",
-				label: "KAUS",
+				context: "flight",
+				label: "DL 2011 KATL–KAUS",
 				date: "2026-04-21",
 			}),
 		]);
 
-		// Dropped from its visit, the photo goes with it.
-		await visit([]);
+		// Dropped from its flight, the photo goes with it.
+		await flight([]);
 		expect(
 			(
-				(await (await request(`/v1/photos/${onVisit.id}`)).json()) as {
+				(await (await request(`/v1/photos/${onFlight.id}`)).json()) as {
 					state: string;
 				}
 			).state,
@@ -524,7 +540,7 @@ describe("Photo library", () => {
 		expect(await state(library.id)).toBe("ready");
 	});
 });
-describe("Food, workouts, visits and books", () => {
+describe("Food, workouts, flights and books", () => {
 	// AI configured, with a queue that records jobs; tests run the consumer by hand.
 	const sent: AnalysisJob[] = [];
 	const aiEnv = {
@@ -807,24 +823,103 @@ describe("Food, workouts, visits and books", () => {
 			(await request(`/v1/workouts/${logId}/analyze`, "POST")).status,
 		).toBe(503);
 	});
-	it("saves visits with flights and keeps a single current book", async () => {
-		const visitId = id();
-		const visit = (await (
-			await request(`/v1/visits/${visitId}`, "PUT", {
-				airportIdent: "kjfk",
-				date: "2026-01-02",
-				flightNumbers: ["THY 717", "THY 35"],
-				isLayover: true,
-				notes: "",
-				photoIds: [],
-			})
+	it("saves flights, looks them up, and keeps a single current book", async () => {
+		const flightId = id();
+		const flight = (await (
+			await request(
+				`/v1/flights/${flightId}`,
+				"PUT",
+				flightInput({
+					airlineIcao: "ual",
+					airlineIata: null,
+					airlineName: "",
+					flightNumber: "565",
+					from: "cyyz",
+					to: "ksfo",
+					departsAt: "2026-06-01T07:10",
+					registration: " n37502 ",
+					seat: "8f",
+					seatType: "window",
+					cabin: "economy",
+				}),
+			)
 		).json()) as Record<string, unknown>;
-		expect(visit).toMatchObject({
-			airportIdent: "KJFK",
-			flightNumbers: ["THY 717", "THY 35"],
-			isLayover: true,
+		expect(flight).toMatchObject({
+			airlineIcao: "UAL",
+			from: "CYYZ",
+			to: "KSFO",
+			departsAt: "2026-06-01T07:10",
+			registration: "N37502",
+			seat: "8F",
+			seatType: "window",
 		});
-		expect(visit.notes).toBeUndefined();
+		expect(flight.airlineIata).toBeUndefined();
+		expect(flight.airlineName).toBeUndefined();
+		expect(flight.notes).toBeUndefined();
+		// A flight needs an airline and two different airports.
+		for (const bad of [
+			flightInput({ airlineIcao: null, airlineIata: null }),
+			flightInput({ to: "KATL" }),
+		])
+			expect((await request(`/v1/flights/${id()}`, "PUT", bad)).status).toBe(
+				400,
+			);
+
+		// Lookups go to AeroDataBox only when a key is configured, and map its answer.
+		const lookup = (env: Env = bindings) =>
+			request(
+				"/v1/flights/lookup?number=AC%20590&date=2026-06-24",
+				"GET",
+				undefined,
+				token,
+				env,
+			);
+		expect((await lookup()).status).toBe(503);
+		const withKey = { ...bindings, AERODATABOX_API_KEY: "test-key" };
+		const spy = vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+			Response.json([
+				{
+					number: "AC 590",
+					departure: {
+						airport: { icao: "KIAH" },
+						scheduledTime: { local: "2026-06-24 07:30-05:00" },
+						revisedTime: { local: "2026-06-24 07:42-05:00" },
+					},
+					arrival: {
+						airport: { icao: "CYYZ" },
+						predictedTime: { local: "2026-06-24 11:46-04:00" },
+					},
+					aircraft: { reg: "C-GMIW", model: "Boeing 737-800" },
+					airline: { name: "Air Canada", iata: "AC", icao: "ACA" },
+				},
+			]),
+		);
+		expect(await (await lookup(withKey)).json()).toEqual({
+			candidates: [
+				{
+					airlineIcao: "ACA",
+					airlineIata: "AC",
+					airlineName: "Air Canada",
+					flightNumber: "590",
+					from: "KIAH",
+					to: "CYYZ",
+					date: "2026-06-24",
+					departsAt: "2026-06-24T07:42",
+					arrivesAt: "2026-06-24T11:46",
+					aircraft: "Boeing 737-800",
+					registration: "C-GMIW",
+				},
+			],
+		});
+		expect(String(spy.mock.calls[0][0])).toBe(
+			"https://aerodatabox.p.rapidapi.com/flights/number/AC590/2026-06-24?dateLocalRole=Departure&withAircraftImage=false&withLocation=false",
+		);
+		spy.mockResolvedValueOnce(new Response(null, { status: 204 }));
+		expect(await (await lookup(withKey)).json()).toEqual({ candidates: [] });
+		spy.mockResolvedValueOnce(new Response(null, { status: 429 }));
+		expect((await lookup(withKey)).status).toBe(502);
+		spy.mockRestore();
+
 		const book = (title: string, isCurrent: boolean) => ({
 			title,
 			author: "Author",
@@ -852,18 +947,11 @@ describe("Food, workouts, visits and books", () => {
 	});
 	it("lists more records than D1 binds in one query", async () => {
 		for (let i = 0; i < 120; i++)
-			await request(`/v1/visits/${id()}`, "PUT", {
-				airportIdent: "KJFK",
-				date: "2026-01-02",
-				flightNumbers: [],
-				isLayover: false,
-				notes: "",
-				photoIds: [],
-			});
-		const response = await request("/v1/visits");
+			await request(`/v1/flights/${id()}`, "PUT", flightInput());
+		const response = await request("/v1/flights");
 		expect(response.status).toBe(200);
 		expect(
-			((await response.json()) as { visits: unknown[] }).visits.length,
+			((await response.json()) as { flights: unknown[] }).flights.length,
 		).toBeGreaterThanOrEqual(120);
 	});
 	it("accepts bounded public recommendations", async () => {

@@ -24,7 +24,7 @@ const primary = [
 ];
 const secondary = [
 	{ href: "/admin/books", label: "Books", icon: BookOpen },
-	{ href: "/admin/airports", label: "Airports", icon: Plane },
+	{ href: "/admin/flights", label: "Flights", icon: Plane },
 ];
 
 /** Tab bar on phones, top bar on larger screens. Every admin page renders inside it. */

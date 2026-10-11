@@ -2,7 +2,7 @@
 
 ## Current state
 
-The whole site runs on Cloudflare: journal, the photo library, food (+ AI analysis), workouts (+ AI analysis and stats), airport visits, books and recommendations, plus the public homepage, gallery, airports map and bookshelf. The Supabase code is gone from the app; Fits, AI request logs and the AI config page were dropped rather than migrated. The local Next.js app talks to the production Cloudflare backend. **Supabase itself is untouched** and still serves the currently deployed Vercel build until this branch ships; `scripts/migrate/` (read-only against Supabase) is kept for the final sync.
+The whole site runs on Cloudflare: journal, the photo library, food (+ AI analysis), workouts (+ AI analysis and stats), flights, books and recommendations, plus the public homepage, gallery, airports map and bookshelf. The Supabase code is gone from the app; Fits, AI request logs and the AI config page were dropped rather than migrated. The local Next.js app talks to the production Cloudflare backend. **Supabase itself is untouched** and still serves the currently deployed Vercel build until this branch ships; `scripts/migrate/` (read-only against Supabase) is kept for the final sync.
 
 **One shared backend for the entire application**: one Worker, one D1 database, one private photo bucket. New features add tables (numbered SQL migrations) and routes to it — never a separate database or bucket.
 
@@ -16,7 +16,7 @@ The whole site runs on Cloudflare: journal, the photo library, food (+ AI analys
 | `app/api/admin/*` | Thin authenticated Next.js routes that proxy to the Worker |
 | `app/admin/(app)/` | Admin pages inside `AdminShell` (tab bar on phones, top bar on desktop) |
 | `components/admin/kit.tsx` | Shared admin pieces: page header, "+" button, record card, editor sheet, list loader, delete with undo |
-| `components/admin/{journal,food,workouts,airports,books,photos}/` | One component per admin page, each a list plus an editor sheet |
+| `components/admin/{journal,food,workouts,flights,books,photos}/` | One component per admin page, each a list plus an editor sheet |
 | `lib/backend/public-data.ts` | Public pages' data, read on the server and cached under one tag that every admin change expires (`privateRoute`) |
 
 | Resource | Production |
@@ -38,11 +38,11 @@ Food and workout entries are analyzed by Prime Intellect (`z-ai/glm-5.3-flash`, 
 
 ## Photos
 
-One library for every feature. `photos` holds the file plus library metadata; `photo_links(context, context_id, position)` attaches photos to journal, food, workout and visit records.
+One library for every feature. `photos` holds the file plus library metadata; `photo_links(context, context_id, position)` attaches photos to journal, food, workout and flight records.
 
 - **Uploads:** the browser (`components/admin/photo-variants.ts`) decodes the image, makes a 2048 px display and a 480 px thumbnail (WebP, or JPEG where the browser can't encode WebP), and reads capture time/GPS/camera with `shared/exif.ts`. It PUTs original + variants straight to R2 via presigned URLs, then `POST /photos/:id/complete` records the metadata after the Worker checks all three objects exist. Canvas encoding writes no EXIF, so GPS never reaches a served image.
 - **Serving:** private variants only through the authenticated admin API. Public photos at `GET {worker}/public/photos/:id/:generation/(display|thumb)`, unauthenticated and cached forever. The URL contains the generation and only works while the photo is public.
-- **Visibility follows use** (migration `0006`): a photo is public when it is in the gallery (`featured`) or on an airport visit (unless `map_hidden`), private otherwise. It is never set directly; `syncVisibility` runs after every link change and photo edit.
+- **Visibility follows use** (migration `0006`): a photo is public when it is in the gallery (`featured`) or on a flight (unless `map_hidden`; migration `0008` moved this from visits), private otherwise. It is never set directly; `syncVisibility` runs after every link change and photo edit.
 - **Lifecycle:** a photo removed from its entry is deleted unless another entry or the gallery uses it. Uploads abandoned for 24 hours are cleaned up by the 10-minute cron.
 - **Library:** `GET /v1/photos` lists newest *taken* first (undated last), filters by `context`, `featured` or `unused` (no entry, not in the gallery), and each link carries the entry's date and a short label.
 - **Location:** GPS is stored privately. The public gallery only exposes it when a photo's "show location" is on.
@@ -104,6 +104,15 @@ Photos (2026-10-10): 82 Supabase photos imported with `scripts/migrate/photos.ts
 The journal's one-off scripts were removed after its migration; `scripts/migrate/` is deleted the same way once every feature has moved. Backups and the import snapshot are in gitignored `migration-artifacts/`.
 
 Food, workouts, visits, books (2026-10-10): `scripts/migrate/records.ts plan|apply|verify` copied 73 food entries, 23 workouts, 101 visits and 18 books (0 recommendations); verify checks every column of every row against Supabase. It also **rebuilt the food/workout/visit photo links**: Supabase's `photo_attachments` are keyed by upload folder (a date or airport code), not entry, so the photo import had linked them to nothing. Links now come from each entry's own `photos` refs (67 links). Photos referenced by no entry stay in the library as unused. The import is idempotent, so re-run `apply` + `verify` right before cutover to pick up anything written on the live site since. Pre-change D1 bookmarks: `000003f1-00000000-00005100-02ad51510cbac6977e50890d779815f8` (0005), `00000430-00000000-00005100-71186db42591db8b1492e01cef597d1f` (0006; it made the one unused public photo private).
+
+## Flights
+
+Flights replaced airport visits (migration `0008`). Each row is one flight: date, airline (ICAO, IATA and name, as reported), number, from/to airports (ICAO), local gate times, aircraft, registration, seat, cabin, private notes. Airports, layovers (a connection under 24 hours, from the times; same day without them) and trips are derived (`shared/flights.ts`). Airport data stays a static file (`data/airports.min.json`): the public page gets only the airports its flights use from the server, and only the admin page loads the full list.
+
+- **Public:** route, date, flight code, airline, aircraft, registration, cabin, distance, public photos. **Private:** seat, times, notes. `next dev` embeds the raw server data in the HTML for React's debugging, so the private fields are visible there on localhost only; production builds don't include them.
+- **Lookup:** the admin's "Look up" button calls `GET /v1/flights/lookup?number=&date=`, which queries AeroDataBox via RapidAPI (secret `AERODATABOX_API_KEY`). The free plan has 400 units a month and each lookup costs 2, so nothing calls it automatically and tests mock it.
+- **Import (2026-10):** `scripts/migrate/flights.ts plan|apply|verify <FlightyExport.csv>` turns visits into flights using a Flighty export for details. A Flighty flight is imported when both of its airports have a visit naming its number within a day; Flighty-only flights (cancelled, upcoming, never logged) are skipped. Visit notes and photos move to the flight that left that airport, else the one that landed. Airline IATA codes and names come from OpenFlights (`VJC` and `AKJ` aren't in it, so they show as ICAO until edited). `SLT` in the export is really Akasa (`AKJ`). The PNR is never read. `D1_TARGET=local` runs it against the local database for a rehearsal (rehearsed: 57 flights from 103 visits, 18 photo links, idempotent).
+- **Deploy order:** apply `0008` → deploy the Worker (with the new secret) → run the import `apply` + `verify` → deploy Next.js. Until the last step, the live airports page is empty (the old build asks for `/v1/visits`). `visits` stays until a later migration drops it.
 
 ## Remaining
 

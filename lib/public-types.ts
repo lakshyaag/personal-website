@@ -23,12 +23,26 @@ export interface PublicPhoto {
 	caption: string | null;
 	locationLabel: string | null;
 }
-export interface PublicVisit {
+/** A flight as the public airports page shows it. Seat, times and notes stay private. */
+export interface PublicFlight {
 	id: string;
-	airportIdent: string;
 	date: string;
-	flightNumbers?: string[];
-	isLayover?: boolean;
-	notes?: string;
-	photos?: PublicPhoto[];
+	/** "AC 590" */
+	code: string;
+	airlineName: string;
+	from: string;
+	to: string;
+	km: number;
+	aircraft?: string;
+	registration?: string;
+	cabin?: string;
+	/** Continues the previous flight after a layover at `from`. */
+	connecting: boolean;
+	/** Public photos, each placed at the airport it was taken nearest. */
+	photos: (PublicPhoto & { airport: string })[];
+}
+export interface PublicFlights {
+	flights: PublicFlight[];
+	/** Only the airports these flights use, so the page never ships the full airport list. */
+	airports: Airport[];
 }
